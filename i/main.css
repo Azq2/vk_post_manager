@@ -1,0 +1,188 @@
+body {
+	
+}
+
+* {
+	font-family: Arial
+}
+
+.main {
+	margin: 0 auto;
+	max-width: 640px;
+	position: relative;
+	z-index: 1000
+}
+
+.overlay {
+	position: fixed;
+	width: 100%;
+	top: 0; bottom: 0;
+	left: 0; right: 0;
+	background: rgba(0, 0, 0, 0.9);
+	z-index: 9999
+}
+
+.modal {
+	position: fixed;
+	top: 25%; left: 50%;
+	width: 300px;
+	margin-left: -150px;
+	background: #fff;
+	padding: 3px;
+	z-index: 10000
+}
+
+a { text-decoration: none; color: #069 }
+a:hover { text-decoration: underline }
+form { margin: 0 }
+
+table {
+	background-color: #ffffff; 
+	border: 1px solid #ccc; 
+	border-collapse: collapse; 
+}
+
+td {
+	vertical-align: top;
+	background-color: #fafafa; 
+	border: 1px solid #ccc; 
+	padding: 5px; 
+}
+
+tr {
+	border: 1px solid #ccc; 
+}
+
+th {
+	background-color: #f0f0f0; 
+	border: 1px solid #ccc; 
+	padding: 4px; 
+}
+
+.time {
+	color: gray; 
+	float: right;
+	font-size: small
+}
+.tab { }
+.tab-active { font-weight: bold }
+
+.type_0 { color: red }
+.type_1 {color: green }
+
+.type_0 td { background-color: #F5E9E9 }
+.type_1 td { background-color: #E5F6EB }
+
+.bottom_sep td {
+	border-bottom-width: 2px
+}
+
+.oh {
+	overflow: hidden
+}
+
+.right { float: right }
+.left { float: left }
+
+.row {
+	border-bottom: 1px dotted gray;
+	padding: 5px
+}
+
+.row-error {
+	background-color: #FFDBDB;
+	color: #F00;
+}
+
+.green {
+	color: green
+}
+.red {
+	color: red
+}
+
+/* progress */
+.progress {
+	height: 10px;
+	background: #d9e3ef;
+}
+.progress-item {
+	height: 10px;
+	background: #61a961;
+}
+.progress-item_sep {
+	height: 10px;
+	position: absolute;
+	border-right: 1px solid #61a961;
+	box-sizing: border-box;
+	margin-left: -1px;
+}
+.pad_b {
+	padding-bottom: 5px;
+}
+.pad_t {
+	padding-top: 5px;
+}
+
+.m { vertical-align: middle }
+
+/* post */
+.post-text {
+	overflow: hidden;
+}
+.post-preview {
+	padding-right: 4px;
+}
+.post-attach {
+	background-color: #E1FDFF;
+	border: 1px solid #65D3FF;
+	padding: 5px;
+	margin: 3px;
+	overflow: hidden;
+}
+.deleted {
+	opacity: 0.5;
+}
+ul {
+	margin: 0;
+	padding: 5px;
+	padding-left: 15px;
+}
+li {
+	margin: 2px;
+	padding: 0
+}
+
+.hide {
+	display: none
+}
+.post-queued {
+	background-color: #dcf6d8
+}
+
+/* btn */
+.btn[disabled] {
+	opacity: 0.7
+}
+.btn {
+	border: 1px dotted #808080;
+    background: #E0E0E0;
+    padding: 4px;
+    cursor: pointer;
+    margin: 1px
+}
+.btn-delete {
+	border: 1px dotted #B32B2B;
+    background: #DC4444;
+    color: #fff
+}
+.btn-cancel {
+	border: 1px dotted #DECF6E;
+	background: #FFCD00;
+	color: #4C4434
+}
+.btn-green {
+	border: 1px dotted #808080;
+	background: #6CA8AC;
+	color: #fff;
+}
