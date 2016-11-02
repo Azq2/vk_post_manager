@@ -23,7 +23,10 @@
 		
 		function mysql_query($query) {
 			global $_mysql_link;
-			return mysqli_query($_mysql_link, $query);
+			$req = mysqli_query($_mysql_link, $query);
+			if ($req === false)
+				die("error($query): ".mysql_error()."\n");
+			return $req;
 		}
 		
 		function mysql_error() {
@@ -171,31 +174,43 @@
 	}
 	
 	function count_time($time) {
-		$out = []; 
-		$days = floor($time / (3600 * 24)); 
+		$out = [];
 		
+		$years = floor($time / (3600 * 24 * 365));
+		if ($years > 0) {
+			$time -= $years * 3600 * 24 * 365; 
+			$out[] = $years." год"; 
+		}
+		
+		$months = floor($time / (3600 * 24 * 30));
+		if ($months > 0) {
+			$time -= $months * 3600 * 24 * 30; 
+			$out[] = $months." мес"; 
+		}
+		
+		$days = floor($time / (3600 * 24));
 		if ($days > 0) {
 			$time -= $days * 3600 * 24; 
-			$out[] = $days."д"; 
+			$out[] = $days." дн"; 
 		}
 		
 		$hours = floor($time / 3600); 
 		if ($hours > 0 || $days > 0) {
 			$time -= $hours * 3600; 
-			$out[] = $hours."ч"; 
+			$out[] = $hours." ч"; 
 		}
 		
 		$minutes = floor($time / 60); 
 		if ($minutes > 0 || $hours > 0 || $days > 0) {
 			$time -= $minutes * 60; 
-			$out[] = $minutes."м"; 
+			$out[] = $minutes." м"; 
 		}
 		
 		if (empty($out) || $time > 0) {
 			$seconds = $time; 
 			$out[] = $seconds."с"; 
 		}
-		return implode(', ', $out); 
+		return implode(', ', array_slice($out, 0, 2)); 
 	}
 	
 	function vk($method, $args = array()) {

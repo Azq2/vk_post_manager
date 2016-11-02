@@ -1,28 +1,29 @@
 <?php
-	const WORKLOGS_PASS = "***";
+	require "inc/init.php";
 	
 	// Авторизация
-	if (!isset($_COOKIE['password']) || $_COOKIE['password'] !== WORKLOGS_PASS) {
-		if (!isset($_SERVER['PHP_AUTH_USER']) || $_SERVER['PHP_AUTH_PW'] !== WORKLOGS_PASS) {
+	if (!isset($_COOKIE['password']) || $_COOKIE['password'] !== WEBUI_PASSWORD) {
+		if (!isset($_SERVER['PHP_AUTH_USER']) || $_SERVER['PHP_AUTH_PW'] !== WEBUI_PASSWORD) {
 			header('WWW-Authenticate: Basic realm="Home porn archive"');
 			header('HTTP/1.0 401 Unauthorized');
 			echo 'AYKA LOH.';
 			exit;
 		}
 	}
-	setcookie('password', WORKLOGS_PASS, time() + 365 * 24 * 3600 * 2);
+	setcookie('password', WEBUI_PASSWORD, time() + 365 * 24 * 3600 * 2);
 	
-	require "inc/init.php";
 	
 	$q = new Http;
 	$action = isset($_REQUEST['a']) ? preg_replace("/[^a-z0-9_-]+/i", "", $_REQUEST['a']) : '';
 	
+	$curl = new Url($_SERVER['REQUEST_URI']);
+	
 	$comm_tabs = array();
 	$comms = array();
-	$req = mysql_query("SELECT * FROM `vk_groups`");
+	$req = mysql_query("SELECT * FROM `vk_groups` ORDER BY pos ASC");
 	while ($res = mysql_fetch_assoc($req)) {
 		$comms[$res['id']] = $res;
-		$comm_tabs[$res['id']] = array($res['name'], '?gid='.$res['id']);
+		$comm_tabs[$res['id']] = array($res['name'], $curl->set('gid', $res['id'])->url());
 	}
 	
 	$gid = (int) array_val($_REQUEST, 'gid', reset($comms)['id']);
@@ -33,6 +34,287 @@
 	$comm = &$comms[$gid];
 	
 	switch ($action) {
+		case "returns":
+			$req = mysql_query("SELECT type, uid, COUNT(IF (type = 0, 1, NULL)) as cnt_leave, COUNT(IF (type = 1, 1, NULL)) as cnt_join
+					FROM `vk_join_stat` WHERE cid = $gid
+					GROUP BY uid ORDER BY cnt_join DESC");
+			$users = array();
+			while ($row = mysql_fetch_assoc($req)) {
+				if ($row['cnt_join'] > 1 || $row['cnt_leave'] > 1) {
+					$stat[] = $row;
+					$users[] = $row['uid'];
+				}
+			}
+			mysql_free_result($req);
+			$users = array_unique($users);
+			
+			mk_page(array(
+				'title' => 'Пользователи', 
+				'content' => Tpl::render("returns.html", array(
+					'stat' => &$stat, 
+					'join_stat' => &$join_data, 
+					'users' => get_vk_users($users), 
+					'comm_tabs' => switch_tabs($comm_tabs, $gid)
+				))
+			));
+		break;
+		
+		case "activity":
+			$stat = array();
+			
+			$date = (new DateTime())
+				->setTimestamp(mysql_result(mysql_query("SELECT MIN(date) FROM vk_posts WHERE group_id = -$gid"), 0));
+			$date = (new DateTime('2016-01-01'));
+			while ($date->getTimestamp() && $date->getTimestamp() < time()) {
+				$start = mktime(0, 0, 0, $date->format("n"), $date->format("j"), $date->format("Y"));
+				$end = mktime(23, 59, 59, $date->format("n"), $date->format("j"), $date->format("Y"));
+				
+				// Посты
+				$users = array();
+				$posts = array();
+				$users_posts = array();
+				
+				$req = mysql_query("SELECT * FROM vk_posts WHERE date >= $start AND date <= $end AND group_id = -$gid");
+				while ($row = mysql_fetch_assoc($req))
+					$posts[] = $row['post_id'];
+				
+				// Репосты
+				$reposts = 0;
+				$req2 = mysql_query("SELECT DISTINCT user_id, post_id FROM vk_posts_reposts WHERE date >= $start AND date <= $end AND group_id = -$gid");
+				while ($row = mysql_fetch_assoc($req2)) {
+					$users[] = $row['user_id'];
+					$users_posts[] = $row['post_id'];
+					++$reposts;
+				}
+				
+				// Камменты
+				$req2 = mysql_query("SELECT DISTINCT user_id, post_id FROM vk_posts_comments WHERE date >= $start AND date <= $end AND group_id = -$gid");
+				$comments = 0;
+				while ($row = mysql_fetch_assoc($req2)) {
+					$users[] = $row['user_id'];
+					$users_posts[] = $row['post_id'];
+					++$comments;
+				}
+				
+				// ЛАйки
+				$likes = 0;
+				if ($posts) {
+					$req2 = mysql_query("SELECT DISTINCT user_id, post_id FROM vk_posts_likes WHERE post_id IN (".implode(", ", $posts).") AND group_id = -$gid");
+					while ($row = mysql_fetch_assoc($req2)) {
+						$users[] = $row['user_id'];
+						$users_posts[] = $row['post_id'];
+						++$likes;
+					}
+				}
+				
+				$users = array_unique($users);
+				$users_posts = array_unique($users_posts);
+
+				$c = count($posts);
+				$stat[] = array(
+					'date' => $date->format("Y-m-d"), 
+					'reposts' => $reposts, 
+					'likes' => $likes, 
+					'comments' => $comments, 
+					'active_users' => count($users), 
+					'activity' => round($users_posts ? count($users) / count($users_posts) : 0), 
+					'posts' => $c
+				);
+				
+				$date->add(date_interval_create_from_date_string('1 day'));
+			}
+			
+			mk_page(array(
+				'title' => 'Активность', 
+				'content' => Tpl::render("activity.html", array(
+					'stat' => &$stat
+				))
+			));
+		break;
+		
+		case "user_info":
+			$user_id = (int) array_val($_GET, 'id', 0);
+			
+			// Репосты
+			$req = mysql_query("SELECT COUNT(*) FROM vk_posts_reposts WHERE user_id = $user_id AND group_id = -$gid");
+			$reposts = mysql_result($req, 0);
+			
+			// Репосты 30 дней
+			$req = mysql_query("SELECT COUNT(*) FROM vk_posts_reposts WHERE user_id = $user_id AND group_id = -$gid
+				AND date BETWEEN CURDATE() - INTERVAL 30 DAY AND CURDATE()");
+			$reposts30 = mysql_result($req, 0);
+			
+			// Лайки
+			$req = mysql_query("SELECT COUNT(*) FROM vk_posts_likes WHERE user_id = $user_id AND group_id = -$gid");
+			$likes = mysql_result($req, 0);
+			
+			// Камменты
+			$req = mysql_query("SELECT COUNT(*) FROM vk_posts_comments WHERE user_id = $user_id AND group_id = -$gid");
+			$comments = mysql_result($req, 0);
+			
+			// Камменты 30 дней
+			$req = mysql_query("SELECT COUNT(*) FROM vk_posts_comments WHERE user_id = $user_id AND group_id = -$gid
+				AND date BETWEEN CURDATE() - INTERVAL 30 DAY AND CURDATE()");
+			$comments30 = mysql_result($req, 0);
+			
+			$joins = array();
+			$req = mysql_query("SELECT * FROM `vk_join_stat` WHERE cid = $gid AND uid = $user_id GROUP BY time ASC");
+			$last_time = 0;
+			$time_in_comm = 0;
+			while ($res = mysql_fetch_assoc($req)) {
+				if ($res['type'] == 0) {
+					$time_in_comm += $res['time'] - $last_time;
+					$joins[count($joins) - 1]['time_in_comm'] = 0;
+					$res['time_in_comm'] = $res['time'] - $last_time;
+					$last_time = 0;
+				} else if ($res['type'] == 1) {
+					$last_time = $res['time'];
+					$res['time_in_comm'] = time() - $res['time'];
+				}
+				$joins[] = $res;
+			}
+			if ($last_time)
+				$time_in_comm += time() - $last_time;
+			
+			// array(6) { ["id"]=> string(1) "1" ["cid"]=> string(8) "94594114" ["uid"]=> string(8) "53344747" ["type"]=> string(1) "1" ["time"]=> string(10) "1434800396" ["users_cnt"]=> string(3) "764" }
+			
+			$user = get_vk_users(array($user_id))[$user_id];			
+			mk_page(array(
+				'title' => 'Информация о #'.$user_id, 
+				'content' => Tpl::render("user_info.html", array(
+					'comm_tabs' => switch_tabs($comm_tabs, $gid), 
+					'reposts' => $reposts, 
+					'reposts30' => $reposts30, 
+					'likes' => $likes, 
+					'comments' => $comments, 
+					'comments30' => $comments30, 
+					'time_in_comm' => count_time($time_in_comm), 
+					'joins' => $joins, 
+					'user' => vk_user_widget($user)
+				))
+			));
+		break;
+		
+		case "users":
+			mk_page(array(
+				'title' => 'Пользователи', 
+				'content' => Tpl::render("users.html", array(
+					'comm_tabs' => switch_tabs($comm_tabs, $gid)
+				))
+			));
+		break;
+		
+		case "search_users":
+			$search = array_val($_GET, 'q', "");
+			
+			$res = $q->vkApi("users.search", array(
+				'q'			=> $search, 
+				'group_id'	=> $gid, 
+				'fields'	=> 'sex,photo_50,bdate,verified'
+			));
+			
+			$result = array();
+			foreach ($res->response->items as $user) {
+				$ret = vk_user_widget($user, '?a=user_info&amp;id='.$user->id);
+				$ret['id'] = $user->id;
+				$result[] = $ret;
+			}
+			mk_ajax(array('list' => Tpl::render("search_users_result.html", array(
+				'users' => $result
+			))));
+		break;
+		
+		case "users_top":
+			$users = array();
+			$stat = array(
+				'likes' => array(), 
+				'reposts' => array(), 
+				'comments' => array()
+			);
+			
+			$filter = array_val($_GET, 'filter', "all");
+			
+			$req = mysql_query("SELECT user_id, SUM(likes) as likes, SUM(reposts) as reposts, SUM(comments) as comments, COUNT(*) as c 
+				FROM `vk_posts_reposts` WHERE group_id = -$gid GROUP BY user_id");
+			while ($row = mysql_fetch_assoc($req)) {
+				if ($row['c'] > 0) {
+					$users[] = $row['user_id'];
+					$stat['reposts'][] = $row;
+				}
+			}
+			mysql_free_result($req);
+			$users = array_unique($users);
+			
+			$req = mysql_query("SELECT user_id, COUNT(*) as c FROM `vk_posts_likes` as a WHERE 
+				EXISTS(select 0 from vk_join_stat as b WHERE b.uid = a.user_id AND b.cid = $gid) AND group_id = -$gid GROUP BY user_id");
+			while ($row = mysql_fetch_assoc($req)) {
+				if ($row['c'] > 0) {
+					$users[] = $row['user_id'];
+					$stat['likes'][] = $row;
+				}
+			}
+			mysql_free_result($req);
+			$users = array_unique($users);
+			
+			$req = mysql_query("SELECT user_id, COUNT(*) as c
+				FROM `vk_posts_comments` WHERE group_id = -$gid GROUP BY user_id");
+			while ($row = mysql_fetch_assoc($req)) {
+				if ($row['c'] > 0) {
+					$users[] = $row['user_id'];
+					$stat['comments'][] = $row;
+				}
+			}
+			mysql_free_result($req);
+			$users = array_unique($users);
+			
+			$join_data = array();
+			if ($users) {
+				$users = array_unique($users);
+				$req = mysql_query("SELECT * FROM `vk_join_stat` WHERE uid IN(".implode(", ", $users).") AND cid = $gid GROUP BY uid ORDER BY id DESC");
+				while ($row = mysql_fetch_assoc($req))
+					$join_data[$row['uid']] = $row;
+			}
+			
+			unset($s);
+			foreach ($stat as &$s) {
+				foreach ($s as $i => $row) {
+					if ($filter == 'leaved' && (!isset($join_data[$row['user_id']]) || $join_data[$row['user_id']]['type']))
+						unset($s[$i]);
+				}
+			}
+			unset($s);
+			
+			unset($s);
+			foreach ($stat as &$s) {
+				usort($s, function (&$a, &$b) {
+					return $b['c'] - $a['c'];
+				});
+				$s = array_slice($s, 0, 200);
+			}
+			unset($s);
+			
+			$users_data = get_vk_users($users);
+			$users_widgets = array();
+			foreach ($users_data as $user)
+				$users_widgets[$user_id] = vk_user_widget($user);
+			
+			mk_page(array(
+				'title' => 'Пользователи', 
+				'content' => Tpl::render("users_top_list.html", array(
+					'tabs' => switch_tabs(array(
+						'all' => array('Все', '?a=users&filter=all'), 
+						'leaved' => array('Покинувшие', '?a=users&filter=leaved'), 
+					), $filter), 
+					'filter' => $filter, 
+					'stat' => &$stat, 
+					'join_stat' => &$join_data, 
+					'users' => $users_data, 
+					'users_widgets' => $users_widgets, 
+					'comm_tabs' => switch_tabs($comm_tabs, $gid)
+				))
+			));
+		break;
+		
 		case "fix_timeout":
 			$output = array();
 			fix_comments_timeout($q, $gid, $comm, $output);
@@ -119,15 +401,6 @@
 		default:
 			$filter = isset($_REQUEST['filter']) ? preg_replace("/[^a-z0-9_-]+/i", "", $_REQUEST['filter']) : 'new';
 			
-			$req = mysql_query("SELECT id FROM `vk_suggests_queue` WHERE gid = $gid AND time_posted = 0");
-			$queue = array();
-			while ($res = mysql_fetch_assoc($req))
-				$queue[$res['id']] = true;
-			$total_accpeted = count($queue);
-			
-			$req = mysql_query("SELECT COUNT(*) FROM `vk_suggests_cancel` WHERE gid = $gid");
-			$total_canceled = mysql_result($req, 0);
-			
 			$res = get_comments($q, $gid);
 			
 			$invalid_interval_cnt = 0;
@@ -163,11 +436,10 @@
 				$json[$item->id] = get_post_json($item);
 				$comments[] = Tpl::render("comment.html", array(
 					'date' => display_date($item->date), 
-					'text' => nl2br(links(htmlspecialchars($item->text, ENT_QUOTES))), 
+					'text' => nl2br(links(check_spell(htmlspecialchars($item->text, ENT_QUOTES)))), 
 					'id' => $item->id, 
 					'gid' => abs($item->owner_id), 
 					'user' => vk_user_widget($users[isset($item->created_by) && $item->created_by ? $item->created_by : $item->from_id]), 
-					'state' => isset($queue[$item->id]), 
 					'deleted' => false, 
 					'invalid' => isset($item->invalid) ? -$item->invalid : false, 
 					'post_type' => $item->post_type, 
@@ -485,7 +757,8 @@
 			"video" => "video", 
 			"doc" => "doc", 
 			"audio" => "audio", 
-			"poll" => "poll"
+			"poll" => "poll", 
+			"album" => "album"
 		);
 		$out = array(
 			'lat' => 0, 
@@ -537,12 +810,91 @@
 		);
 	}
 	
-	function vk_user_widget($user) {
+	function check_spell($text) {
+		if (function_exists('pspell_new')) {
+			$errors = array();
+			$text = preg_replace_callback("/([a-zа-яё][a-zа-яё'-]+[a-zа-яё]|[a-zа-яё]+)/siu", function ($m) {
+				$lang = "en";
+				if (preg_match("/[а-яё]/iu", $m[1]))
+					$lang = "ru";
+				
+				if ($lang != "ru")
+					return $m[1];
+				
+				if (!isset($psell[$lang]))
+					$psell[$lang] = pspell_new($lang);
+				
+				if (!pspell_check($psell[$lang], $m[1])) {
+					$errors = pspell_suggest($psell[$lang], $m[1]);
+					return '<span class="spell" title="'.implode(", ", $errors).'">'.$m[1].'</span>';
+				}
+				return $m[1];
+			}, $text);
+		}
+		return $text;
+	}
+	
+	function get_vk_users($need_users) {
+		$cache = array();
+		$users = array();
+		
+		$cache_file = "tmp/vk_users_stat.dat";
+		$need_users = array_unique($need_users);
+		
+		if (file_exists($cache_file)) {
+			$fp = fopen($cache_file, "r");
+			flock($fp, LOCK_EX);
+			
+			$data = "";
+			while (!feof($fp))
+				$data .= fread($fp, 2048);
+			flock($fp, LOCK_UN);
+			fclose($fp);
+			
+			$cache = unserialize($data);
+		}
+		
+		while (count($need_users)) {
+			$users_list = array();
+			for ($i = 0; $i < 500; ++$i)
+				$users_list[] = array_pop($need_users);
+			
+			$not_found = array();
+			foreach ($users_list as $id) {
+				if (!isset($cache[$id])) {
+					$not_found[] = $id;
+					continue;
+				}
+				$users[$id] = $cache[$id];
+			}
+			
+			if ($not_found) {
+				$vk_users = vk("users.get", array('user_ids' => implode(",", $not_found), 'fields' => 'sex,photo_50,bdate,verified'))->response;
+				foreach ($vk_users as $u) {
+					$users[$u->id] = $u;
+					$cache[$u->id] = $u;
+				}
+				file_put_contents($cache_file, serialize($cache));
+			}
+			unset($vk_users);
+		}
+		
+		$fp = fopen($cache_file, "w");
+		flock($fp, LOCK_EX);
+		ftruncate($fp, 0);
+		fwrite($fp, serialize($cache));
+		flock($fp, LOCK_UN);
+		fclose($fp);
+		
+		return $users;
+	}
+	
+	function vk_user_widget($user, $link = NULL) {
 		return array(
 			'widget' => Tpl::render("vk_user.html", array(
 				'name' => $user->first_name." ".$user->last_name, 
 				'preview' => $user->photo_50, 
-				'link' => "https://vk.com/".(isset($user->screen_name) && strlen($user->screen_name) ? $user->screen_name : 'id'.$user->id)
+				'link' => $link ? $link : "https://vk.com/".(isset($user->screen_name) && strlen($user->screen_name) ? $user->screen_name : 'id'.$user->id)
 			)), 
 			'avatar' => Tpl::render("vk_user_ava.html", array(
 				'preview' => $user->photo_50

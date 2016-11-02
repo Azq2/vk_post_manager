@@ -143,6 +143,23 @@ $(function () {
 		});
 	});
 	
+	var last_user_search;
+	$('.js-search_user_wrap button').on('click', function (e) {
+		var el = $(this), 
+			wrap = el.parents('.js-search_user_wrap'), 
+			input = wrap.find('.js-search_user'), 
+			list = wrap.find('.js-search_user_list');
+		
+		if (last_user_search)
+			last_user_search.cancel();
+		
+		var q = $.trim(input.val());
+		last_user_search = $.get("?a=search_users", {q: q}, function (res) {
+			last_user_search = null;
+			list.html(res.list ? res.list : 'Ничего не найдено?');
+		});
+	});
+	
 	$('#group_settings').on('change click keyup keydown', 'input', function () {
 		recalc_freq_settings();
 		$('#group_settings').find('.js-btn_save').show();

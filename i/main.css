@@ -186,3 +186,9 @@ li {
 	background: #6CA8AC;
 	color: #fff;
 }
+
+.spell {
+	display: inline-block;
+	position: relative;
+	background: url(wave.gif) bottom repeat-x;
+}

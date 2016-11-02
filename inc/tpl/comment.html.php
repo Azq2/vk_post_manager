@@ -18,7 +18,7 @@
 				<div class="post-text">
 					<?php if ($post_type == 'suggest'): ?>
 					<a href="#" class="js-post_edit m right">
-						<img src="http://s.spac.me/i/edit_info.png" alt="" class="m" />
+						<img src="//s.spac.me/i/edit_info.png" alt="" class="m" />
 					</a>
 					<?php endif; ?>
 					<?= $text ?>
@@ -33,7 +33,7 @@
 					<div class="post-attach js-attach_geo">
 						<?php if ($post_type == 'suggest'): ?>
 						<a href="#" style="float: right; padding: 10px" class="js-attach_delete" data-id="geo">
-							<img src="http://s.spac.me/i/remove.png" alt="" />
+							<img src="//s.spac.me/i/remove.png" alt="" />
 						</a>
 						<?php endif; ?>
 						GEO: <?= $geo->coordinates ?><br />
@@ -53,12 +53,17 @@
 						<div class="post-attach js-attach_<?= htmlspecialchars($att_id) ?>">
 						<?php if ($post_type == 'suggest'): ?>
 							<a href="#" style="float: right; padding: 10px" class="js-attach_delete" data-id="<?= htmlspecialchars($att_id) ?>">
-								<img src="http://s.spac.me/i/remove.png" alt="" />
+								<img src="//s.spac.me/i/remove.png" alt="" />
 							</a>
 						<?php endif; ?>
 						<?php if ($att->type == 'photo'): ?>
 							<a href="<?= $att->photo->photo_604 ?>" target="_blank">
 								<img src="<?= $att->photo->photo_130 ?>" alt="" />
+							</a>
+						<?php elseif ($att->type == 'album'): ?>
+							<b>Альбом фото:</b> <a href="https://vk.com/<?= $att_id ?>" target="_blank"><?= htmlspecialchars($att->album->title) ?></a><br />
+							<a href="https://vk.com/<?= $att_id ?>" target="_blank">
+								<img src="<?= $att->album->thumb->photo_130 ?>" alt="" />
 							</a>
 						<?php elseif ($att->type == 'video'): ?>
 							<b>Видео:</b> <?= htmlspecialchars($att->video->title) ?><br />

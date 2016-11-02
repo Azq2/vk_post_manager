@@ -8,7 +8,7 @@
 		
 		<link rel="stylesheet" media="screen" type="text/css" href="i/main.css?<?= time(); ?>" />
 		
-		<script src="http://code.jquery.com/jquery-1.9.1.js"></script>
+		<script src="//code.jquery.com/jquery-1.9.1.js"></script>
 		<script type="text/javascript" src="i/main.js?<?= time(); ?>"></script>
 	</head>
 	
