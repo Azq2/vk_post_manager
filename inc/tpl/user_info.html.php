@@ -1,4 +1,3 @@
-<?= $comm_tabs ?>
 
 <div class="js-search_user_wrap">
 	<input type="text" class="js-search_user" style="width: 70%" value="" placeholder="Поиска пользователя" />

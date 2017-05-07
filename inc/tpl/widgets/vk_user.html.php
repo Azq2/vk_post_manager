@@ -1,0 +1,1 @@
+<a href="<?= $link ?>" target="_blank" class="post-author"><b><?= $name ?></b></a>

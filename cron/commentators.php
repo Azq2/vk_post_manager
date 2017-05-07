@@ -1,5 +1,5 @@
 <?php
-require "../inc/init.php";
+require dirname(__FILE__)."/../inc/init.php";
 $q = new Http;
 
 $re22q = mysql_query("SELECT * FROM `vk_groups` ORDER BY pos ASC");

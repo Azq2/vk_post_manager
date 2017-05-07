@@ -1,0 +1,1 @@
+<img src="<?= $preview ?>" alt="" width="50" height="50" />

@@ -1,11 +1,7 @@
 
 <style>.main { max-width: 900px; }</style>
 
-<div class="rows">
-	<?= $comm_tabs ?>
-</div>
-
-<div class="rows">
+<div class="row">
 	<?= $tabs ?>
 </div>
 

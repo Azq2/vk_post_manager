@@ -1,8 +1,4 @@
 
-<div class="rows">
-	<?= $comm_tabs ?>
-</div>
-
 <table>
 	<tr>
 		<th>Чел</th>

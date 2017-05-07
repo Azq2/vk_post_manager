@@ -9,3 +9,5 @@ ini_set('memory_limit', '128M');
 mysql_select_db(DB_NAME) or die("mysql_select_db: ".mysql_error());
 mysql_set_charset('UTF8');
 date_default_timezone_set('Europe/Moscow');
+
+define_oauth();

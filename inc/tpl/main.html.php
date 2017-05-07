@@ -8,8 +8,8 @@
 		
 		<link rel="stylesheet" media="screen" type="text/css" href="i/main.css?<?= time(); ?>" />
 		
-		<script src="//code.jquery.com/jquery-1.9.1.js"></script>
-		<script type="text/javascript" src="i/main.js?<?= time(); ?>"></script>
+		<script src="i/lib/jquery.min.js"></script>
+		<script type="text/javascript" src="i/functions.js?<?= time(); ?>"></script>
 	</head>
 	
 	<body>
@@ -19,7 +19,17 @@
 					
 				</div>
 			</div>
-			<?= $content ?>
+			
+			<div class="row">
+				<?= $sections_tabs ?>
+				<div class="pad_t">
+					<?= $comm_tabs ?>
+				</div>
+			</div>
+			
+			<div class="content">
+				<?= $content ?>
+			</div>
 		</div>
 	</body>
 </html>
