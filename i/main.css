@@ -256,11 +256,41 @@ table, td, th, tr {
 .post-pic {
 	padding: 3px 0
 }
+
+.post-doc_title {
+	padding: 4px 4px;
+	text-align: left;
+	color: #fff;
+	position: absolute;
+	bottom: 0;
+	background: rgba(0,0,0,0.5);
+	left: 0;
+	right: 0;
+	word-wrap: break-word;
+}
+
+.post-doc_play {
+	width: 64px;
+	height: 64px;
+	position: absolute;
+	top: 50%;
+	left: 50%;
+	margin-left: -32px;
+	margin-top: -32px;
+	opacity: 0.9;
+}
+
 .post-pic .preview {
 	box-shadow: #cecece 0px 0px 1px 0px;
 }
 .post-author {
 	color: #2a5885
+}
+.post-author-OK {
+	color: #ee8208
+}
+.post-author-OK:hover {
+	text-decoration: underline
 }
 .post-pic .post-attach_remove {
 	position: absolute;

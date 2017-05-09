@@ -104,7 +104,7 @@ switch ($action) {
 							'client_id'		=> VK_APP_ID, 
 							'redirect_uri'	=> 'https://oauth.vk.com/blank.html', 
 							'display'		=> 'mobile', 
-							'scope'			=> 'offline wall groups photos', 
+							'scope'			=> 'offline wall groups photos docs', 
 							'response_type'	=> 'code'
 						]), 
 						'ok_oauth' => 'https://connect.ok.ru/oauth/authorize?'.http_build_query([
@@ -124,18 +124,9 @@ switch ($action) {
 	
 	case "grabber":
 		$sub_action = array_val($_GET, 'sa', '');
-		$sort = array_val($_GET, 'sort', 'DESC');
-		$mode = array_val($_GET, 'mode', 'external');
-		$content_filter = array_val($_GET, 'content', 'pics');
-		
-		if ($mode != "internal")
-			$mode = "external";
-		
-		if ($sort != "ASC" && $sort != "RAND")
-			$sort = "DESC";
-		
-		if ($content_filter != "all")
-			$content_filter = "pics";
+		$sort = array_val($_REQUEST, 'sort', 'DESC');
+		$mode = array_val($_REQUEST, 'mode', 'external');
+		$content_filter = array_val($_REQUEST, 'content', 'pics');
 		
 		$sources = [];
 		$req = mysql_query("SELECT * FROM `vk_grabber_sources` WHERE group_id = $gid ORDER BY id DESC");
@@ -185,55 +176,150 @@ switch ($action) {
 		
 		switch ($sub_action) {
 			case "blacklist":
-				$blacklist_id = isset($_POST['blacklist']) ? $_POST['blacklist'] : '';
-				if ($blacklist_id) {
-					mysql_query("INSERT IGNORE INTO `vk_grabber_blacklist` SET group_id = $gid, 
-						object = '".mysql_real_escape_string($blacklist_id)."'");
+				$source_id = isset($_POST['source_id']) ? $_POST['source_id'] : '';
+				$source_type = isset($_POST['source_type']) ? $_POST['source_type'] : '';
+				$remote_id = isset($_POST['remote_id']) ? $_POST['remote_id'] : '';
+				
+				if ($source_id && $source_type && $remote_id) {
+					mysql_query("
+						INSERT IGNORE INTO `vk_grabber_blacklist` SET
+							group_id = $gid, 
+							source_id = '".mysql_real_escape_string($source_id)."', 
+							source_type = '".mysql_real_escape_string($source_type)."', 
+							remote_id = '".mysql_real_escape_string($remote_id)."'
+					");
 				}
 				mk_ajax(['success' => true]);
+				exit;
+			break;
+			
+			case "load":
+				$O = isset($_REQUEST['O']) ? (int) $_REQUEST['O'] : 0;
+				$L = isset($_REQUEST['L']) ? (int) $_REQUEST['L'] : 10;
+				
+				$where = [];
+				$order = '';
+				
+				$sources_where = [];
+				foreach ($sources as $s) {
+					$sources_where[] = "(d.`source_id` = '".mysql_real_escape_string($s['id'])."' AND
+						d.`source_type` = '".mysql_real_escape_string($s['type'])."')";
+				}
+				
+				// Фильтр по типу контента
+				if ($content_filter == 'pics')
+					$where[] = '(d.`images_cnt` > 0 OR d.`gifs_cnt` > 0)';
+				elseif ($content_filter == 'only_gif')
+					$where[] = 'd.`gifs_cnt` > 0';
+				elseif ($content_filter == 'without_gif')
+					$where[] = 'd.`images_cnt` > 0';
+				
+				if ($sort == 'DESC') {
+					$order = 'ORDER BY d.`time` DESC';
+				} else if ($sort == 'ASC') {
+					$order = 'ORDER BY d.`time` ASC';
+				} else if ($sort == 'RAND') {
+					if (isset($_REQUEST['exclude'])) {
+						$exclude = [];
+						foreach (explode(",", $_REQUEST['exclude']) as $t)
+							$exclude[] = "'".mysql_real_escape_string($t)."'";
+						if ($exclude)
+							$where[] = 'CONCAT(d.`source_type`, "_", d.`remote_id`) NOT IN ('.implode(", ", $exclude).')';
+					}
+					$order = 'ORDER BY RAND()';
+				} else if ($sort == 'LIKES') {
+					$order = 'ORDER BY d.`likes` DESC';
+				} else if ($sort == 'REPOSTS') {
+					$order = 'ORDER BY d.`reposts` DESC';
+				} else if ($sort == 'COMMENTS') {
+					$order = 'ORDER BY d.`comments` DESC';
+				}
+				
+				if ($mode == 'internal') {
+					// Из своего сообщества
+					$where[] = '(d.`source_type` = "VK" AND d.`source_id` = -'.$gid.')';
+				} else {
+					// Из чужих сообществ
+					if ($sources_where)
+						$where[] = '('.implode(" OR ", $sources_where).')';
+				}
+				
+				$where[] = 'NOT EXISTS (
+					SELECT 0 FROM `vk_grabber_blacklist` as b WHERE
+						b.group_id = '.$gid.' AND
+						b.source_id = d.source_id AND
+						b.source_type = d.source_type AND
+						b.remote_id = d.remote_id
+				)';
+				
+				$sql = "
+					SELECT SQL_CALC_FOUND_ROWS d.*, o.name as owner_name, o.url as owner_url, o.avatar as owner_avatar FROM `vk_grabber_data` as `d`
+						INNER JOIN `vk_grabber_data_owners` as `o` ON
+							o.id = CONCAT(d.source_type, '_', d.owner)
+						".($where ? "WHERE ".implode(" AND ", $where) : "")."
+					$order
+					LIMIT $O, $L
+				";
+				
+				$req = mysql_query($sql);
+				if (!$req) {
+					mk_ajax([
+						'success' 	=> false, 
+						'sql'		=> $sql, 
+						'error'		=> mysql_error()
+					]);
+					exit;
+				}
+				
+				$req2 = mysql_query("SELECT FOUND_ROWS()");
+				$count = mysql_result($req2, 0);
+				
+				$items = [];
+				while ($res = mysql_fetch_assoc($req)) {
+					$res['attaches'] = unserialize(gzinflate($res['attaches']));
+					$items[] = $res;
+				}
+				mk_ajax(['success' => true, 'sql' => preg_replace("/\s+/", " ", $sql), 'items' => $items, 'total' => (int) $count]);
+				exit;
+			break;
+			
+			case "queue_done":
+				$id = isset($_REQUEST['id']) ? preg_replace("/[^a-f0-9]/", "", $_REQUEST['id']) : '';
+				$out = [];
+				if (file_exists(H.'../tmp/post_queue/'.$id)) {
+					$status = json_decode(file_get_contents(H.'../tmp/post_queue/'.$id), true);
+					if (isset($status['out'], $status['out']['error'])) {
+						$out['error'] = $status['out']['error'];
+					} elseif (isset($status['attaches'])) {
+						// Добавляем пост
+						add_queued_wall_post($out, $status['attaches'], $status['text']);
+					} else {
+						$out['queue'] = $status;
+					}
+				} else {
+					$out['error'] = 'Очередь скачивания файла уже удалена. ('.$id .')';
+				}
+				mk_ajax($out);
 				exit;
 			break;
 			
 			case "queue":
 				$out = [];
 				$text = isset($_POST['text']) ? $_POST['text'] : '';
-				$blacklist_id = isset($_POST['blacklist']) ? $_POST['blacklist'] : '';
-				if (isset($_POST['images']) && is_array($_POST['images'])) {
-					foreach ($_POST['images'] as $img) {
-						$data = file_get_contents($img);
-						if ($data) {
-							$file = "tmp/pic_".md5($img).".png";
-							$fp = fopen($file, "w");
-							if ($fp) {
-								flock($fp, LOCK_EX);
-								fwrite($fp, $data);
-								flock($fp, LOCK_UN);
-								fclose($fp);
-								
-								$images[] = [
-									'path' => $file, 
-									'caption' => ''
-								];
-							} else {
-								$out['error'] = 'fopen('.$file.')';
-								break;
-							}
-						} else {
-							$out['error'] = 'file_get_contents('.$img.')';
-							break;
-						}
-					}
+				
+				if (isset($_POST['documents']) || isset($_POST['images'])) {
+					$msg = json_encode([
+						'images'	=> isset($_POST['images']) ? $_POST['images'] : [], 
+						'documents'	=> isset($_POST['documents']) ? $_POST['documents'] : [], 
+						'text'		=> $text, 
+						'gid'		=> $gid
+					]);
+					
+					file_put_contents(H.'../tmp/post_queue/'.md5($msg), $msg);
+					
+					$out['id'] = md5($msg);
+					$out['success'] = true;
 				}
-				
-				save_pic_post($out, $images, $text);
-				
-				if (!isset($out['error']) && $blacklist_id) {
-					mysql_query("INSERT IGNORE INTO `vk_grabber_blacklist` SET group_id = $gid, 
-						object = '".mysql_real_escape_string($blacklist_id)."'");
-				}
-				
-				foreach ($images as $img)
-					@unlink($img['path']);
 				
 				mk_ajax($out);
 				exit;
@@ -306,7 +392,7 @@ switch ($action) {
 							'group_ids'	=> $group_id
 						));
 						if (isset($res->response) && $res->response) {
-							$source_id = $res->response[0]->id;
+							$source_id = -$res->response[0]->id;
 							$source_type = 'VK';
 							$source_name = $res->response[0]->name;
 						} else if (isset($res->error)) {
@@ -346,7 +432,7 @@ switch ($action) {
 			if ($s['type'] == 'OK') {
 				$url = 'https://ok.ru/group/'.$s['id'];
 			} else if ($s['type'] == 'VK') {
-				$url = 'https://vk.com/public'.$s['id'];
+				$url = 'https://vk.com/public'.(-$s['id']);
 			}
 			
 			$view['sources'][] = [
@@ -772,15 +858,14 @@ switch ($action) {
 				$out['fatal'] = true;
 				$out['error'] = 'Что за дичь? Не очень похоже на пикчу с котиком.';
 			} else {
-				save_pic_post($out, [
-					[
-						'path'		=> $_FILES['file']['tmp_name'], 
-						'caption'	=> isset($_POST['caption']) ? $_POST['caption'] : ""
-					]
-				], isset($_POST['message']) ? $_POST['message'] : "");
+				$attachments = pics_uploader($out, $q, $gid, [
+					'path'		=> $_FILES['file']['tmp_name'], 
+					'caption'	=> isset($_POST['caption']) ? $_POST['caption'] : ""
+				]);
+				add_queued_wall_post($out, $attachments, isset($_POST['message']) ? $_POST['message'] : "");
 			}
 			
-			echo json_encode($out);
+			mk_ajax($out);
 			exit;
 		}
 		
@@ -892,77 +977,32 @@ switch ($action) {
 	break;
 }
 
-function save_pic_post(&$out, $images, $text) {
+function add_queued_wall_post(&$out, $attachments, $text) {
 	global $q, $gid, $comm;
 	
-	$res = $q->vkApi("photos.getWallUploadServer", array(
-		'group_id' => $gid
-	));
-	if (($error = vk_api_error($res))) {
-		$out['error'] = $error;
-	} else if (!isset($res->response->upload_url)) {
-		$out['error'] = "upload_url не найден :(";
-	} else {
-		if (!$images)
-			$out['error'] = "А где же картинки?!??!";
+	if (!isset($out['error'])) {
+		$comments = get_comments($q, $gid);
 		
-		$attachments = [];
-		foreach ($images as $i => $img) {
-			$upload_raw = $q->vkApiUpload($res->response->upload_url, [
-				['path' => $img['path'], 'name' => "cat.jpg"]
-			])->body;
-			$upload = @json_decode($upload_raw);
-			
-			if (!$upload_raw) {
-				$out['error'] = "Ошибка подключения к UPLOAD серверу при загрузке фото #$i! (path: ".$img['path'].", server: ".$res->response->upload_url.")";
-				break;
-			} else if (!$upload) {
-				$out['error'] = '<pre>'.htmlspecialchars($upload_raw).'</pre>';
-				break;
-			} else if ($upload->photo == "[]") {
-				$out['error'] = "Сервер не отдал фотографию для #$i! <pre>".htmlspecialchars($upload_raw).'</pre>';
-				break;
-			} else {
-				$file = $q->vkApi("photos.saveWallPhoto", array(
-					'group_id'		=> $gid, 
-					'photo'			=> stripcslashes($upload->photo), 
-					'server'		=> $upload->server, 
-					'hash'			=> $upload->hash, 
-					'caption'		=> isset($img['caption']) ? $img['caption'] : ""
-				));
-				if (!isset($file->response) || !$file->response) {
-					$out['error'] = "Ошибка сохранения фото #$i в стене!!!";
-					break;
-				} else {
-					$attachments[] = 'photo'.$file->response[0]->owner_id.'_'.$file->response[0]->id;
-				}
-			}
-		}
+		$base_time = max($comments->lastPosted, $comments->lastPostponed);
+		$post_time = get_post_time($base_time, $comm, $comments->lastSpecial);
 		
-		if (!isset($out['error'])) {
-			$comments = get_comments($q, $gid);
-			
-			$base_time = max($comments->lastPosted, $comments->lastPostponed);
-			$post_time = get_post_time($base_time, $comm, $comments->lastSpecial);
-			
-			$data = array(
-				'owner_id'		=> -$gid, 
-				'signed'		=> 0, 
-				'message'		=> $text, 
-				'attachments'	=> implode(",", $attachments)
-			);
-			
-			if ($post_time)
-				$data['publish_date'] = $post_time;
-			
-			$res = $q->vkApi("wall.post", $data);
-			if (($error = vk_api_error($res))) {
-				$out['error'] = $error;
-				$out['data'] = $data;
-			} else {
-				$out['link'] = 'https://vk.com/wall-'.$gid.'_'.$res->response->post_id;
-				$out['date'] = display_date($post_time);
-			}
+		$data = array(
+			'owner_id'		=> -$gid, 
+			'signed'		=> 0, 
+			'message'		=> $text, 
+			'attachments'	=> implode(",", $attachments)
+		);
+		
+		if ($post_time)
+			$data['publish_date'] = $post_time;
+		
+		$res = $q->vkApi("wall.post", $data);
+		if (($error = vk_api_error($res))) {
+			$out['error'] = $error;
+			$out['data'] = $data;
+		} else {
+			$out['link'] = 'https://vk.com/wall-'.$gid.'_'.$res->response->post_id;
+			$out['date'] = display_date($post_time);
 		}
 	}
 	$out['success'] = !isset($out['error']);
@@ -1216,27 +1256,6 @@ function fix_comments_timeout($q, $gid, $comm, &$output) {
 	exit;
 }
 
-function parse_vk_error($res, &$output) {
-	if ($res && isset($res->response))
-		return true;
-	if ($res && isset($res->error)) {
-		if ($res->error->error_code == 6) {
-			$output['sleep'] = true;
-			$output['error'] = $res->error->error_msg;
-		} elseif ($res->error->error_code == 14) {
-			$output['captcha'] = array(
-				'url' => $res->error->captcha_img, 
-				'sid' => $res->error->captcha_sid
-			);
-		} else {
-			$output['error'] = $res->error->error_msg;
-		}
-	} elseif (!$res || !isset($res->response)) {
-		$output['error'] = "VK API недоступен. ".json_encode($res);
-	}
-	return false;
-}
-
 function get_comments($q, $gid) {
 	$code = '
 		var postponed = API.wall.get({
@@ -1329,31 +1348,6 @@ function get_wall_comments($q, $gid, $filter) {
 	foreach ($res->response->items as $c)
 		$comments[$u->id] = $c;
 	return (object) array('items' => $comments, 'users' => $users);
-}
-
-function mk_ajax($data) {
-	header("Content-Type: application/json; charset=UTF-8");
-	echo json_encode($data, JSON_PRETTY_PRINT);
-}
-
-function vk_api_error($res) {
-	if (!$res)
-		return "Ошибка подключения к API";
-	if (isset($res->error)) {
-		if ($res->error->error_code == 5) {
-			return "Ошибка авторизации API";
-		} else if ($res->error->error_code == 14) {
-			$ret->captcha = array(
-				'img' => $res->error->captcha_img, 
-				'sid' => $res->error->captcha_sid
-			);
-			return "Нужно ввести капчу";
-		}
-		return $res->error->error_msg;
-	}
-	if (!isset($res->response))
-		return "Неверный ответ API!";
-	return false;
 }
 
 function get_post_json($post) {

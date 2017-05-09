@@ -127,27 +127,6 @@
 </div>
 
 <div class="wrapper">
-	<div id="vk_oauth" class="row hide">
-		<a href="#vk_oauth" class="js-vk_oauth">
-			<img src="https://vk.com/favicon.ico" width="16" height="16" alt="<?= $s['type'] ?>" class="m" />
-			<span class="m">Войди в ВК, что бы грабить илитные корованы</span>
-		</a>
-	</div>
-	
-	<div id="vk_oauth_ok" class="row hide">
-		<a href="#vk_oauth" class="js-vk_oauth" data-exit="1">
-			<img src="https://vk.com/favicon.ico" width="16" height="16" alt="<?= $s['type'] ?>" class="m" />
-			<span class="m">Выйти с грабителя <span id="vk_oauth_name"></span></span>
-		</a>
-	</div>
-	
-	<div id="ok_oauth" class="row hide">
-		<a href="#ok_oauth" class="js-ok_oauth">
-			<img src="https://ok.ru/favicon.ico" width="16" height="16" alt="<?= $s['type'] ?>" class="m" />
-			<span class="m">Войди в OK, что бы грабить аццтойные корованы</span>
-		</a>
-	</div>
-	
 	<div class="row center grey" id="garbber_init_spinner">
 		<img src="//s.spac.me/i/spinner2.gif" width="16" height="16" alt="" class="m" />
 		<span class="m">Продаём душу аццкой сотоне...</span>
@@ -161,7 +140,7 @@
 <div class="wrapper hide" id="garbber_posts_spinner">
 	<div class="row center grey">
 		<img src="//s.spac.me/i/spinner2.gif" width="16" height="16" alt="" class="m" />
-		<span class="m">Ищем ближайшие корованы... <span id="grabber_offset">дохуя</span> из <span id="grabber_total">нихуя</span></span>
+		<span class="m">Ищем ближайшие корованы...</span>
 	</div>
 </div>
 

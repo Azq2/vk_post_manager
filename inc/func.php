@@ -74,6 +74,123 @@ if (!function_exists('mysql_fetch_assoc')) {
 	}
 }
 
+function vk_api_error($res) {
+	if (!$res)
+		return "Ошибка подключения к API";
+	if (isset($res->error)) {
+		if ($res->error->error_code == 5) {
+			return "Ошибка авторизации API";
+		} else if ($res->error->error_code == 14) {
+			$ret->captcha = array(
+				'img' => $res->error->captcha_img, 
+				'sid' => $res->error->captcha_sid
+			);
+			return "Нужно ввести капчу";
+		}
+		return $res->error->error_msg;
+	}
+	if (!isset($res->response))
+		return "Неверный ответ API!";
+	return false;
+}
+
+function parse_vk_error($res, &$output) {
+	if ($res && isset($res->response))
+		return true;
+	if ($res && isset($res->error)) {
+		if ($res->error->error_code == 6) {
+			$output['sleep'] = true;
+			$output['error'] = $res->error->error_msg;
+		} elseif ($res->error->error_code == 14) {
+			$output['captcha'] = array(
+				'url' => $res->error->captcha_img, 
+				'sid' => $res->error->captcha_sid
+			);
+		} else {
+			$output['error'] = $res->error->error_msg;
+		}
+	} elseif (!$res || !isset($res->response)) {
+		$output['error'] = "VK API недоступен. ".json_encode($res);
+	}
+	return false;
+}
+
+function mk_ajax($data) {
+	header("Content-Type: application/json; charset=UTF-8");
+	echo json_encode($data, JSON_PRETTY_PRINT);
+}
+
+function pics_uploader(&$out, $q, $gid, $images, $progress = false) {
+	$upload_photos = $q->vkApi("photos.getWallUploadServer", array(
+		'group_id' => $gid
+	));
+	$upload_docs = $q->vkApi("docs.getWallUploadServer", array(
+		// 'group_id' => $gid
+	));
+	if (($error = vk_api_error($upload_photos)) || ($error = vk_api_error($upload_docs))) {
+		$out['error'] = $error;
+	} else if (!isset($upload_photos->response->upload_url) || !isset($upload_docs->response->upload_url)) {
+		$out['error'] = "upload_url не найден :(";
+	} else {
+		if (!$images)
+			$out['error'] = "А где же картинки?!??!";
+		
+		$attachments = [];
+		foreach ($images as $i => $img) {
+			$is_doc = isset($img['document']) && $img['document'];
+			
+			echo "size=".filesize($img['path'])." (".($is_doc ? 'DOC' : 'PIC').")\n";
+			
+			$upload_raw = $q->vkApiUpload($is_doc ? $upload_docs->response->upload_url : $upload_photos->response->upload_url, [
+				['path' => $img['path'], 'name' => $is_doc ? "image.gif" : "image.jpg", 'key' => $is_doc ? 'file' : 'photo']
+			])->body;
+			$upload = @json_decode($upload_raw);
+			
+			if (!$upload_raw) {
+				$out['error'] = "Ошибка подключения к UPLOAD серверу при загрузке ".($is_doc ? 'документа' : 'фото').
+					" #$i! (path: ".$img['path'].", server: ".$res->response->upload_url.")";
+				break;
+			} else if (!$upload) {
+				$out['error'] = '<pre>'.htmlspecialchars($upload_raw).'</pre>';
+				break;
+			} else if (isset($upload->error)) {
+				$out['error'] = "UPLOAD (gid=$gid) ".$upload->error;
+				break;
+			} else {
+				if ($is_doc) {
+					$file = $q->vkApi("docs.save", array(
+						'file'			=> $upload->file, 
+						'title'			=> isset($img['title']) ? $img['title'] : "", 
+						'tags'			=> isset($img['tags']) ? $img['tags'] : "", 
+					));
+				} else {
+					$file = $q->vkApi("photos.saveWallPhoto", array(
+						'group_id'		=> $gid, 
+						'photo'			=> stripcslashes($upload->photo), 
+						'server'		=> $upload->server, 
+						'hash'			=> $upload->hash, 
+						'caption'		=> isset($img['caption']) ? $img['caption'] : ""
+					));
+				}
+				if (!isset($file->response) || !$file->response) {
+					$out['error'] = "Ошибка сохранения ".($is_doc ? 'документа' : 'фото')." #$i в стене!!! $upload_raw";
+					break;
+				} else {
+					$att = $is_doc ? 
+						'doc'.$file->response[0]->owner_id.'_'.$file->response[0]->id : 
+						'photo'.$file->response[0]->owner_id.'_'.$file->response[0]->id;
+					$attachments[] = $att;
+					
+					if ($progress)
+						$progress($att);
+				}
+			}
+		}
+	}
+	
+	return $attachments;
+}
+
 function define_oauth() {
 	$types = ['VK' => 1, 'OK' => 1];
 	
@@ -346,7 +463,7 @@ class Url implements \ArrayAccess, \IteratorAggregate {
 		}
 		if ($this->fragment)
 			$url .= '#'.$this->fragment;
-		return $xhtml ? htmlspecialchars($url, true) : $url;
+		return $xhtml ? htmlspecialchars($url, ENT_QUOTES) : $url;
 	}
 	
 	public function getQuery() {
@@ -467,9 +584,10 @@ class Http {
 	public function vkApiUpload($url, $files = array()) {
 		$args = array(); $i = 0;
 		foreach ($files as $f) {
-			$args['file'.$i] = new CURLFile($f['path']);
+			$key = isset($f['key']) ? $f['key'] : 'file'.$i;
+			$args[$key] = new CURLFile($f['path']);
 			if (isset($f['name']))
-				$args['file'.$i]->setPostFilename($f['name']);
+				$args[$key]->setPostFilename($f['name']);
 			++$i;
 		}
 		return $this->exec($url, $args);
