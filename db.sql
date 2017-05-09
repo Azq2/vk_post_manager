@@ -1,5 +1,4 @@
 SET SQL_MODE = "NO_AUTO_VALUE_ON_ZERO";
-SET time_zone = "+00:00";
 
 CREATE TABLE `vk_comm_users` (
   `cid` int(10) UNSIGNED NOT NULL,
@@ -8,7 +7,31 @@ CREATE TABLE `vk_comm_users` (
 
 CREATE TABLE `vk_grabber_blacklist` (
   `group_id` int(10) UNSIGNED NOT NULL,
-  `object` varchar(255) NOT NULL
+  `source_id` varchar(64) NOT NULL,
+  `source_type` varchar(32) NOT NULL,
+  `remote_id` varchar(64) NOT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+
+CREATE TABLE `vk_grabber_data` (
+  `source_id` varchar(64) NOT NULL,
+  `source_type` varchar(32) NOT NULL,
+  `remote_id` varchar(64) NOT NULL,
+  `time` int(10) UNSIGNED NOT NULL,
+  `likes` int(10) UNSIGNED NOT NULL DEFAULT '0',
+  `reposts` int(10) UNSIGNED NOT NULL DEFAULT '0',
+  `comments` int(10) UNSIGNED NOT NULL DEFAULT '0',
+  `images_cnt` int(10) UNSIGNED NOT NULL DEFAULT '0',
+  `gifs_cnt` int(10) UNSIGNED NOT NULL DEFAULT '0',
+  `owner` varchar(255) DEFAULT NULL,
+  `text` text CHARACTER SET utf8mb4,
+  `attaches` longblob
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+
+CREATE TABLE `vk_grabber_data_owners` (
+  `id` varchar(255) NOT NULL,
+  `name` varchar(1024) NOT NULL,
+  `url` varchar(1024) NOT NULL,
+  `avatar` varchar(1024) NOT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 
 CREATE TABLE `vk_grabber_sources` (
@@ -82,11 +105,21 @@ CREATE TABLE `vk_special_posts` (
   `group_id` int(11) NOT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 
+
 ALTER TABLE `vk_comm_users`
   ADD PRIMARY KEY (`cid`,`uid`);
 
 ALTER TABLE `vk_grabber_blacklist`
-  ADD PRIMARY KEY (`group_id`,`object`);
+  ADD PRIMARY KEY (`group_id`,`source_id`,`source_type`,`remote_id`);
+
+ALTER TABLE `vk_grabber_data`
+  ADD PRIMARY KEY (`source_id`,`source_type`,`remote_id`) USING BTREE,
+  ADD KEY `time` (`time`),
+  ADD KEY `likes` (`likes`),
+  ADD KEY `reposts` (`reposts`);
+
+ALTER TABLE `vk_grabber_data_owners`
+  ADD PRIMARY KEY (`id`);
 
 ALTER TABLE `vk_grabber_sources`
   ADD PRIMARY KEY (`group_id`,`id`,`type`) USING BTREE;
@@ -118,6 +151,7 @@ ALTER TABLE `vk_posts_reposts`
 
 ALTER TABLE `vk_special_posts`
   ADD PRIMARY KEY (`post_id`,`group_id`);
+
 
 ALTER TABLE `vk_join_stat`
   MODIFY `id` int(10) UNSIGNED NOT NULL AUTO_INCREMENT;
