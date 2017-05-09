@@ -542,6 +542,12 @@ class Http {
 			$this->last_http_code." [".$this->last_http_redirect."]" : $this->last_http_code;
 	}
 	
+	public function timeout($connect, $download) {
+		curl_setopt($this->ch, CURLOPT_CONNECTTIMEOUT, $connect);
+		curl_setopt($this->ch, CURLOPT_TIMEOUT, $download);
+		return $this;
+	}
+	
 	public function exec($url, $post = array(), $xhr = false) {
 		if ($xhr) {
 			curl_setopt($this->ch, CURLOPT_HTTPHEADER, array(

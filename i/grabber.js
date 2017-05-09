@@ -487,6 +487,9 @@ function loadPosts() {
 			max_offset = res.total;
 			remote_topics_offset += LOAD_CHUNK;
 			
+			console.log(res.sql);
+			console.log('data: ' + res.time_data + ', list: ' + res.time_list);
+			
 			if (res.items.length) {
 				console.log("loaded " + res.items.length + "with chunk " + LOAD_CHUNK);
 				for (var i = 0; i < res.items.length; ++i) {

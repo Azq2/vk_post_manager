@@ -200,11 +200,15 @@ switch ($action) {
 				$where = [];
 				$order = '';
 				
-				$sources_where = [];
+				$sources_hash = [];
 				foreach ($sources as $s) {
-					$sources_where[] = "(d.`source_id` = '".mysql_real_escape_string($s['id'])."' AND
-						d.`source_type` = '".mysql_real_escape_string($s['type'])."')";
+					if ($s['enabled'])
+						$sources_hash[$s['type']][] = "'".mysql_real_escape_string($s['id'])."'";
 				}
+				
+				$sources_where = [];
+				foreach ($sources_hash as $type => $ids)
+					$sources_where[] = "(d.`source_type` = '".mysql_real_escape_string($type)."' AND d.`source_id` IN (".implode(",", $ids)."))\n";
 				
 				// Фильтр по типу контента
 				if ($content_filter == 'pics')
@@ -244,6 +248,7 @@ switch ($action) {
 						$where[] = '('.implode(" OR ", $sources_where).')';
 				}
 				
+				$time_list = microtime(true);
 				$where[] = 'NOT EXISTS (
 					SELECT 0 FROM `vk_grabber_blacklist` as b WHERE
 						b.group_id = '.$gid.' AND
@@ -253,9 +258,7 @@ switch ($action) {
 				)';
 				
 				$sql = "
-					SELECT SQL_CALC_FOUND_ROWS d.*, o.name as owner_name, o.url as owner_url, o.avatar as owner_avatar FROM `vk_grabber_data` as `d`
-						INNER JOIN `vk_grabber_data_owners` as `o` ON
-							o.id = CONCAT(d.source_type, '_', d.owner)
+					SELECT SQL_CALC_FOUND_ROWS d.* FROM `vk_grabber_data_index` as `d`
 						".($where ? "WHERE ".implode(" AND ", $where) : "")."
 					$order
 					LIMIT $O, $L
@@ -274,12 +277,43 @@ switch ($action) {
 				$req2 = mysql_query("SELECT FOUND_ROWS()");
 				$count = mysql_result($req2, 0);
 				
-				$items = [];
+				// Получаем массив id данных и 
+				$ids = [];
+				$meta = [];
 				while ($res = mysql_fetch_assoc($req)) {
-					$res['attaches'] = unserialize(gzinflate($res['attaches']));
-					$items[] = $res;
+					$ids[$res['data_id']] = 1;
+					$meta[$res['data_id']] = $res;
 				}
-				mk_ajax(['success' => true, 'sql' => preg_replace("/\s+/", " ", $sql), 'items' => $items, 'total' => (int) $count]);
+				mysql_free_result($req);
+				mysql_free_result($req2);
+				$time_list = microtime(true) - $time_list;
+				
+				$items = [];
+				if ($ids) {
+					// Получаем овнеров
+					$owners = [];
+					$req = mysql_query("SELECT * FROM `vk_grabber_data_owners`");
+					while ($res = mysql_fetch_assoc($req))
+						$owners[$res['id']] = $res;
+					mysql_free_result($req);
+					
+					$time_data = microtime(true);
+					$req = mysql_query("SELECT * FROM `vk_grabber_data` WHERE `id` IN (".implode(",", array_keys($ids)).")");
+					while ($res = mysql_fetch_assoc($req)) {
+						$res = array_merge($res, $meta[$res['id']]);
+						$owner = $owners[$res['source_type'].'_'.$res['owner']];
+						$res['owner_name'] = $owner['name'];
+						$res['owner_url'] = $owner['url'];
+						$res['owner_avatar'] = $owner['avatar'];
+						$res['attaches'] = unserialize(gzinflate($res['attaches']));
+						$items[] = $res;
+					}
+					mysql_free_result($req);
+					$time_data = microtime(true) - $time_data;
+				}
+				
+				mk_ajax(['success' => true, 'owners' => $owners, 'sql' => $sql, 'items' => $items, 'total' => (int) $count, 
+							'time_data' => $time_data, 'time_list' => $time_list]);
 				exit;
 			break;
 			

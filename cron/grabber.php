@@ -4,11 +4,11 @@ if (php_sapi_name() != "cli")
 
 require dirname(__FILE__)."/../inc/init.php";
 
-if (file_exists(H."../grabber_lock") && (isset($argv[1]) && $argv[1] != "lock")) {
+if (file_exists(H."../tmp/grabber_lock") && (isset($argv[1]) && $argv[1] != "lock")) {
 	echo "Lock file exists!";
 	exit;
 }
-file_put_contents(H."../grabber_lock", 1);
+file_put_contents(H."../tmp/grabber_lock", 1);
 
 $q = new Http;
 
@@ -16,10 +16,12 @@ $sources_hash = [];
 $req = mysql_query("SELECT * FROM `vk_grabber_sources`");
 while ($s = mysql_fetch_assoc($req)) {
 	$sources_hash[$s['type']][$s['id']] = 1;
-	$sources_hash['VK'][$s['group_id']] = 1; // Ещё и граббим свою группу
+	$sources_hash['VK'][-$s['group_id']] = 1; // Ещё и граббим свою группу
 }
 
 foreach ($sources_hash as $type => $type_sources) {
+	echo "======================== $type ========================\n";
+	
 	// Граббер VK
 	if ($type == 'VK') {
 		$api_limit = 25;
@@ -69,6 +71,7 @@ foreach ($sources_hash as $type => $type_sources) {
 							$ended[$gid] = true;
 						
 						$used_owners = [];
+						$good2 = 0;
 						foreach ($response->items as $item) {
 							$gifs_cnt = 0;
 							$images_cnt = 0;
@@ -249,39 +252,30 @@ foreach ($sources_hash as $type => $type_sources) {
 							
 							$used_owners[$item->owner_id] = 1;
 							
-							$req = mysql_query("SELECT EXISTS(SELECT 0 FROM `vk_grabber_data` WHERE 
-								`source_id` = '".mysql_real_escape_string($item->owner_id)."' AND 
-								`source_type` = '".mysql_real_escape_string($type)."'AND 
-								`remote_id` = '".mysql_real_escape_string($item->owner_id."_".$item->id)."')");
-							if (!mysql_result($req, 0))
+							$ok = insert_to_db((object) [
+								'source_id'			=> $item->owner_id, 
+								'source_type'		=> $type, 
+								'remote_id'			=> $item->owner_id."_".$item->id, 
+								
+								'text'				=> $item->text, 
+								'owner'				=> $item->owner_id, 
+								'attaches'			=> $attaches, 
+								
+								'time'				=> $item->date, 
+								'likes'				=> (isset($item->likes) ? $item->likes->count : 0), 
+								'comments'			=> (isset($item->comments) ? $item->comments->count : 0), 
+								'reposts'			=> (isset($item->reposts) ? $item->reposts->count : 0), 
+								'images_cnt'		=> $images_cnt, 
+								'gifs_cnt'			=> $gifs_cnt
+							]);
+							if ($ok) {
 								++$good;
-							
-							mysql_query("
-								INSERT INTO `vk_grabber_data` SET
-									`source_id`		= '".mysql_real_escape_string($item->owner_id)."', 
-									`source_type`	= '".mysql_real_escape_string($type)."', 
-									`remote_id`		= '".mysql_real_escape_string($item->owner_id."_".$item->id)."', 
-									`text`			= '".mysql_real_escape_string($item->text)."', 
-									`time`			= ".$item->date.", 
-									`likes`			= ".(isset($item->likes) ? $item->likes->count : 0).", 
-									`comments`		= ".(isset($item->comments) ? $item->comments->count : 0).", 
-									`reposts`		= ".(isset($item->reposts) ? $item->reposts->count : 0).", 
-									`images_cnt`	= $images_cnt, 
-									`gifs_cnt`		= $gifs_cnt, 
-									`owner`			= '".mysql_real_escape_string($item->owner_id)."', 
-									`attaches`		= '".mysql_real_escape_string(gzdeflate(serialize($attaches)))."'
-								ON DUPLICATE KEY UPDATE
-									`text`			= VALUES(`text`), 
-									`time`			= VALUES(`time`), 
-									`likes`			= VALUES(`likes`), 
-									`comments`		= VALUES(`comments`), 
-									`reposts`		= VALUES(`reposts`), 
-									`images_cnt`	= VALUES(`images_cnt`), 
-									`gifs_cnt`		= VALUES(`gifs_cnt`), 
-									`owner`			= VALUES(`owner`), 
-									`attaches`		= VALUES(`attaches`)
-							") or die("MYSQL ERROR: ".mysql_error());
+								++$good2;
+							}
 						}
+						
+						if (!$good2)
+							$ended[$gid] = true;
 						
 						foreach ($response->profiles as $item) {
 							if (!isset($used_owners[$item->id]))
@@ -336,11 +330,19 @@ foreach ($sources_hash as $type => $type_sources) {
 				if (isset($ended[$id]))
 					continue;
 				
-				$page_url = "https://ok.ru/group/$id/topics/?st.page=$page";
-				$dom = create_dom($q->exec($page_url)->body);
-				$main_xpath = new DOMXPath($dom);
-				
 				echo "COMM_ID: $id\n";
+				
+				$page_url = "https://ok.ru/group/$id/topics/?st.page=$page";
+				$q->timeout(10, 30);
+				while (true) {
+					$res = $q->exec($page_url);
+					if ($res->code == 200)
+						break;
+					echo "http err: ".$res->code."\n";
+					sleep(1);
+				}
+				$dom = create_dom($res->body);
+				$main_xpath = new DOMXPath($dom);
 				
 				$good2 = 0;
 				$title = false;
@@ -432,7 +434,15 @@ foreach ($sources_hash as $type => $type_sources) {
 					$likes = (int) preg_replace("/\D/", "", $likes->item(0)->textContent);
 					
 					// Получаем весь топик
-					$topic_dom = create_dom($q->exec("https://ok.ru/group/$id/topic/$topic_id")->body);
+					$q->timeout(10, 30);
+					while (true) {
+						$res = $q->exec("https://ok.ru/group/$id/topic/$topic_id");
+						if ($res->code == 200)
+							break;
+						echo "http err: ".$res->code."\n";
+						sleep(1);
+					}
+					$topic_dom = create_dom($res->body);
 					$xpath = new DOMXPath($topic_dom);
 					$item = $xpath->query("//div[@id='cnts_$topic_id']")->item(0);
 					
@@ -518,40 +528,26 @@ foreach ($sources_hash as $type => $type_sources) {
 						continue;
 					}
 					
-					$req = mysql_query("SELECT EXISTS(SELECT 0 FROM `vk_grabber_data` WHERE 
-						`source_id` = '".mysql_real_escape_string($id)."' AND 
-						`source_type` = '".mysql_real_escape_string($type)."' AND
-						`remote_id` = '".mysql_real_escape_string($topic_id)."')");
-					if (!mysql_result($req, 0)) {
+					$ok = insert_to_db((object) [
+						'source_id'			=> $id, 
+						'source_type'		=> $type, 
+						'remote_id'			=> $topic_id, 
+						
+						'text'				=> $text, 
+						'owner'				=> $reposts, 
+						'attaches'			=> $attaches, 
+						
+						'time'				=> $date, 
+						'likes'				=> $likes, 
+						'comments'			=> $comments, 
+						'reposts'			=> $reposts, 
+						'images_cnt'		=> $images_cnt, 
+						'gifs_cnt'			=> $gifs_cnt
+					]);
+					if ($ok) {
 						++$good;
 						++$good2;
 					}
-					
-					mysql_query("
-						INSERT INTO `vk_grabber_data` SET
-							`source_id`		= '".mysql_real_escape_string($id)."', 
-							`source_type` = '".mysql_real_escape_string($type)."', 
-							`remote_id`		= '".mysql_real_escape_string($topic_id)."', 
-							`text`			= '".mysql_real_escape_string($text)."', 
-							`time`			= ".$date.", 
-							`likes`			= ".$likes.", 
-							`comments`		= ".$comments.", 
-							`reposts`		= ".$reposts.", 
-							`images_cnt`	= $images_cnt, 
-							`gifs_cnt`		= $gifs_cnt, 
-							`owner`			= '".mysql_real_escape_string($id)."', 
-							`attaches`		= '".mysql_real_escape_string(gzdeflate(serialize($attaches)))."'
-						ON DUPLICATE KEY UPDATE
-							`text`			= VALUES(`text`), 
-							`time`			= VALUES(`time`), 
-							`likes`			= VALUES(`likes`), 
-							`comments`		= VALUES(`comments`), 
-							`reposts`		= VALUES(`reposts`), 
-							`images_cnt`	= VALUES(`images_cnt`), 
-							`gifs_cnt`		= VALUES(`gifs_cnt`), 
-							`owner`			= VALUES(`owner`), 
-							`attaches`		= VALUES(`attaches`)
-					") or die("MYSQL ERROR: ".mysql_error());
 					
 					echo "OK: #$topic_id\n";
 				}
@@ -565,7 +561,64 @@ foreach ($sources_hash as $type => $type_sources) {
 		}
 	}
 }
-unlink(H."../grabber_lock");
+unlink(H."../tmp/grabber_lock");
+
+function insert_to_db($data) {
+	$req = mysql_query("SELECT `data_id` FROM `vk_grabber_data_index` WHERE 
+		`source_id` = '".mysql_real_escape_string($data->source_id)."' AND 
+		`source_type` = '".mysql_real_escape_string($data->source_type)."' AND 
+		`remote_id` = '".mysql_real_escape_string($data->remote_id)."'");
+	if (!$req)
+		die("MYSQL ERROR 1: ".mysql_error());
+	
+	$data_id = mysql_num_rows($req) ? mysql_result($req, 0) : 0;
+	
+	$good = 0;
+	if (!$data_id) {
+		++$good;
+		mysql_query("
+			INSERT INTO `vk_grabber_data` SET
+				`text`			= '".mysql_real_escape_string($data->text)."', 
+				`owner`			= '".mysql_real_escape_string($data->owner)."', 
+				`attaches`		= '".mysql_real_escape_string(gzdeflate(serialize($data->attaches)))."'
+		") or die("MYSQL ERROR 2: ".mysql_error());
+		$data_id = mysql_insert_id();
+	} else {
+		mysql_query("
+			UPDATE `vk_grabber_data` SET
+				`text`			= '".mysql_real_escape_string($data->text)."', 
+				`owner`			= '".mysql_real_escape_string($data->owner)."', 
+				`attaches`		= '".mysql_real_escape_string(gzdeflate(serialize($data->attaches)))."'
+			WHERE
+				`id` = ".$data_id."
+		") or die("MYSQL ERROR 3: ".mysql_error());
+	}
+	
+	mysql_query("
+		INSERT INTO `vk_grabber_data_index` SET
+			`source_id`		= '".mysql_real_escape_string($data->source_id)."', 
+			`source_type`	= '".mysql_real_escape_string($data->source_type)."', 
+			`remote_id`		= '".mysql_real_escape_string($data->remote_id)."', 
+			`data_id`		= ".$data_id.", 
+			`time`			= ".$data->time.", 
+			`likes`			= ".$data->likes.", 
+			`comments`		= ".$data->comments.", 
+			`reposts`		= ".$data->reposts.", 
+			`images_cnt`	= ".$data->images_cnt.", 
+			`gifs_cnt`		= ".$data->gifs_cnt."
+		ON DUPLICATE KEY UPDATE
+			`data_id`		= VALUES(`data_id`), 
+			`time`			= VALUES(`time`), 
+			`likes`			= VALUES(`likes`), 
+			`comments`		= VALUES(`comments`), 
+			`reposts`		= VALUES(`reposts`), 
+			`images_cnt`	= VALUES(`images_cnt`), 
+			`gifs_cnt`		= VALUES(`gifs_cnt`)
+	") or die("MYSQL ERROR 4: ".mysql_error());
+	
+	return $good;
+}
+
 
 function inner_text($node) {
 	if ($node->nodeName == '#text') {

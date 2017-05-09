@@ -13,6 +13,13 @@ CREATE TABLE `vk_grabber_blacklist` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 
 CREATE TABLE `vk_grabber_data` (
+  `id` bigint(20) UNSIGNED NOT NULL,
+  `owner` varchar(255) DEFAULT NULL,
+  `text` text CHARACTER SET utf8mb4,
+  `attaches` longblob
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+
+CREATE TABLE `vk_grabber_data_index` (
   `source_id` varchar(64) NOT NULL,
   `source_type` varchar(32) NOT NULL,
   `remote_id` varchar(64) NOT NULL,
@@ -22,9 +29,7 @@ CREATE TABLE `vk_grabber_data` (
   `comments` int(10) UNSIGNED NOT NULL DEFAULT '0',
   `images_cnt` int(10) UNSIGNED NOT NULL DEFAULT '0',
   `gifs_cnt` int(10) UNSIGNED NOT NULL DEFAULT '0',
-  `owner` varchar(255) DEFAULT NULL,
-  `text` text CHARACTER SET utf8mb4,
-  `attaches` longblob
+  `data_id` int(10) UNSIGNED NOT NULL DEFAULT '0'
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 
 CREATE TABLE `vk_grabber_data_owners` (
@@ -113,10 +118,11 @@ ALTER TABLE `vk_grabber_blacklist`
   ADD PRIMARY KEY (`group_id`,`source_id`,`source_type`,`remote_id`);
 
 ALTER TABLE `vk_grabber_data`
+  ADD PRIMARY KEY (`id`);
+
+ALTER TABLE `vk_grabber_data_index`
   ADD PRIMARY KEY (`source_id`,`source_type`,`remote_id`) USING BTREE,
-  ADD KEY `time` (`time`),
-  ADD KEY `likes` (`likes`),
-  ADD KEY `reposts` (`reposts`);
+  ADD KEY `source_id` (`source_type`,`source_id`,`time`) USING BTREE;
 
 ALTER TABLE `vk_grabber_data_owners`
   ADD PRIMARY KEY (`id`);
@@ -153,5 +159,7 @@ ALTER TABLE `vk_special_posts`
   ADD PRIMARY KEY (`post_id`,`group_id`);
 
 
+ALTER TABLE `vk_grabber_data`
+  MODIFY `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT;
 ALTER TABLE `vk_join_stat`
   MODIFY `id` int(10) UNSIGNED NOT NULL AUTO_INCREMENT;
