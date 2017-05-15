@@ -1,1 +1,1 @@
-<a href="<?= $link ?>" target="_blank" class="post-author"><b><?= $name ?></b></a>
+<a href="<?= $link ?>" target="_blank" class="post-author m"><b><?= $name ?></b></a>

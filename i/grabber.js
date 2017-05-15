@@ -232,6 +232,9 @@ window.onbeforeunload = function() {
 	return queue_size > 0 ? "Посты ещё добавляются. Точна???" : undefined; 
 };
 
+remote_topics_offset = +window.localStorage["saved_offset_" + uniq_id] || 0;
+$('#post_offset').val(remote_topics_offset);
+
 $('body').on('click', '.js-page_input_btn', function (e) {
 	e.preventDefault();
 	var page = Math.max(1, +$(this).parents('.js-pagenav').find('.js-page_input').val() || 0);
@@ -318,9 +321,9 @@ $('body').on('click', '.js-page_input_btn', function (e) {
 			if (res.error) {
 				toggle_spinner(false);
 				alert(res.error);
-			} else if (res.date) {
+			} else if (res.link) {
 				toggle_spinner(false);
-				wrap.html('<b class="green">' + (res.date ? 'Пост успешно добавлен в очередь (' + res.date + '). ' : 'Пост опубликован! (очередь была пустая)') + '</b>');
+				wrap.html('<a href="' + res.link + '" target="_blank"><b class="green">Пост успешно добавлен в очередь. </b></a>');
 				
 				// Блэклистим
 				$.api("?a=grabber&sa=blacklist", {

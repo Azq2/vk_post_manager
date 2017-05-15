@@ -55,6 +55,7 @@ post_action('.js-post_accept', function (post, gid, id) {
 		gid: gid, id: id, 
 		signed: +post.find('.js-anon_switch').data('state') ? 0 : 1, 
 		message: data.message.getText ? data.message.getText() : data.message, 
+		type: data.post_type, 
 		attachments: []
 	};
 	
@@ -77,7 +78,7 @@ post_action('.js-post_accept', function (post, gid, id) {
 			post.find('.js-comment_btns').hide();
 			post.find('.js-comment_msg')
 				.show()
-				.html('<b class="green">Пост успешно добавлен в очередь (' + res.date + '). </b>');
+				.html('<b class="green">Пост успешно добавлен в очередь. </b>');
 		} else {
 			alert(res.error);
 		}

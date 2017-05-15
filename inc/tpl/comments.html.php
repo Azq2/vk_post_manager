@@ -31,23 +31,19 @@
 	</div>
 </form>
 
-<?php if ($invalid_interval_cnt > 0): ?>
-<div class="row row-error center">
-	Внимание! Обнаружено <?= $invalid_interval_cnt ?> постов с неверным интервалом!<br />
-	<?php if ($filter != 'accepted'): ?>
-		<div class="pad_t">
-			<a href="<?= $postponed_link ?>">Перейти к списку.</a>
-		</div>
-	<?php else: ?>
-		<div id="convert_info" class="pad_t hide"></div>
-		<div class="pad_t">
-			<button class="btn btn-delete js-convert" data-gid="<?= $gid ?>">
-				<img src="i/img/spinner.gif" alt="" class="m js-spinner hide" />
-				<span class="m">Сконвертировать в новый интервал?</span>
-			</button>
-		</div>
-	<?php endif; ?>
-</div>
+<?php if ($by_week && $list == 'postponed'): ?>
+	<table class="table">
+		<tr>
+			<?php foreach ($by_week['items'] as $w): ?>
+				<th><?= $w['date'] ?></th>
+			<?php endforeach; ?>
+		</tr>
+		<tr>
+			<?php foreach ($by_week['items'] as $w): ?>
+				<td><?= $w['cnt'] ?></td>
+			<?php endforeach; ?>
+		</tr>
+	</table>
 <?php endif; ?>
 
 <div class="row">

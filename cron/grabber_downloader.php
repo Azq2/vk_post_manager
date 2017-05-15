@@ -2,6 +2,8 @@
 if (php_sapi_name() != "cli")
 	die("Not a CLI :)\n");
 
+umask(0);
+
 require dirname(__FILE__)."/../inc/init.php";
 $q = new Http;
 
@@ -44,12 +46,13 @@ while (true) {
 				foreach ($queue['images'] as $i => $img) {
 					echo "=> download: $img [".($i + 1)." / ".count($queue['images'])."]\n";
 					
-					$tmp_file = H."../tmp/doc_".md5($id.$img).".png";
+					$tmp_file = realpath(H."../tmp/download")."/doc_".md5($id.$img).".png";
 					$time = microtime(true);
-					system("wget ".escapeshellcmd($img)." -O ".escapeshellcmd($tmp_file), $x);
+					system("wget --tries 10 ".escapeshellarg($img)." -O ".escapeshellarg($tmp_file), $x);
 					$time = microtime(true) - $time;
 					if ($x != 0 || !file_exists($tmp_file) || !filesize($tmp_file)) {
-						$queue['out']['error'] = 'wget('.$img.')';
+						$queue['out']['error'] = 'wget('.$img.') = '.$x;
+						break;
 					} else {
 						$images[] = [
 							'path' => realpath($tmp_file), 
@@ -90,6 +93,7 @@ while (true) {
 					file_put_contents($file, json_encode($queue));
 				}
 			}
+			file_put_contents($file, json_encode($queue));
 			
 			$url = mysql_result(mysql_query("SELECT `url` FROM `vk_grabber_data_owners` WHERE `id` = 'VK_-".$queue['gid']."'"), 0);
 			
@@ -98,12 +102,13 @@ while (true) {
 				foreach ($queue['documents'] as $i => $img) {
 					echo "=> download: $img [".($i + 1)." / ".count($queue['documents'])."]\n";
 					
-					$tmp_file = H."../tmp/doc_".md5($id.$img).".png";
+					$tmp_file = realpath(H."../tmp/download")."/doc_".md5($id.$img).".png";
 					$time = microtime(true);
-					system("wget ".escapeshellcmd($img)." -O ".escapeshellcmd($tmp_file), $x);
+					system("wget ".escapeshellarg($img)." -O ".escapeshellarg($tmp_file), $x);
 					$time = microtime(true) - $time;
 					if ($x != 0 || !file_exists($tmp_file) || !filesize($tmp_file)) {
-						$queue['out']['error'] = 'wget('.$img.')';
+						$queue['out']['error'] = 'wget('.$img.') = '.$x;
+						break;
 					} else {
 						$images[] = [
 							'path' => realpath($tmp_file), 
@@ -145,6 +150,7 @@ while (true) {
 					file_put_contents($file, json_encode($queue));
 				}
 			}
+			file_put_contents($file, json_encode($queue));
 			
 			if (!isset($queue['out']['error'])) {
 				// Pагружаем в ВК
@@ -167,7 +173,8 @@ while (true) {
 		
 		foreach ($images as $img) {
 			echo "=> delete: ".basename($img['path'], realpath(H."../"))."\n";
-			unlink($img['path']);
+			if (file_exists($img['path']))
+				unlink($img['path']);
 		}
 		
 		if ($delete)
@@ -177,3 +184,4 @@ while (true) {
 	if (!$n)
 		break;
 }
+

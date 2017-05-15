@@ -95,6 +95,13 @@ CREATE TABLE `vk_posts_likes` (
   `user_id` int(10) UNSIGNED NOT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 
+CREATE TABLE `vk_posts_queue` (
+  `nid` int(10) UNSIGNED NOT NULL,
+  `id` int(10) UNSIGNED NOT NULL,
+  `group_id` int(11) NOT NULL,
+  `fake_date` int(10) UNSIGNED NOT NULL DEFAULT '0'
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+
 CREATE TABLE `vk_posts_reposts` (
   `post_id` int(10) UNSIGNED NOT NULL,
   `group_id` int(11) NOT NULL,
@@ -151,6 +158,11 @@ ALTER TABLE `vk_posts_likes`
   ADD PRIMARY KEY (`post_id`,`group_id`,`user_id`),
   ADD KEY `user_id` (`user_id`);
 
+ALTER TABLE `vk_posts_queue`
+  ADD PRIMARY KEY (`nid`),
+  ADD UNIQUE KEY `group_id-id` (`group_id`,`id`) USING BTREE,
+  ADD KEY `group_id-position` (`group_id`) USING BTREE;
+
 ALTER TABLE `vk_posts_reposts`
   ADD PRIMARY KEY (`post_id`,`group_id`,`user_id`),
   ADD KEY `user_id` (`user_id`);
@@ -163,3 +175,5 @@ ALTER TABLE `vk_grabber_data`
   MODIFY `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT;
 ALTER TABLE `vk_join_stat`
   MODIFY `id` int(10) UNSIGNED NOT NULL AUTO_INCREMENT;
+ALTER TABLE `vk_posts_queue`
+  MODIFY `nid` int(10) UNSIGNED NOT NULL AUTO_INCREMENT;

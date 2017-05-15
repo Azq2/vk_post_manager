@@ -194,6 +194,10 @@ table, td, th, tr {
 	color: #F00;
 }
 
+.row-blue {
+	background: #ddebf7
+}
+
 .row-yellow {
 	background-color: #fcf4c8;
 }
@@ -350,8 +354,8 @@ li {
     color: #fff
 }
 .btn-cancel {
-	background: #FFCD00;
-	color: #4C4434
+	background: #e8910d;
+	color: #fff
 }
 .btn-green {
 	background: #61a961;
@@ -440,4 +444,15 @@ li {
 	max-width: 128px;
 	max-height: 128px;
 	vertical-align: middle;
+}
+
+.histogram {
+	width: 100%;
+	height: 100px
+}
+
+.histogram-item {
+	background: pink;
+	display: inline-block;
+	vertical-align: bottom;
 }

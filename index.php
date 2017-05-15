@@ -1,5 +1,9 @@
 <?php
-require "inc/init.php";
+require __DIR__."/inc/init.php";
+require __DIR__."/inc/vk_posts.php";
+
+error_reporting(E_ALL);
+ini_set('display_errors', 'On');
 
 // Авторизация
 if (!isset($_COOKIE['password']) || $_COOKIE['password'] !== WEBUI_PASSWORD) {
@@ -37,8 +41,8 @@ switch ($action) {
 		$expires = (int) array_val($_GET, 'expires', '');
 		
 		if ($type && $access_token) {
-			if (!preg_match("/^[\w\d]+$/i", $type))
-				die;
+			if (!preg_match("/^[\w\d_]+$/i", $type))
+				die('type: '.htmlspecialchars($type));
 			
 			mysql_query("
 				INSERT INTO `vk_oauth` SET
@@ -70,7 +74,7 @@ switch ($action) {
 						'code'			=> $_GET['code'], 
 						'grant_type'	=> 'authorization_code'
 					]));
-				} else if ($_GET['state'] == 'VK') {
+				} else if ($_GET['state'] == 'VK' || $_GET['state'] == 'VK_SCHED') {
 					curl_setopt($ch, CURLOPT_URL, "https://oauth.vk.com/access_token");
 					curl_setopt($ch, CURLOPT_POSTFIELDS, http_build_query([
 						'client_id'		=> VK_APP_ID, 
@@ -92,7 +96,7 @@ switch ($action) {
 						'expires'		=> isset($res->expires_in) && $res->expires_in ? time() + $res->expires_in : 0
 					]));
 				} else {
-					echo $raw;
+					echo "RAW: ".$raw;
 					exit;
 				}
 			} else {
@@ -278,18 +282,17 @@ switch ($action) {
 				$count = mysql_result($req2, 0);
 				
 				// Получаем массив id данных и 
-				$ids = [];
 				$meta = [];
+				$items = [];
 				while ($res = mysql_fetch_assoc($req)) {
-					$ids[$res['data_id']] = 1;
+					$items[$res['data_id']] = 1;
 					$meta[$res['data_id']] = $res;
 				}
 				mysql_free_result($req);
 				mysql_free_result($req2);
 				$time_list = microtime(true) - $time_list;
 				
-				$items = [];
-				if ($ids) {
+				if ($items) {
 					// Получаем овнеров
 					$owners = [];
 					$req = mysql_query("SELECT * FROM `vk_grabber_data_owners`");
@@ -298,7 +301,7 @@ switch ($action) {
 					mysql_free_result($req);
 					
 					$time_data = microtime(true);
-					$req = mysql_query("SELECT * FROM `vk_grabber_data` WHERE `id` IN (".implode(",", array_keys($ids)).")");
+					$req = mysql_query("SELECT * FROM `vk_grabber_data` WHERE `id` IN (".implode(",", array_keys($items)).")");
 					while ($res = mysql_fetch_assoc($req)) {
 						$res = array_merge($res, $meta[$res['id']]);
 						$owner = $owners[$res['source_type'].'_'.$res['owner']];
@@ -306,13 +309,13 @@ switch ($action) {
 						$res['owner_url'] = $owner['url'];
 						$res['owner_avatar'] = $owner['avatar'];
 						$res['attaches'] = unserialize(gzinflate($res['attaches']));
-						$items[] = $res;
+						$items[$res['id']] = $res;
 					}
 					mysql_free_result($req);
 					$time_data = microtime(true) - $time_data;
 				}
 				
-				mk_ajax(['success' => true, 'owners' => $owners, 'sql' => $sql, 'items' => $items, 'total' => (int) $count, 
+				mk_ajax(['success' => true, 'sql' => $sql, 'owners' => $owners, 'items' => array_values($items), 'total' => (int) $count, 
 							'time_data' => $time_data, 'time_list' => $time_list]);
 				exit;
 			break;
@@ -325,8 +328,20 @@ switch ($action) {
 					if (isset($status['out'], $status['out']['error'])) {
 						$out['error'] = $status['out']['error'];
 					} elseif (isset($status['attaches'])) {
-						// Добавляем пост
-						add_queued_wall_post($out, $status['attaches'], $status['text']);
+						if (!isset($status['post_id'])) {
+							// Добавляем пост
+							add_queued_wall_post($out, $status['attaches'], $status['text']);
+							
+							if (!isset($out['error'])) {
+								$status['post_id'] = $out['post_id'];
+								file_put_contents(H.'../tmp/post_queue/'.$id, json_encode($status));
+							}
+						}
+						
+						if (!isset($out['error'])) {
+							$out['link'] = 'https://vk.com/wall-'.$gid.'_'.$status['post_id'];
+							$out['post_id'] = $status['post_id'];
+						}
 					} else {
 						$out['queue'] = $status;
 					}
@@ -350,6 +365,7 @@ switch ($action) {
 					]);
 					
 					file_put_contents(H.'../tmp/post_queue/'.md5($msg), $msg);
+					chmod(H.'../tmp/post_queue/'.md5($msg), 0666);
 					
 					$out['id'] = md5($msg);
 					$out['success'] = true;
@@ -497,10 +513,6 @@ switch ($action) {
 			$view['sources_ids'] = [['VK', $gid]];
 		
 		$view['blacklist'] = [];
-		
-		$req = mysql_query("SELECT * FROM `vk_grabber_blacklist` WHERE group_id = $gid");
-		while ($res = mysql_fetch_assoc($req))
-			$view['blacklist'][$res['object']] = 1;
 		
 		mk_page(array(
 			'title' => 'Граббер корованов 2000', 
@@ -789,47 +801,46 @@ switch ($action) {
 		));
 	break;
 	
-	case "fix_timeout":
-		$output = array('gid' => $gid);
-		fix_comments_timeout($q, $gid, $comm, $output);
-		mk_ajax($output);
-	break;
-	
 	case "queue":
-		$output = array();
-		$id = (int) array_val($_REQUEST, 'id', 0);
-		$signed = (int) array_val($_REQUEST, 'signed', 0);
-		$lat = (float) array_val($_REQUEST, 'lat', 0);
-		$long = (float) array_val($_REQUEST, 'long', 0);
-		$message = array_val($_REQUEST, 'message', "");
-		$attachments = array_val($_REQUEST, 'attachments', "");
+		$output = [];
 		
-		$res = get_comments($q, $gid);
+		$id				= (int) array_val($_REQUEST, 'id', 0);
+		$signed			= (int) array_val($_REQUEST, 'signed', 0);
+		$lat			= (float) array_val($_REQUEST, 'lat', 0);
+		$long			= (float) array_val($_REQUEST, 'long', 0);
+		$message		= array_val($_REQUEST, 'message', "");
+		$attachments	= array_val($_REQUEST, 'attachments', "");
+		$post_type		= array_val($_REQUEST, 'type', "");
 		
-		$base_time = max($res->lastPosted, $res->lastPostponed);
-		$post_time = get_post_time($base_time, $comm, $res->lastSpecial);
+		if ($post_type == 'post')
+			die;
 		
-		if (!isset($res->suggests->items[$id])) {
-			$output['error'] = 'Пост #'.$id.' не найден в предложениях!';
-		} else {
-			$data = array(
-				'post_id' => $id, 
-				'owner_id' => -$gid, 
-				'signed' => $signed, 
-				'message' => $message, 
-				'lat' => $lat, 
-				'long' => $long, 
-				'attachments' => $attachments
-			);
+		$req = mysql_query("SELECT MAX(`fake_date`) FROM `vk_posts_queue`");
+		$fake_date = max(time() + 3600 * 24 * 60, mysql_num_rows($req) ? mysql_result($req, 0) : 0) + 3600;
+		
+		$res = $q->vkApi($post_type == 'suggest' ? "wall.post" : "wall.edit", [
+			'post_id'		=> $id, 
+			'owner_id'		=> -$gid, 
+			'signed'		=> $signed, 
+			'message'		=> $message, 
+			'lat'			=> $lat, 
+			'long'			=> $long, 
+			'attachments'	=> $attachments, 
+			'publish_date'	=> $fake_date
+		]);
+		
+		$output['post_type'] = $post_type;
+		if (parse_vk_error($res, $output)) {
+			$output['success'] = true;
+			$output['date'] = display_date($fake_date);
 			
-			if ($post_time)
-				$data['publish_date'] = $post_time;
-			
-			$res = $q->vkApi("wall.post", $data);
-			if (parse_vk_error($res, $output)) {
-				$output['success'] = true;
-				$output['date'] = display_date($post_time);
-			}
+			mysql_query("
+				INSERT INTO `vk_posts_queue`
+				SET
+					`fake_date`	= $fake_date, 
+					`group_id`	= $gid, 
+					`id`		= ".(isset($res->response->post_id) ? (int) $res->response->post_id : $id)."
+			") or die("ERROR: ".mysql_error());
 		}
 		
 		mk_ajax($output);
@@ -878,7 +889,7 @@ switch ($action) {
 			
 			$interval = round($interval / 300) * 300;
 			
-			mysql_query("UPDATE `vk_groups` SET `period_from` = $from, `period_to` = $to, `interval` = $interval");
+			mysql_query("UPDATE `vk_groups` SET `period_from` = $from, `period_to` = $to, `interval` = $interval WHERE `id` = $gid");
 		}
 		header("Location: ".preg_replace("/[\s:]/si", "", isset($_REQUEST['return']) ? $_REQUEST['return'] : '?'));
 	break;
@@ -913,99 +924,117 @@ switch ($action) {
 		$filter = isset($_REQUEST['filter']) ? preg_replace("/[^a-z0-9_-]+/i", "", $_REQUEST['filter']) : 'new';
 		
 		$special_posts = get_special_posts($gid);
-		
-		$res = get_comments($q, $gid);
-		
-		$invalid_interval_cnt = 1;
-		$last_post_time = 0;
-		$last_is_special = false;
-		foreach ($res->postponed->items as $post) {
-			if (!$last_post_time)
-				$last_post_time = $post->date;
-			
-			$norm_time = get_post_time($last_post_time, $comm, $last_is_special);
-			
-			if (!isset($special_posts[$post->id]) && $last_post_time != $post->date) {
-				$diff = ($norm_time - $post->date);
-				if (abs($diff) > 5) {
-					$post->invalid = $diff;
-					$post->expected_date = $norm_time;
-					++$invalid_interval_cnt;
-				}
-			}
-			
-			$last_post_time = $post->date;
-			$last_is_special = isset($special_posts[$post->id]) ? $post->date : false;
-		}
-		
-		$users = $res->users;
+		$res = get_comments($q, $comm);
 		
 		$url = (new Url("?"))->set(array(
 			'gid' => $gid
 		));
 		
-		$list = $res->suggests;
-		if ($filter == 'accepted')
-			$list = $res->postponed;
+		$filter2list = [
+			'accepted'	=> 'postponed', 
+			'new'		=> 'suggests', 
+			'special'	=> 'specials'
+		];
+		
+		if (!isset($filter2list[$filter]))
+			die("unknown filter?");
+		
+		$list = $filter2list[$filter];
+		
+		$last_date = "";
 		
 		$json = array();
 		$comments = array();
-		foreach ($list->items as $item) {
+		$last_time = 0;
+		
+		$last_posted = 0;
+		$last_postponed = 0;
+		
+		$by_week_max = 0;
+		$by_week = [];
+		
+		foreach ($res->{$list} as $item) {
+			$from_id = (isset($item->created_by) && $item->created_by ? $item->created_by : (isset($item->from_id) ? $item->from_id : $item->owner_id));
+			
+			$date = display_date($item->date, false, false);
+			
+			if (!isset($by_week[date("Y-W-N", $item->date)]))
+				$by_week[date("Y-W-N", $item->date)] = ['n' => date("N", $item->date), 'date' => $date, 'cnt' => 0];
+			++$by_week[date("Y-W-N", $item->date)]['cnt'];
+			
+			$by_week_max = max($by_week_max, $by_week[date("Y-W-N", $item->date)]['cnt']);
+			
+			if ($date != $last_date)
+				$last_time = 0;
+			
+			if ($item->post_type == 'post')
+				$last_posted = max($item->date, $last_posted);
+			else if (!isset($special_posts[$item->id]))
+				$last_postponed = max($item->date, $last_postponed);
+			
 			$json[$item->id] = get_post_json($item);
 			$comments[] = Tpl::render("widgets/comment.html", array(
-				'date' => display_date($item->date), 
-				'text' => nl2br(links(check_spell(htmlspecialchars($item->text, ENT_QUOTES)))), 
-				'id' => $item->id, 
-				'gid' => abs($item->owner_id), 
-				'user' => vk_user_widget($users[isset($item->created_by) && $item->created_by ? $item->created_by : $item->from_id]), 
-				'deleted' => false, 
-				'invalid' => isset($item->invalid) ? -$item->invalid : false, 
-				'expected_date' => isset($item->expected_date) ? display_date($item->expected_date) : false, 
-				'post_type' => $item->post_type, 
-				'geo' => isset($item->geo) ? $item->geo : null, 
-				'attachments' => isset($item->attachments) ? $item->attachments : null, 
-				'special' => isset($special_posts[$item->id]) ? 1 : 0
+				'date'			=> display_date($item->date), 
+				'text'			=> nl2br(links(check_spell(htmlspecialchars($item->text, ENT_QUOTES)))), 
+				'id'			=> $item->id, 
+				'gid'			=> abs($item->owner_id), 
+				'user'			=> vk_user_widget($res->users[$from_id]), 
+				'deleted'		=> false, 
+				'post_type'		=> $item->post_type, 
+				'list'			=> $list, 
+				'geo'			=> isset($item->geo) ? $item->geo : null, 
+				'attachments'	=> isset($item->attachments) ? $item->attachments : null, 
+				'special'		=> isset($special_posts[$item->id]) ? 1 : 0, 
+				'period'		=> $date != $last_date ? $date : false, 
+				'delta'			=> $last_time ? "+".count_delta($item->date - $last_time)." " : 0, 
+				'scheduled'		=> isset($item->orig_date) && abs($item->date - $item->orig_date) <= 60
 			));
+			
+			$last_time = $item->date;
+			$last_date = $date;
 		}
 		
 		mk_page(array(
 			'title' => 'Предложения постов', 
 			'content' => Tpl::render("comments.html", array(
-				'gid' => $gid, 
-				
-				'json' => json_encode($json, JSON_UNESCAPED_UNICODE), 
-				
-				'tabs' => switch_tabs([
+				'by_week'	=> [
+					'items'	=> array_values($by_week), 
+					'max'	=> $by_week_max
+				], 
+				'list'		=> $list, 
+				'gid'		=> $gid, 
+				'json'		=> json_encode($json, JSON_UNESCAPED_UNICODE), 
+				'tabs'		=> switch_tabs([
 					'url' => $url, 
 					'param' => 'filter', 
 					'tabs' => [
-						'new'		=> 'Новые ('.$res->suggests->count.')', 
-						'accepted'	=> 'Принятые ('.$res->postponed->count.')'
+						'new'		=> 'Новые ('.count($res->suggests).')', 
+						'accepted'	=> 'Принятые ('.$res->postponed_cnt.')', 
+						'special'	=> 'Рекламные ('.count($res->specials).')', 
 					], 
 					'active' => $filter
 				]), 
 				
-				'last_post_time' => $res->lastPosted ? display_date($res->lastPosted) : 'n/a', 
-				'last_delayed_post_time' => $res->lastPostponed ? display_date($res->lastPostponed) : 'n/a', 
+				'last_post_time'				=> $last_posted ? display_date($last_posted) : 'n/a', 
+				'last_delayed_post_time'		=> $last_postponed ? display_date($last_postponed) : 'n/a', 
 				
-				'last_post_time_unix' => $res->lastPosted, 
-				'last_delayed_post_time_unix' => $res->lastPostponed, 
+				'last_post_time_unix'			=> $last_posted, 
+				'last_delayed_post_time_unix'	=> $last_postponed, 
 				
-				'postponed_link' => (string) (new Url("?"))->set(array(
-					'gid' => $gid, 
-					'filter' => 'accepted'
+				'postponed_link'		=> (string) (new Url("?"))->set(array(
+					'gid'		=> $gid, 
+					'filter'	=> 'accepted'
 				)), 
-				'invalid_interval_cnt' => $invalid_interval_cnt, 
-				'back' => $_SERVER['REQUEST_URI'], 
+				'back'					=> $_SERVER['REQUEST_URI'], 
 				
-				'comments' => $comments, 
-				'filter' => $filter, 
-				'from' => parse_time($comm['period_from']), 
-				'to' => parse_time($comm['period_to']), 
-				'interval' => parse_time($comm['interval']), 
-				'success' => isset($_REQUEST['ok']), 
-				'postponed_cnt' => $res->postponed->count, 
-				'suggests_cnt' => $res->suggests->count
+				'comments'				=> $comments, 
+				'filter'				=> $filter, 
+				'from'					=> parse_time($comm['period_from']), 
+				'to'					=> parse_time($comm['period_to']), 
+				'interval'				=> parse_time($comm['interval']), 
+				'success'				=> isset($_REQUEST['ok']), 
+				'postponed_cnt'			=> $res->postponed_cnt, 
+				'suggests_cnt'			=> $res->suggests_cnt
 			))
 		));
 	break;
@@ -1015,20 +1044,16 @@ function add_queued_wall_post(&$out, $attachments, $text) {
 	global $q, $gid, $comm;
 	
 	if (!isset($out['error'])) {
-		$comments = get_comments($q, $gid);
-		
-		$base_time = max($comments->lastPosted, $comments->lastPostponed);
-		$post_time = get_post_time($base_time, $comm, $comments->lastSpecial);
+		$req = mysql_query("SELECT MAX(`fake_date`) FROM `vk_posts_queue`");
+		$fake_date = max(time() + 3600 * 24 * 60, mysql_num_rows($req) ? mysql_result($req, 0) : 0) + 3600;
 		
 		$data = array(
 			'owner_id'		=> -$gid, 
 			'signed'		=> 0, 
 			'message'		=> $text, 
-			'attachments'	=> implode(",", $attachments)
+			'attachments'	=> implode(",", $attachments), 
+			'publish_date'	=> $fake_date
 		);
-		
-		if ($post_time)
-			$data['publish_date'] = $post_time;
 		
 		$res = $q->vkApi("wall.post", $data);
 		if (($error = vk_api_error($res))) {
@@ -1036,7 +1061,15 @@ function add_queued_wall_post(&$out, $attachments, $text) {
 			$out['data'] = $data;
 		} else {
 			$out['link'] = 'https://vk.com/wall-'.$gid.'_'.$res->response->post_id;
-			$out['date'] = display_date($post_time);
+			$out['post_id'] = $res->response->post_id;
+			
+			mysql_query("
+				INSERT INTO `vk_posts_queue`
+				SET
+					`fake_date`	= $fake_date, 
+					`group_id`	= $gid, 
+					`id`		= ".(int) $res->response->post_id."
+			") or die("ERROR: ".mysql_error());
 		}
 	}
 	$out['success'] = !isset($out['error']);
@@ -1075,354 +1108,6 @@ function mk_page($args) {
 	header("Content-Type: text/html; charset=UTF-8");
 	echo Tpl::render("main.html", $def + $args);
 }
-
-function get_special_posts($gid) {
-	return [];
-	
-	$special_posts = [];
-	$req = mysql_query("SELECT * FROM `vk_special_posts` WHERE group_id = $gid");
-	while ($res = mysql_fetch_assoc($req))
-		$special_posts[$res['post_id']] = 1;
-	return $special_posts;
-}
-
-function get_post_time($base_time, $comm, $last_special_post, $incr = true) {
-	$base_time = max(time() + 60, $base_time);
-	if ($incr) {
-		if (!$last_special_post || $last_special_post - $base_time > $comm['interval']) {
-			// Между специальным и обычным топиком поместится целый пост
-			$post_time = $base_time + $comm['interval'];
-		} else {
-			// Между специальным и обычным топиком не поместится целый пост
-			$post_time = $last_special_post + 3600;
-		}
-	}
-	
-	// Фиксим по заданным периодам публикации
-	$day_start = get_day_start($post_time);
-	if (24 * 3600 - ($comm['period_to'] - $comm['period_from']) > 60) { // Есть фиксированный период постинга
-		if ($post_time - ($day_start + $comm['period_from']) <= -10) {
-			// Если время не попадает под минимальный период, то переносим его на начало периода текущего дня
-			$post_time = $day_start + $comm['period_from'];
-		} else if ($post_time - ($day_start + $comm['period_to']) >= 10) {
-			// Если время превышает границу времени, то переносим на следующий день
-			$post_time = $day_start + 24 * 3600 + $comm['period_from'];
-		}
-	}
-	
-	// Выравниваем по 10 минут
-	if ($post_time && ($post_time % 300 != 0))
-		$post_time = round($post_time / 300) * 300;
-	
-	return $post_time;
-}
-
-function fix_comments_timeout($q, $gid, $comm, &$output) {
-	$code = '
-		var postponed = API.wall.get({
-			owner_id:	-'.$gid.', 
-			filter:		"postponed", 
-			extended:	true, 
-			count:		100
-		});
-		var last_comment = API.wall.get({
-			owner_id: -'.$gid.', 
-			filter: "all", 
-			count: 2
-		});
-		
-		var p1 = last_comment.items.length > 0 ? last_comment.items[0].date : 0;
-		var p2 = last_comment.items.length > 1 ? last_comment.items[1].date : 0;
-		
-		return {
-			postponed: postponed, 
-			lastPosted: p1 > p2 ? p1 : p2
-		};
-	';
-	
-	$wall = $q->vkApi("execute", ['code' => $code]);
-	
-	if ($gid != 144599756) {
-		$output['error'] = 'Invalid gid: '.$gid;
-		return;
-	}
-	
-	if (!isset($wall->response)) {
-		parse_vk_error($wall, $output);
-		return;
-	}
-	
-	if (!isset($wall->response->lastPosted)) {
-		$output['error'] = 'lastPosted not found';
-		return;
-	}
-	
-	if (!isset($wall->response->postponed)) {
-		$output['error'] = 'postponed not found';
-		return;
-	}
-	
-	$output['fixed'] = 0;
-	$output['processed'] = 0;
-	$output['total'] = $wall->response->postponed->count;
-	
-	$special_posts = get_special_posts($gid);
-	
-	$attach_map = array(
-		"photo"		=> 1, 
-		"video"		=> 1, 
-		"doc"		=> 1, 
-		"audio"		=> 1, 
-		"page"		=> 1, 
-		"note"		=> 1, 
-		"poll"		=> 1, 
-		"album"		=> 1, 
-		"link"		=> 1, 
-	);
-	
-	$cnt = 0;
-	$last_post_time = 0;
-	$last_is_special = 0;
-	$error = false;
-	foreach ($wall->response->postponed->items as $item) {
-		++$output['processed'];
-		
-		if (!$last_post_time)
-			$last_post_time = $item->date;
-		
-		$post_time = get_post_time($last_post_time, $comm, $last_is_special, $last_post_time != $item->date);
-		
-		// У специальных постов нельзя менять publish_date
-		if ($last_is_special)
-			$post_time = $item->date;
-		
-		$last_is_special = isset($special_posts[$item->id]) ? $item->date : 0;
-		$last_post_time = $post_time;
-		
-		echo '#'.$item->id.' '.(isset($special_posts[$item->id]) ? '(special)' : '')." => ".display_date($post_time)."\n";
-		
-		$publish_diff = abs($item->date - $post_time);
-		if ($publish_diff > 5 && !isset($special_posts[$item->id])) {
-			// Парсим аттачи
-			$attachments = [];
-			if (isset($item->attachments)) {
-				foreach ($item->attachments as $att) {
-					if (!isset($attach_map[$att->type])) {
-						$error = 'Неизвестный аттач: '.$att->type;
-						break;
-					}
-					$att_data = $att->{$att->type};
-					if ($att->type == 'link') {
-						$attachments[] = $att_data->url;
-					} else {
-						$attachments[] = $att->type.$att_data->owner_id.'_'.$att_data->id;
-					}
-				}
-			}
-			
-			// Парсим geo
-			$place_id = $lat = $lng = false;
-			if (isset($item->geo) && $item->geo) {
-				if (isset($geo->place_id)) {
-					$place_id= $geo->place_id;
-				} elseif (preg_match("/^-?([\d\.]+) -?([\d\.]+)$/", $item->geo->coordinates, $m)) {
-					$lat = $m[1];
-					$lng = $m[2];
-				} else {
-					$error = 'Неизвестный формат координат: '.$item->geo->coordinates;
-				}
-			}
-			
-			$api_data = [
-				'owner_id'		=> $item->owner_id, 
-				'post_id'		=> $item->id, 
-				'publish_date'	=> $post_time, 
-				'attachments'	=> implode(",", $attachments), 
-				'message'		=> $item->text, 
-				'signed'		=> $item->signer_id ? 1 : 0, 
-			];
-			
-			if ($lat !== false) {
-				$api_data['lat'] = $lat;
-				$api_data['lng'] = $lng;
-			}
-			
-			if ($place_id)
-				$api_data['place_id'] = $place_id;
-			
-			if (isset($item->mark_as_ads))
-				$api_data['mark_as_ads'] = $item->mark_as_ads ? 1 : 0;
-			
-			if (isset($item->friends_only))
-				$api_data['friends_only'] = $item->friends_only ? 1 : 0;
-			/*
-			$res = $q->vkApi("wall.edit", $api_data);
-			if ($res && isset($res->response)) {
-				++$output['fixed'];
-			} else {
-				parse_vk_error($res, $output);
-				$output['post'] = $item;
-				$output['api_data'] = $api_data;
-				$output['publish_diff'] = $publish_diff;
-				break;
-			}
-			*/
-		}
-		
-		++$cnt;
-		
-		if ($error)
-			break;
-	}
-	
-	if (!isset($output['error'])) {
-		if (!$error && !$cnt)
-			$error = "Не найдено отложенных постов.";
-		if ($error) {
-			$output['error'] = $error;
-		} else {
-			$output['success'] = true;
-		}
-	}
-	
-	var_dump($output);
-	
-	exit;
-}
-
-function get_comments($q, $gid) {
-	$code = '
-		var postponed = API.wall.get({
-			owner_id: -'.$gid.', 
-			filter: "postponed", 
-			extended: true, 
-			count: 100
-		});
-		var suggests = API.wall.get({
-			owner_id: -'.$gid.', 
-			filter: "suggests", 
-			extended: true, 
-			count: 100
-		});
-		var last_comment = API.wall.get({
-			owner_id: -'.$gid.', 
-			filter: "all", 
-			count: 2
-		});
-		
-		if (!postponed)
-			postponed = {};
-		
-		postponed.profiles = API.users.get({user_ids: postponed.items@.created_by, fields: "photo_50"});
-		
-		var p1 = last_comment.items.length > 0 ? last_comment.items[0].date : 0;
-		var p2 = last_comment.items.length > 1 ? last_comment.items[1].date : 0;
-		
-		return {
-			postponed: postponed, 
-			suggests: suggests, 
-			lastPosted: p1 > p2 ? p1 : p2
-		};
-	';
-	$out = $q->vkApi("execute", array('code' => $code));
-	if (!isset($out->response)) {
-		echo '<pre>';
-		echo htmlspecialchars(json_encode($out, JSON_PRETTY_PRINT));
-		echo '</pre>';
-		die();
-	}
-	
-	$res = $out->response;
-	
-	$special_posts = get_special_posts($gid);
-	
-	$users = array();
-	$res->lastPostponed = 0;
-	$res->lastSpecial = 0;
-	if ($res->postponed) {
-		foreach ($res->postponed->profiles as $u)
-			$users[$u->id] = $u;
-		$comments = array();
-		foreach ($res->postponed->items as $c) {
-			if (!isset($special_posts[$c->id])) {
-				$res->lastPostponed = $c->date;
-				$res->lastSpecial = false;
-			} else {
-				if (!$res->lastSpecial)
-					$res->lastSpecial = $c->date;
-			}
-			$comments[$c->id] = $c;
-		}
-		$res->postponed->items = $comments;
-	}
-	if ($res->suggests) {
-		foreach ($res->suggests->profiles as $u)
-			$users[$u->id] = $u;
-		$comments = array();
-		foreach ($res->suggests->items as $c)
-			$comments[$c->id] = $c;
-		$res->suggests->items = array_reverse($comments, true);
-	}
-	$res->users = $users;
-	
-	return $res;
-}
-
-function get_wall_comments($q, $gid, $filter) {
-	$res = $q->vkApi("wall.get", array(
-		'owner_id' => $gid, 
-		'filter' => $filter, 
-		'extended' => true
-	));
-	$users = array();
-	foreach ($res->response->profiles as $u)
-		$users[$u->id] = $u;
-	
-	$comments = array();
-	foreach ($res->response->items as $c)
-		$comments[$u->id] = $c;
-	return (object) array('items' => $comments, 'users' => $users);
-}
-
-function get_post_json($post) {
-	$attach_map = array(
-		"photo" => "photo", 
-		"video" => "video", 
-		"doc" => "doc", 
-		"audio" => "audio", 
-		"poll" => "poll", 
-		"album" => "album"
-	);
-	$out = array(
-		'lat' => 0, 
-		'long' => 0, 
-		'attachments' => array(), 
-		'post_id' => $post->id, 
-		'owner_id' => $post->owner_id, 
-		'publish_date' => isset($post->publish_date) ? $post->publish_date : 0, 
-		'message' => $post->text, 
-		'signed' => isset($post->signer_id) ? (int) ((bool) $post->signer_id) : 0
-	);
-	if (isset($post->attachments)) {
-		foreach ($post->attachments as $att) {
-			if (isset($attach_map[$att->type])) {
-				$att_data = $att->{$att->type};
-				$out['attachments'][] = $att->type.$att_data->owner_id."_".$att_data->id;
-			} else if ($att->type == 'link') {
-				$out['attachments'][] = $att->link->url;
-			} else {
-				die("Unknown attach error: <pre>".htmlspecialchars(print_r($att, 1)).'</pre>');
-			}
-		}
-	}
-	if (isset($post->geo)) {
-		if (!preg_match("/^([\d\.-]+) ([\d\.-]+)$/", $post->geo->coordinates, $geo))
-			die("Invalid geo: ".$post->geo->coordinates);
-		$out['lat'] = $geo[1];
-		$out['long'] = $geo[2];
-	}
-	return $out;
-}						
 
 function links($text) {
 	return preg_replace_callback('/(?:([!()?.,\s\n\r]|^)((https?:\/\/)?((?:[a-z0-9_\-]+\.)+(?:[a-z]{2,7}|xn--p1ai|xn--j1amh|xn--80asehdb|xn--80aswg))(\/.*?)?(\#.*?)?)(?:[.!:;,*()]*([\s\r\n]|$))|([!()?.,\s\n\r]|^)((https?:\/\/)?((?:[a-z0-9а-яєґї_\-]+\.)+(?:рф|укр|онлайн|сайт|срб|su))(\/.*?)?(\#.*?)?)(?:[.!:;,*()]*([\s\r\n]|$))|([!()?.,\s\n\r]|^)((https?:\/\/)((?:[a-z0-9а-яєґї_\-]+\.)+(?:[a-z]{2,7}|рф|укр|онлайн|сайт|срб|su))(\/.*?)?(\#.*?)?)(?:[.!:;,*()]*([\s\r\n]|$)))/sium', function ($m) {
@@ -1525,7 +1210,7 @@ function get_vk_users($need_users) {
 function vk_user_widget($user, $link = NULL) {
 	return array(
 		'widget' => Tpl::render("widgets/vk_user.html", array(
-			'name' => $user->id == 289678746 ? 'Выдрочка' : $user->first_name." ".$user->last_name, 
+			'name' => $user->id == 289678746 ? 'Выдрочка' : (isset($user->name) ? $user->name : $user->first_name." ".$user->last_name), 
 			'preview' => $user->photo_50, 
 			'link' => $link ? $link : "https://vk.com/".(isset($user->screen_name) && strlen($user->screen_name) ? $user->screen_name : 'id'.$user->id)
 		)), 

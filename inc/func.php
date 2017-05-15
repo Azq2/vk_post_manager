@@ -8,7 +8,7 @@ if (!function_exists('mysql_fetch_assoc')) {
 	
 	function mysql_connect($host, $user, $passwd) {
 		global $_mysql_link;
-		return ($_mysql_link = mysqli_connect("p:".$host, $user, $passwd));
+		return ($_mysql_link = mysqli_connect($host, $user, $passwd));
 	}
 	
 	function mysql_select_db($db) {
@@ -137,6 +137,9 @@ function pics_uploader(&$out, $q, $gid, $images, $progress = false) {
 		
 		$attachments = [];
 		foreach ($images as $i => $img) {
+			if ($i)
+				usleep(1);
+			
 			$is_doc = isset($img['document']) && $img['document'];
 			
 			echo "size=".filesize($img['path'])." (".($is_doc ? 'DOC' : 'PIC').")\n";
@@ -157,33 +160,45 @@ function pics_uploader(&$out, $q, $gid, $images, $progress = false) {
 				$out['error'] = "UPLOAD (gid=$gid) ".$upload->error;
 				break;
 			} else {
-				if ($is_doc) {
-					$file = $q->vkApi("docs.save", array(
-						'file'			=> $upload->file, 
-						'title'			=> isset($img['title']) ? $img['title'] : "", 
-						'tags'			=> isset($img['tags']) ? $img['tags'] : "", 
-					));
-				} else {
-					$file = $q->vkApi("photos.saveWallPhoto", array(
-						'group_id'		=> $gid, 
-						'photo'			=> stripcslashes($upload->photo), 
-						'server'		=> $upload->server, 
-						'hash'			=> $upload->hash, 
-						'caption'		=> isset($img['caption']) ? $img['caption'] : ""
-					));
-				}
-				if (!isset($file->response) || !$file->response) {
-					$out['error'] = "Ошибка сохранения ".($is_doc ? 'документа' : 'фото')." #$i в стене!!! $upload_raw";
+				while (true) {
+					if ($is_doc) {
+						$file = $q->vkApi("docs.save", array(
+							'file'			=> $upload->file, 
+							'title'			=> isset($img['title']) ? $img['title'] : "", 
+							'tags'			=> isset($img['tags']) ? $img['tags'] : "", 
+						));
+					} else {
+						$file = $q->vkApi("photos.saveWallPhoto", array(
+							'group_id'		=> $gid, 
+							'photo'			=> stripcslashes($upload->photo), 
+							'server'		=> $upload->server, 
+							'hash'			=> $upload->hash, 
+							'caption'		=> isset($img['caption']) ? $img['caption'] : ""
+						));
+					}
+					if (($error = vk_api_error($file))) {
+						if ($file->error->error_code == 6) {
+							sleep(3);
+							continue;
+						}
+						$out['error'] = "Ошибка сохранения ".($is_doc ? 'документа' : 'фото')." #$i в стене!! (".$error.")";
+						break;
+					} elseif (!isset($file->response) || !$file->response) {
+						$out['error'] = "Ошибка сохранения ".($is_doc ? 'документа' : 'фото')." #$i в стене!!! $upload_raw";
+						break;
+					} else {
+						$att = $is_doc ? 
+							'doc'.$file->response[0]->owner_id.'_'.$file->response[0]->id : 
+							'photo'.$file->response[0]->owner_id.'_'.$file->response[0]->id;
+						$attachments[] = $att;
+						
+						if ($progress)
+							$progress($att);
+					}
 					break;
-				} else {
-					$att = $is_doc ? 
-						'doc'.$file->response[0]->owner_id.'_'.$file->response[0]->id : 
-						'photo'.$file->response[0]->owner_id.'_'.$file->response[0]->id;
-					$attachments[] = $att;
-					
-					if ($progress)
-						$progress($att);
 				}
+				if (isset($out['error']))
+					break;
 			}
 		}
 	}
@@ -192,7 +207,7 @@ function pics_uploader(&$out, $q, $gid, $images, $progress = false) {
 }
 
 function define_oauth() {
-	$types = ['VK' => 1, 'OK' => 1];
+	$types = ['VK' => 1, 'OK' => 1, 'VK_SCHED' => 1];
 	
 	$req = mysql_query("SELECT * FROM `vk_oauth`");
 	while ($res = mysql_fetch_assoc($req)) {
@@ -202,7 +217,7 @@ function define_oauth() {
 	
 	foreach ($types as $type => $_) {
 		if (!defined($type.'_USER_ACCESS_TOKEN'))
-			define($type.'_VK_USER_ACCESS_TOKEN', '');
+			define($type.'_USER_ACCESS_TOKEN', '');
 	}
 }
 
@@ -297,25 +312,25 @@ function display_date($time_unix, $full = false, $show_time = true) {
 	if ($full)
 		return date("d ".$month_list[$time[4] + 1]." Y в H:i:s", $time_unix); 
 	
+	// Сегодня
+	if ($time[3] == $curr_time[3] && $time[4] == $curr_time[4] && $time[5] == $curr_time[5])
+		return $show_time ? date("H:i:s", $time_unix) : "сегодня";
+	
 	if (time() >= $time_unix) {
-		// Сегодня
-		if ($time[3] == $curr_time[3] && $time[4] == $curr_time[4] && $time[5] == $curr_time[5])
-			return date("H:i:s", $time_unix); 
-		
 		// Вчера
 		$yesterday = mktime(0, 0, 0, $curr_time[4] + 1, $curr_time[3] - 1, 1900 + $curr_time[5]); 
 		if ($yesterday <= $time_unix)
-			return "вчера ".date("H:i:s", $time_unix); 
+			return "вчера".($show_time ? " ".date("H:i:s", $time_unix) : "");
 		
 		// На этой неделе
 		$start_week = mktime(0, 0, 0, $curr_time[4] + 1, $curr_time[3] - $to_russian_week[$curr_time[6]], 1900 + $curr_time[5]); 
 		if ($start_week <= $time_unix)
-			return $week_names[$to_russian_week[$time[6]]].", ".date("H:i:s", $time_unix); 
+			return $week_names[$to_russian_week[$time[6]]].($show_time ? ", ".date("H:i:s", $time_unix) : "");
 	}
 	
 	// В этом году
 	if ($curr_time[5] == $time[5])
-		return $time[3]." ".$month_list_short[$time[4] + 1]." ".date("H:i:s", $time_unix); 
+		return $time[3]." ".$month_list_short[$time[4] + 1].($show_time ? " ".date("H:i:s", $time_unix) : "");
 	
 	// Хрен знает когда
 	return $time[3]." ".$month_list_short[$time[4] + 1]." ".(1900 + $time[5]); 
@@ -359,6 +374,45 @@ function count_time($time) {
 		$out[] = $seconds."с"; 
 	}
 	return implode(', ', array_slice($out, 0, 2)); 
+}
+
+function count_delta($time) {
+	$out = [];
+	
+	$years = floor($time / (3600 * 24 * 365));
+	$time -= $years * 3600 * 24 * 365;
+	
+	$months = floor($time / (3600 * 24 * 30));
+	$time -= $months * 3600 * 24 * 30; 
+	
+	$days = floor($time / (3600 * 24));
+	$time -= $days * 3600 * 24; 
+	
+	$hours = floor($time / 3600); 
+	$time -= $hours * 3600;
+	
+	$minutes = floor($time / 60); 
+	$time -= $minutes * 60;
+	
+	$seconds = $time; 
+	
+	if ($years > 0)
+		$out[] = $years." год";
+	
+	if ($months > 0)
+		$out[] = $months." мес.";
+	
+	if ($days > 0)
+		$out[] = $days." день";
+	
+	if ($hours > 0 || $days > 0 || $minutes > 0) {
+		$out[] = sprintf("%02d:%02d", $hours, $minutes);
+	}
+	
+	if (!$out)
+		$out[] = sprintf("%02d:%02d:%02d", 0, 0, $seconds);
+	
+	return implode(" ", $out); 
 }
 
 function vk($method, $args = array()) {
@@ -443,7 +497,7 @@ class Url implements \ArrayAccess, \IteratorAggregate {
 		return new Url(is_null($url) ? $_SERVER['REQUEST_URI'] : $url);
 	}
 	
-	public function url($xhtml = true, $separator = ';', $escape = true) {
+	public function url($xhtml = true, $separator = '&', $escape = true) {
 		$url = '';
 		if ($this->scheme && $this->host) {
 			$url .= $this->scheme.'://';
@@ -522,6 +576,7 @@ class Url implements \ArrayAccess, \IteratorAggregate {
 class Http {
 	public $ch;
 	public $users;
+	public $vk_user = 'VK';
 	
 	public $last_http_code = 0;
 	public $last_http_redirect = '';
@@ -546,6 +601,10 @@ class Http {
 		curl_setopt($this->ch, CURLOPT_CONNECTTIMEOUT, $connect);
 		curl_setopt($this->ch, CURLOPT_TIMEOUT, $download);
 		return $this;
+	}
+	
+	public function vkSetUser($user) {
+		$this->vk_user = $user;
 	}
 	
 	public function exec($url, $post = array(), $xhr = false) {
@@ -603,7 +662,7 @@ class Http {
 		$sig = '';
 		$args['v'] = '5.63';
 		$args['lang'] = 'ru';
-		$args['access_token'] = VK_USER_ACCESS_TOKEN;
+		$args['access_token'] = constant($this->vk_user.'_USER_ACCESS_TOKEN');
 		
 		if (isset($_REQUEST['vk_captcha_key']))
 			$args['captcha_key'] = $_REQUEST['vk_captcha_key'];

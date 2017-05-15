@@ -1,4 +1,8 @@
-<div class="row<?=$special ? ' row-yellow' : '' ?> js-post<?= $invalid ? ' row-error' : '' ?>" data-id="<?= $gid ?>_<?= $id ?>" id="post_<?= $gid ?>_<?= $id ?>" data-id="<?= $id ?>">
+<?php if ($period): ?>
+	<div class="grey center row"><?= $period ?></div>
+<?php endif; ?>
+
+<div class="row<?=$special ? ' row-yellow' : '' ?><?= ($list == 'suggests' && $post_type == 'postpone') ? ' row-blue' : '' ?> js-post" data-id="<?= $gid ?>_<?= $id ?>" id="post_<?= $gid ?>_<?= $id ?>" data-id="<?= $id ?>">
 	<div id="post_inner_<?= $gid ?>_<?= $id ?>">
 		<div class="oh">
 			<div class="left post-preview">
@@ -6,16 +10,22 @@
 			</div>
 			<div class="oh">
 				<span class="time">
-					<span class="m"><?= $date ?></span>
+					<span class="m">
+						<?= $date ?>
+					</span>
 				</span>
 				<?= $user['widget'] ?>
 				
-				<?php if ($invalid): ?>
-					<span class="red">(<?= $invalid > 0 ? '+'.$invalid : $invalid ?>, <?= $expected_date ?>)</span>
+				<a href="https://vk.com/wall-<?= $gid ?>_<?= $id ?>" target="_blank">
+					<img src="i/img/external.svg" width="14" height="14" class="m" alt="" />
+				</a>
+				
+				<?php if ($list == 'postponed' && $delta): ?>
+					&nbsp;<span class="green m"><?= $delta ?></span>
 				<?php endif; ?>
 				
 				<div class="post-text">
-					<?php if ($post_type == 'suggest'): ?>
+					<?php if ($list == 'suggests'): ?>
 					<a href="#" class="js-post_edit m right">
 						<img src="//s.spac.me/i/edit_info.png" alt="" class="m" />
 					</a>
@@ -35,7 +45,7 @@
 		<div class="post-attaches">
 			<?php if ($geo): ?>
 			<div class="post-attach js-attach_geo">
-				<?php if ($post_type == 'suggest'): ?>
+				<?php if ($list == 'suggests'): ?>
 				<a href="#" style="float: right; padding: 10px" class="js-attach_delete" data-id="geo">
 					<img src="//s.spac.me/i/remove.png" alt="" />
 				</a>
@@ -56,7 +66,7 @@
 				
 				<?php if ($att->type != 'photo'): ?>
 					<div class="<?= $att->type != 'photo' ? 'post-attach ' : '' ?>js-attach_<?= htmlspecialchars($att_id) ?>">
-					<?php if ($post_type == 'suggest'): ?>
+					<?php if ($list == 'suggests'): ?>
 						<a href="#" style="float: right; padding: 10px" class="js-attach_delete" data-id="<?= htmlspecialchars($att_id) ?>">
 							<img src="i/img/remove.png" alt="" />
 						</a>
@@ -70,7 +80,7 @@
 						<a href="<?= $att->photo->photo_604 ?>" target="_blank" target="_blank" class="aspect"
 								style="padding-top: <?= $att->photo->height / $att->photo->width * 100 ?>%">
 							<img src="<?= $att->photo->photo_604 ?>" alt="" class="preview" />
-							<?php if ($post_type == 'suggest'): ?>
+							<?php if ($list == 'suggests'): ?>
 								<span class="post-attach_remove js-attach_delete inl" class="js-attach_delete" data-id="<?= htmlspecialchars($att_id) ?>">
 									<img src="i/img/remove_2x.png" alt="" />
 								</span>
@@ -120,22 +130,44 @@
 		<?php endif; ?>
 	</div>
 	
-	<div class="js-comment_btns pad_t">
-	<?php if ($post_type == 'suggest'): ?>
-		<button class="btn js-post_accept">В очередь</button>
-		<button class="btn btn-green js-toggle_btn js-anon_switch" data-state="1">Анон</button>
-		<div class="right">
-			<button class="btn btn-delete js-post_delete js-anon_switch">Удалить</button>
+	<?php if ($post_type != 'post'): ?>
+		<div class="js-comment_btns pad_t">
+		<?php if ($list == 'suggests'): ?>
+			<button class="btn js-post_accept">В очередь</button>
+			<button class="btn btn-green js-toggle_btn js-anon_switch" data-state="1">Анон</button>
+			
+			<?php if ($post_type == 'postpone'): ?>
+				<button class="btn btn-cancel js-toggle_btn js-spec_switch" data-state="<?= $special ?>">ADS</button>
+			<?php endif; ?>
+			
+			<div class="right">
+				<button class="btn btn-delete js-post_delete">&nbsp;x&nbsp;</button>
+			</div>
+		<?php elseif ($list == 'postponed'): ?>
+			<button class="btn" onclick="window.open('https://m.vk.com/wall-<?= $gid ?>_<?= $id ?>?act=edit&post_from=postponed&wide=1','','width=640,height=480,top=0,left='+($(window).innerWidth()-640)/2);return false;">Ред</button>
+			<button class="btn btn-cancel js-toggle_btn js-spec_switch" data-state="<?= $special ?>">ADS</button>
+			<!-- <button class="btn js-post_force_add">Запостить</button> -->
+			<div class="right">
+				<button class="btn btn-delete js-post_delete">&nbsp;x&nbsp;</button>
+			</div>
+		<?php endif; ?>
 		</div>
-	<?php elseif ($post_type == 'postpone'): ?>
-		<button class="btn" onclick="window.open('https://m.vk.com/wall-<?= $gid ?>_<?= $id ?>?act=edit&post_from=postponed&wide=1','','width=640,height=480,top=0,left='+($(window).innerWidth()-640)/2);return false;">Ред</button>
-		<button class="btn btn-green js-toggle_btn js-spec_switch" data-state="<?= $special ?>">Особый</button>
-		<!-- <button class="btn js-post_force_add">Запостить</button> -->
-		<div class="right">
-			<button class="btn btn-delete js-post_delete">Удалить</button>
+	<?php else: ?>
+		<div class="pad_t">
+			<button class="btn btn-cancel js-toggle_btn js-spec_switch" data-state="<?= $special ?>">ADS</button>
+		</div>
+		
+		<div class="grey pad_t">
+			Последний добавленный пост
 		</div>
 	<?php endif; ?>
-	</div>
+	
+	<?php if ($post_type != 'post' && $scheduled): ?>
+		<div class="pad_t green">
+			В очереди на постинг
+		</div>
+	<?php endif; ?>
+	
 	<div class="js-comment_msg hide"></div>
 	<div id="post_stub_<?= $gid ?>_<?= $id ?>"></div>
 </div>

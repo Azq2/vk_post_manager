@@ -534,7 +534,7 @@ foreach ($sources_hash as $type => $type_sources) {
 						'remote_id'			=> $topic_id, 
 						
 						'text'				=> $text, 
-						'owner'				=> $reposts, 
+						'owner'				=> $id, 
 						'attaches'			=> $attaches, 
 						
 						'time'				=> $date, 
