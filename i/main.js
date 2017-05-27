@@ -87,16 +87,6 @@ post_action('.js-post_accept', function (post, gid, id) {
 		alert("Сетевая ошибка :(");
 	});
 });
-post_action('.js-spec_switch', function (post, gid, id) {
-	var el = this;
-	$.api("?a=special_post", {
-		gid: gid, id: id, 
-		state: el.data('state') ? 1 : 0, 
-		dataType: "json"
-	}, function () {
-		location.reload(true);
-	});
-}, 'change');
 post_action('.js-post_delete', function (post, gid, id) {
 	var el = this, restore = !!el.data('restore');
 	if (el.attr("disabled"))
@@ -221,8 +211,17 @@ function recalc_freq_settings() {
 		form  = $form[0];
 	var interval = +form.elements.hh.value * 3600 + +form.elements.mm.value * 60, 
 		from = +form.elements.from_hh.value * 3600 + +form.elements.from_mm.value * 60, 
-		to = +form.elements.to_hh.value * 3600 + +form.elements.to_mm.value * 60, 
-		count = Math.round((to - from + 1) / interval);
+		to = +form.elements.to_hh.value * 3600 + +form.elements.to_mm.value * 60;
+	
+	if (to < from)
+		to += 24 * 3600;
+	
+	var count = 0;
+	while (from <= to) {
+		from += interval;
+		from = Math.round(from / 300) * 300;
+		++count;
+	}
 	
 	$('#post_cnt').text(count).css("color", count > 50 ? 'red' : '');
 }

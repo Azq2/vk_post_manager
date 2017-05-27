@@ -136,16 +136,11 @@
 			<button class="btn js-post_accept">В очередь</button>
 			<button class="btn btn-green js-toggle_btn js-anon_switch" data-state="1">Анон</button>
 			
-			<?php if ($post_type == 'postpone'): ?>
-				<button class="btn btn-cancel js-toggle_btn js-spec_switch" data-state="<?= $special ?>">ADS</button>
-			<?php endif; ?>
-			
 			<div class="right">
 				<button class="btn btn-delete js-post_delete">&nbsp;x&nbsp;</button>
 			</div>
 		<?php elseif ($list == 'postponed'): ?>
 			<button class="btn" onclick="window.open('https://m.vk.com/wall-<?= $gid ?>_<?= $id ?>?act=edit&post_from=postponed&wide=1','','width=640,height=480,top=0,left='+($(window).innerWidth()-640)/2);return false;">Ред</button>
-			<button class="btn btn-cancel js-toggle_btn js-spec_switch" data-state="<?= $special ?>">ADS</button>
 			<!-- <button class="btn js-post_force_add">Запостить</button> -->
 			<div class="right">
 				<button class="btn btn-delete js-post_delete">&nbsp;x&nbsp;</button>
@@ -153,10 +148,6 @@
 		<?php endif; ?>
 		</div>
 	<?php else: ?>
-		<div class="pad_t">
-			<button class="btn btn-cancel js-toggle_btn js-spec_switch" data-state="<?= $special ?>">ADS</button>
-		</div>
-		
 		<div class="grey pad_t">
 			Последний добавленный пост
 		</div>

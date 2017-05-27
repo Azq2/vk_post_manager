@@ -175,7 +175,7 @@ function uploadNextFile() {
 						if (json.success) {
 							files.shift();
 							
-							$('#file_upload_info_' + file.id).html('<span class="green">Поставлено в очередь на <b>' + json.date + '</b></span><br />' + 
+							$('#file_upload_info_' + file.id).html('<span class="green">Поставлено в очередь</span><br />' + 
 								'<a href="' + json.link + '" target="_blank">Перейти к записи</a>');
 							$('#file_pct_' + file.id).parent().remove();
 							

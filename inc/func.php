@@ -142,8 +142,6 @@ function pics_uploader(&$out, $q, $gid, $images, $progress = false) {
 			
 			$is_doc = isset($img['document']) && $img['document'];
 			
-			echo "size=".filesize($img['path'])." (".($is_doc ? 'DOC' : 'PIC').")\n";
-			
 			$upload_raw = $q->vkApiUpload($is_doc ? $upload_docs->response->upload_url : $upload_photos->response->upload_url, [
 				['path' => $img['path'], 'name' => $is_doc ? "image.gif" : "image.jpg", 'key' => $is_doc ? 'file' : 'photo']
 			])->body;

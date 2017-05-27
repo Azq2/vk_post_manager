@@ -846,17 +846,6 @@ switch ($action) {
 		mk_ajax($output);
 	break;
 	
-	case "special_post":
-		$id = (int) array_val($_REQUEST, 'id', 0);
-		$state = (int) array_val($_REQUEST, 'state', 0);
-		if ($state) {
-			mysql_query("INSERT IGNORE INTO `vk_special_posts` SET group_id = $gid, post_id = $id");
-		} else {
-			mysql_query("DELETE FROM `vk_special_posts` WHERE group_id = $gid AND post_id = $id");
-		}
-		mk_ajax(['success' => true]);
-	break;
-	
 	case "delete":
 		$id = (int) array_val($_REQUEST, 'id', 0);
 		$restore = (int) array_val($_REQUEST, 'restore', 0);
@@ -894,6 +883,180 @@ switch ($action) {
 		header("Location: ".preg_replace("/[\s:]/si", "", isset($_REQUEST['return']) ? $_REQUEST['return'] : '?'));
 	break;
 	
+	case "join_visual":
+		$stat = [];
+		
+		$type = array_val($_GET, 'type', 'diff');
+		$period = array_val($_GET, 'period', '1year');
+		$output = array_val($_GET, 'output', 'month');
+		
+		$date_start = 0;
+		$date_end = 0;
+		if ($period == 'now') {
+			$time = localtime(time());
+			$date_start = mktime(0, 0, 0, $time[4] + 1, $time[3], 1900 + $time[5]);
+		} elseif ($period == 'yesterday') {
+			$time = localtime(time());
+			$date_start = mktime(0, 0, 0, $time[4] + 1, $time[3] - 1, 1900 + $time[5]);
+			$date_end = mktime(0, 0, 0, $time[4] + 1, $time[3], 1900 + $time[5]);
+		} elseif ($period == 'week') {
+			$time = localtime(time());
+			$offsets = array(6, 0, 1, 2, 3, 4, 5);
+			$date_start = mktime(0, 0, 0, $time[4] + 1, $time[3] - $offsets[$time[6]], 1900 + $time[5]);
+		} elseif (preg_match("/(\d+)day/", $period, $m)) {
+			$date_start = time() - 3600 * 24 * $m[1];
+		} elseif (preg_match("/(\d+)year/", $period, $m)) {
+			$date_start = time() - 3600 * 24 * 365 * $m[1];
+		}
+		
+		$where = "";
+		if ($date_start)
+			$where .= " AND `time` >= $date_start";
+		if ($date_end)
+			$where .= " AND `time` <= $date_end";
+		
+		$output_list = [
+			'hour'	=> 'по часам', 
+			'day'	=> 'по дням', 
+			'week'	=> 'по неделям', 
+			'month'	=> 'по месяцам', 
+		];
+		
+		$show_output = array_keys($output_list);
+		if ($date_start) {
+			$show_output = [];
+			
+			$ndays = (($date_end ? $date_end : time()) - $date_start) / (24 * 3600);
+			
+			if ($ndays > 1)
+				unset($output_list['hour']);
+			
+			if ($ndays < 2)
+				unset($output_list['day']);
+			
+			if ($ndays < 8)
+				unset($output_list['week']);
+			
+			if ($ndays < 30)
+				unset($output_list['month']);
+		} else {
+			unset($output_list['hour']);
+		}
+		
+		if (!isset($output_list[$output])) {
+			$tmp = array_keys($output_list);
+			$output = reset($tmp);
+		}
+		
+		$total_join = 0;
+		$total_leave = 0;
+		
+		$req = mysql_query("SELECT * FROM `vk_join_stat` WHERE `cid` = $gid $where ORDER BY `id` DESC");
+		while ($res = mysql_fetch_assoc($req)) {
+			$date = false;
+			if ($output == 'day')
+				$key = date("Y-m-d", $res['time']);
+			elseif ($output == 'hour') {
+				$key = date("Y-m-d H:00", $res['time']);
+				$date = date("H:00", $res['time']);
+			} elseif ($output == 'month')
+				$key = date("Y-m", $res['time']);
+			elseif ($output == 'year')
+				$key = date("Y", $res['time']);
+			elseif ($output == 'week') {
+				$key = date("Y-W", $res['time']);
+				$date = date("Y-m-d", $res['time']);
+			}
+			
+			if (!$date)
+				$date = $key;
+			
+			if (!isset($stat[$key])) {
+				$stat[$key] = [
+					'date'		=> $date, 
+					'join'		=> 0, 
+					'leave'		=> 0, 
+					'diff'		=> 0
+				];
+			}
+			
+			$res['type'] ? ++$stat[$key]['join'] : ++$stat[$key]['leave'];
+			$res['type'] ? ++$total_join : ++$total_leave;
+			
+			$stat[$key]['diff'] = $stat[$key]['join'] - $stat[$key]['leave'];
+		}
+		
+		if ($type == 'joins') {
+			$fields = [
+				'join'		=> ['title' => 'Вступили', 'color' => ['#00ff00', '#00ff00']], 
+				'leave'		=> ['title' => 'Покинули', 'color' => ['#ff0000', '#ff0000']], 
+			];
+		} else if ($type == 'diff') {
+			$fields = [
+				'diff'		=> ['title' => 'Разница', 'color' => ['#00ff00', '#ff0000']], 
+			];
+		}
+		
+		$graphs = [];
+		foreach ($fields as $k => $g) {
+			$graphs[] = [
+				'title'					=> $g['title'], 
+				'lineColor'				=> $g['color'][0], 
+				'negativeLineColor'		=> $g['color'][1], 
+				'lineThickness'			=> 1.5, 
+				'bulletSize'			=> 5, 
+				'valueField'			=> $k
+			];
+		}
+		
+		mk_page(array(
+			'title' => 'Пользователи', 
+			'content' => Tpl::render("join_visual.html", [
+				'stat'			=> array_reverse(array_values($stat)), 
+				'graphs'		=> $graphs, 
+				'total_join'	=> $total_join, 
+				'total_leave'	=> $total_leave, 
+				
+				// Тип
+				'type_tabs'	=> switch_tabs([
+					'url' => Url::mk()->url(), 
+					'param' => 'type', 
+					'tabs' => [
+						'joins'	=> 'Вступления', 
+						'diff'	=> 'Разница'
+					], 
+					'active' => $type
+				]), 
+				
+				// Вывод
+				'output_tabs'	=> switch_tabs([
+					'url' => Url::mk()->url(), 
+					'param' => 'output', 
+					'tabs' => $output_list, 
+					'active' => $output
+				]), 
+				
+				// Период
+				'period_tabs'	=> switch_tabs([
+					'url' => Url::mk()->url(), 
+					'param' => 'period', 
+					'tabs' => [
+						'now'		=> 'Сегодня', 
+						'yesterday'	=> 'Вчера', 
+						'week'		=> 'Эта неделя', 
+						'7day'		=> '7 дней', 
+						'30day'		=> '30 дней', 
+						'90day'		=> '90 дней', 
+						'180day'	=> '180 дней', 
+						'1year'		=> '1 год', 
+						'all'		=> 'Всё время', 
+					], 
+					'active' => $period
+				]), 
+			])
+		));
+	break;
+	
 	case "multipicpost":
 		if ($_FILES && isset($_FILES['file'])) {
 			$out = array();
@@ -903,10 +1066,10 @@ switch ($action) {
 				$out['fatal'] = true;
 				$out['error'] = 'Что за дичь? Не очень похоже на пикчу с котиком.';
 			} else {
-				$attachments = pics_uploader($out, $q, $gid, [
+				$attachments = pics_uploader($out, $q, $gid, [[
 					'path'		=> $_FILES['file']['tmp_name'], 
 					'caption'	=> isset($_POST['caption']) ? $_POST['caption'] : ""
-				]);
+				]]);
 				add_queued_wall_post($out, $attachments, isset($_POST['message']) ? $_POST['message'] : "");
 			}
 			
@@ -923,7 +1086,6 @@ switch ($action) {
 	default:
 		$filter = isset($_REQUEST['filter']) ? preg_replace("/[^a-z0-9_-]+/i", "", $_REQUEST['filter']) : 'new';
 		
-		$special_posts = get_special_posts($gid);
 		$res = get_comments($q, $comm);
 		
 		$url = (new Url("?"))->set(array(
@@ -969,7 +1131,7 @@ switch ($action) {
 			
 			if ($item->post_type == 'post')
 				$last_posted = max($item->date, $last_posted);
-			else if (!isset($special_posts[$item->id]))
+			else if (!$item->special)
 				$last_postponed = max($item->date, $last_postponed);
 			
 			$json[$item->id] = get_post_json($item);
@@ -984,7 +1146,7 @@ switch ($action) {
 				'list'			=> $list, 
 				'geo'			=> isset($item->geo) ? $item->geo : null, 
 				'attachments'	=> isset($item->attachments) ? $item->attachments : null, 
-				'special'		=> isset($special_posts[$item->id]) ? 1 : 0, 
+				'special'		=> $item->special ? 1 : 0, 
 				'period'		=> $date != $last_date ? $date : false, 
 				'delta'			=> $last_time ? "+".count_delta($item->date - $last_time)." " : 0, 
 				'scheduled'		=> isset($item->orig_date) && abs($item->date - $item->orig_date) <= 60
@@ -1097,10 +1259,11 @@ function mk_page($args) {
 				'index'				=> 'Предложки', 
 				'multipicpost'		=> 'Мультипикчепостинг', 
 				'grabber'			=> 'Граббер', 
-				'users_top'			=> 'Топ юзверей', 
-				'users'				=> 'Юзвери', 
-				'activity'			=> 'Активность', 
-				'returns'			=> 'Возвраты', 
+//				'users_top'			=> 'Топ юзверей', 
+//				'users'				=> 'Юзвери', 
+//				'activity'			=> 'Активность', 
+//				'returns'			=> 'Возвраты', 
+				'join_visual'		=> 'График вступления'
 			], 
 			'active' => isset($_REQUEST['a']) ? $_REQUEST['a'] : 'index'
 		])

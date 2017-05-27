@@ -33,7 +33,7 @@ while ($comm = mysql_fetch_assoc($req)) {
 			// Ищем посты, которые перекрывают нужный нам
 			$overlaps = [];
 			foreach (array_merge($comments->postponed, $comments->suggests) as $p) {
-				if ($p->post_type == 'postpone' && abs($item->date - $p->orig_date) <= 60 && !$p->special) { // Нужны только отложенные посты
+				if ($p->post_type == 'postpone' && !$p->special && abs($item->date - $p->orig_date) <= 60) { // Нужны только отложенные посты
 					if ($p->id != $item->id) // Пропускаем себя же
 						$overlaps[] = $p;
 				}
@@ -91,14 +91,35 @@ while ($comm = mysql_fetch_assoc($req)) {
 					'attachments'	=> implode(",", $json['attachments']), 
 					'publish_date'	=> $item->date <= time() + 60 ? time() + 60 : $item->date
 				]);
+				
+				unset($_POST['vk_captcha_key']);
+				unset($_POST['vk_captcha_sid']);
+				
 				if (parse_vk_error($res, $output)) {
 					echo "\t=> #".$item->id." - OK\n";
 					break;
 				}
-				echo "\t=> #".$item->id." - ERROR: ".$output['error']."\n";
 				
-				if (isset($output['captcha']))
-					sleep(120);
+				if (isset($output['error']))
+					echo "\t=> #".$item->id." - ERROR: ".$output['error']."\n";
+				
+				if (isset($output['captcha'])) {
+					echo "\t=> #".$item->id." - CAPCHA: ".$output['captcha']['url']."\n";
+					
+					if (!isset($_SERVER['XUJ'])) {
+						sleep(120);
+						continue;
+					}
+					
+					echo "\tCODE: ";
+					
+					$_REQUEST['vk_captcha_sid'] = $output['captcha']['sid'];
+					$_REQUEST['vk_captcha_key'] = trim(fgets(STDIN));
+					
+					echo "\tok, code = ".$_REQUEST['vk_captcha_key']."\n";
+					
+					continue;
+				}
 				
 				sleep($i + 1);
 			}

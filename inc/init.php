@@ -11,3 +11,8 @@ mysql_set_charset('UTF8');
 date_default_timezone_set('Europe/Moscow');
 
 define_oauth();
+
+// Автозагрузка классов
+spl_autoload_register(function ($class) {
+	require_once H.'lib/'.str_replace("\\", "/", $class).".php";
+});

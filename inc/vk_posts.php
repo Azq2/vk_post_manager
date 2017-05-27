@@ -1,13 +1,5 @@
 <?php
 
-function get_special_posts($gid) {
-	$special_posts = [];
-	$req = mysql_query("SELECT * FROM `vk_special_posts` WHERE `group_id` = $gid");
-	while ($res = mysql_fetch_assoc($req))
-		$special_posts[$res['post_id']] = 1;
-	return $special_posts;
-}
-
 function get_posts_queue($gid) {
 	$queue = [];
 	
@@ -131,8 +123,6 @@ function get_comments($q, $comm) {
 	if (($error = vk_api_error($out)))
 		die("!!!!!!!!!!!!!! get_comments: $error\n");
 	
-	$special_posts = get_special_posts($gid);
-	
 	$users = [];
 	$items = [];
 	foreach ([$out->response->postponed, $out->response->suggests] as $list) {
@@ -172,7 +162,7 @@ function get_comments($q, $comm) {
 	$queue = get_posts_queue($gid);
 	foreach ($items as $post) {
 		$post->special = false;
-		if (isset($special_posts[$post->id])) {
+		if (isset($post->marked_as_ads) && $post->marked_as_ads) {
 			$post->special = true;
 			$specials[] = $post;
 		}
@@ -217,13 +207,24 @@ function get_comments($q, $comm) {
 
 function fix_post_date($post_time, $comm) {
 	$day_start = get_day_start($post_time);
+	
+	// Указан дополнительный интервал
+	$fix_after = 0;
+	if ($comm['period_to'] < $comm['period_from']) {
+		$fix_after = $comm['period_to'];
+		$comm['period_to'] = 3600 * 24;
+	}
+	
 	if (24 * 3600 - ($comm['period_to'] - $comm['period_from']) > 60) { // Есть фиксированный период постинга
-		if ($post_time - ($day_start + $comm['period_from']) <= -10) {
-			// Если время не попадает под минимальный период, то переносим его на начало периода текущего дня
-			$post_time = $day_start + $comm['period_from'];
-		} else if ($post_time - ($day_start + $comm['period_to']) >= 10) {
+		if ($post_time - ($day_start + $comm['period_to']) >= 10) {
 			// Если время превышает границу времени, то переносим на следующий день
 			$post_time = $day_start + 24 * 3600 + $comm['period_from'];
+			echo "period_to\n";
+		} elseif ($post_time - ($day_start + $comm['period_from']) <= -10) {
+			if (!$fix_after || $post_time - ($day_start + $fix_after) > 10) { // Дополнительный интервал
+				// Если время не попадает под минимальный период, то переносим его на начало периода текущего дня
+				$post_time = $day_start + $comm['period_from'];
+			}
 		}
 	}
 	
@@ -283,9 +284,9 @@ function process_queue($comm, $posts) {
 				// Предыдущий пост - специальный и до него меньше часа
 				if ($prev && $prev->special && $cur->date - $prev->date < ($SPECIAL_POST_BEFORE_PAD - $SPECIAL_POST_FIX)) {
 					// Увеличиваем промежуток до часа
-					$cur->date = fix_post_date($prev->date + ($SPECIAL_POST_BEFORE_PAD - ($cur->date - $prev->date)), $comm);
+					$cur->date = fix_post_date($cur->date + ($SPECIAL_POST_BEFORE_PAD - ($cur->date - $prev->date)), $comm);
 					
-//					echo "\t#".$cur->id." fix date ".date("d/m/Y H:i", $cur->date)." by prev SPECIAL\n";
+//					echo "\t#".$cur->id." fix date ".date("d/m/Y H:i", $cur->date)." (diff=".($cur->date - $prev->date).") by prev SPECIAL\n";
 				}
 				
 				// Следующий пост - специальный и до него меньше часа
