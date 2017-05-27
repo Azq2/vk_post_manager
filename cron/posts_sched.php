@@ -16,8 +16,8 @@ $q->vkSetUser('VK_SCHED');
 
 $SCHED_LIMIT = 2;
 
-$req = mysql_query("SELECT * FROM `vk_groups` as `g` WHERE EXISTS (SELECT 0 FROM `vk_posts_queue` as `s` WHERE `s`.group_id = `g`.id LIMIT 1)");
-while ($comm = mysql_fetch_assoc($req)) {
+$req = Mysql::query("SELECT * FROM `vk_groups` as `g` WHERE EXISTS (SELECT 0 FROM `vk_posts_queue` as `s` WHERE `s`.group_id = `g`.id LIMIT 1)");
+while ($comm = $req->fetch()) {
 	echo "=========== ".$comm['id']." ===========\n";
 	$gid = $comm['id'];
 	$comments = get_comments($q, $comm);
@@ -41,8 +41,8 @@ while ($comm = mysql_fetch_assoc($req)) {
 			
 			// Меняем время таким постам на левое
 			foreach ($overlaps as $p) {
-				$req = mysql_query("SELECT MAX(`fake_date`) FROM `vk_posts_queue`");
-				$fake_date = max(time() + 3600 * 24 * 60, mysql_num_rows($req) ? mysql_result($req, 0) : 0) + 3600;
+				$req = Mysql::query("SELECT MAX(`fake_date`) FROM `vk_posts_queue`");
+				$fake_date = max(time() + 3600 * 24 * 60, $req->num() ? $req->result() : 0) + 3600;
 				
 				echo "\t=> fix overlaped post #".$p->id." ".date("d/m/Y H:i", $p->date)." -> ".date("d/m/Y H:i", $fake_date)."\n";
 				
@@ -74,7 +74,7 @@ while ($comm = mysql_fetch_assoc($req)) {
 				}
 				
 				// Обновляем фейковое время в БД
-				mysql_query("UPDATE `vk_posts_queue` SET `fake_date` WHERE `group_id` = $gid AND `id` = ".$p->id);
+				Mysql::query("UPDATE `vk_posts_queue` SET `fake_date` WHERE `group_id` = $gid AND `id` = ".$p->id);
 			}
 			
 			for ($i = 0; $i < 10; ++$i) {

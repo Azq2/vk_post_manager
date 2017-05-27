@@ -27,6 +27,35 @@
 				</div>
 			</div>
 			
+			<?php if ($mysql): ?>
+				<table class="table" width="100%">
+					<tr>
+						<th>
+							Query
+						</th>
+						<th>
+							Time
+						</th>
+						<th>
+							Cost
+						</th>
+					</tr>
+				<?php foreach ($mysql as $q): ?>
+					<tr>
+						<td>
+							<?= htmlspecialchars($q['query']) ?>
+						</td>
+						<td>
+							<?= sprintf("%.04f", $q['time']) ?>
+						</td>
+						<td>
+							<?= sprintf("%.04f", $q['cost']) ?>
+						</td>
+					</tr>
+				<?php endforeach; ?>
+				</table>
+			<?php endif; ?>
+			
 			<div class="content">
 				<?= $content ?>
 			</div>

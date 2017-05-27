@@ -5,8 +5,8 @@ function get_posts_queue($gid) {
 	
 	$i = 0;
 	
-	$req = mysql_query("SELECT * FROM `vk_posts_queue` WHERE `group_id` = ".(int) $gid." ORDER BY `nid` ASC");
-	while ($res = mysql_fetch_assoc($req)) {
+	$req = Mysql::query("SELECT * FROM `vk_posts_queue` WHERE `group_id` = ".(int) $gid." ORDER BY `nid` ASC");
+	while ($res = $req->fetch()) {
 		$res['n'] = $i++;
 		$queue[$res['id']] = $res;
 	}
@@ -127,8 +127,10 @@ function get_comments($q, $comm) {
 	$items = [];
 	foreach ([$out->response->postponed, $out->response->suggests] as $list) {
 		foreach ($list as $chunk) {
-			foreach ($chunk->items as $item)
-				$items[] = $item;
+			if (isset($chunk->items)) {
+				foreach ($chunk->items as $item)
+					$items[] = $item;
+			}
 			
 			if (isset($chunk->profiles)) {
 				foreach ($chunk->profiles as $u)
@@ -219,7 +221,6 @@ function fix_post_date($post_time, $comm) {
 		if ($post_time - ($day_start + $comm['period_to']) >= 10) {
 			// Если время превышает границу времени, то переносим на следующий день
 			$post_time = $day_start + 24 * 3600 + $comm['period_from'];
-			echo "period_to\n";
 		} elseif ($post_time - ($day_start + $comm['period_from']) <= -10) {
 			if (!$fix_after || $post_time - ($day_start + $fix_after) > 10) { // Дополнительный интервал
 				// Если время не попадает под минимальный период, то переносим его на начало периода текущего дня

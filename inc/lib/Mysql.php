@@ -2,19 +2,40 @@
 class Mysql {
 	private static $queries = [];
 	private static $link;
+	private static $config;
+	private static $last_time;
+	private static $debug;
 	
 	public static function connect($db_config) {
-		$key = $db_config['host'].":".$db_config['user'];
+		self::$config = $db_config;
+		self::$link = NULL;
+		if (is_null(self::$debug))
+			self::$debug = php_sapi_name() != "cli";
+	}
+	
+	public static function debug($debug) {
+		self::$debug = (bool) $debug;
+	}
+	
+	public static function link() {
+		if (self::$link && time() - self::$last_time > 60 && !self::$link->ping()) {
+			// Коннект к mysql отвалился по таймауту
+			self::$link = NULL;
+		}
 		
-		$parts = explode(":", $db_config['host']);
+		if (!self::$link) {
+			$db_config = self::$config;
+			$parts = explode(":", $db_config['host']);
+			$link = new mysqli($parts[0], $db_config['user'], $db_config['pass'], NULL, isset($parts[1]) ? $parts[1] : NULL);
+			if ($link->connect_error)
+				die("MYSQL CONNECT: ".$link->connect_error);
+			$link->set_charset('utf8');
+			$link->select_db($db_config['db']);
+			self::$link = $link;
+		}
+		self::$last_time = time();
 		
-		$link = new mysqli($parts[0], $db_config['user'], $db_config['pass'], NULL, isset($parts[1]) ? $parts[1] : NULL);
-		if ($link->connect_error)
-			die("MYSQL CONNECT: ".$link->connect_error);
-		$link->set_charset('utf8');
-		$link->select_db($db_config['db']);
-		
-		self::$link = $link;
+		return self::$link;
 	}
 	
 	public static function prepare($query, $argv = array()) {
@@ -34,6 +55,10 @@ class Mysql {
 		return $query;
 	}
 	
+	public static function escape($str) {
+		return self::link()->real_escape_string($str);
+	}
+	
 	public static function value($str) {
 		if (is_array($str)) {
 			$tmp = array();
@@ -45,14 +70,14 @@ class Mysql {
 			return "NULL";
 		if (is_bool($str))
 			return $str ? 1 : 0;
-		return "'".self::$link->real_escape_string($str)."'";
+		return "'".self::link()->real_escape_string($str)."'";
 	}
 	
 	public static function query($query, $args = []) {
 		$query = self::prepare($query, $args);
 		// echo "\n\n[SQL] ".preg_replace("/\s+/", " ", $query)."\n\n";
 		
-		$link = self::$link;
+		$link = self::link();
 		
 		$start = microtime(true);
 		$r = $link->query($query);
@@ -61,9 +86,9 @@ class Mysql {
 		$result = new MysqlResult($link, $r);
 		
 		if (!$r)
-			die("MYSQL ERROR: ".$link->error.", QUERY: ".$query);
+			die("MYSQL ERROR: ".$link->error.", QUERY: \n".$query."\n");
 		
-		if (!preg_match("/^\s*(FLUSH|EXPLAIN|SHOW|FLUSH)/i", $query)) {
+		if (self::$debug && !preg_match("/^\s*(FLUSH|EXPLAIN|SHOW|FLUSH)/i", $query)) {
 			$cost = self::query("SHOW SESSION STATUS LIKE 'Last_query_cost'")->result(1);
 			self::$queries[] = array(
 				'query' => $query, 

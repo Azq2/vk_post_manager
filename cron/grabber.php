@@ -13,8 +13,8 @@ file_put_contents(H."../tmp/grabber_lock", 1);
 $q = new Http;
 
 $sources_hash = [];
-$req = mysql_query("SELECT * FROM `vk_grabber_sources`");
-while ($s = mysql_fetch_assoc($req)) {
+$req = Mysql::query("SELECT * FROM `vk_grabber_sources`");
+while ($s = $req->fetch()) {
 	$sources_hash[$s['type']][$s['id']] = 1;
 	$sources_hash['VK'][-$s['group_id']] = 1; // Ещё и граббим свою группу
 }
@@ -280,32 +280,32 @@ foreach ($sources_hash as $type => $type_sources) {
 						foreach ($response->profiles as $item) {
 							if (!isset($used_owners[$item->id]))
 								continue;
-							mysql_query("
+							Mysql::query("
 								INSERT INTO `vk_grabber_data_owners` SET
-									`id` = '".mysql_real_escape_string($type.'_'.$item->id)."', 
-									`name` = '".mysql_real_escape_string($item->first_name.' '.$item->last_name)."', 
-									`url` = '".mysql_real_escape_string("/".$item->screen_name)."', 
-									`avatar` = '".mysql_real_escape_string($item->photo_50)."'
+									`id` = '".Mysql::escape($type.'_'.$item->id)."', 
+									`name` = '".Mysql::escape($item->first_name.' '.$item->last_name)."', 
+									`url` = '".Mysql::escape("/".$item->screen_name)."', 
+									`avatar` = '".Mysql::escape($item->photo_50)."'
 								ON DUPLICATE KEY UPDATE
 									`url` = VALUES(`url`), 
 									`name` = VALUES(`name`), 
 									`avatar` = VALUES(`avatar`)
-							") or die("MYSQL ERROR: ".mysql_error());
+							");
 						}
 						
 						foreach ($response->groups as $item) {
 							if (!isset($used_owners[-$item->id]))
 								continue;
-							mysql_query("
+							Mysql::query("
 								INSERT INTO `vk_grabber_data_owners` SET
-									`id` = '".mysql_real_escape_string($type.'_-'.$item->id)."', 
-									`name` = '".mysql_real_escape_string($item->name)."', 
-									`url` = '".mysql_real_escape_string("/".$item->screen_name)."', 
-									`avatar` = '".mysql_real_escape_string($item->photo_50)."'
+									`id` = '".Mysql::escape($type.'_-'.$item->id)."', 
+									`name` = '".Mysql::escape($item->name)."', 
+									`url` = '".Mysql::escape("/".$item->screen_name)."', 
+									`avatar` = '".Mysql::escape($item->photo_50)."'
 								ON DUPLICATE KEY UPDATE
 									`url` = VALUES(`url`), 
 									`name` = VALUES(`name`)
-							") or die("MYSQL ERROR: ".mysql_error());
+							");
 						}
 						
 						echo "OK: #".$item->id."\n";
@@ -381,17 +381,17 @@ foreach ($sources_hash as $type => $type_sources) {
 						}
 						$avatar = str_replace("http:", "https:", $avatar->item(0)->getAttribute("content"));
 						
-						mysql_query("
+						Mysql::query("
 							INSERT INTO `vk_grabber_data_owners` SET
-								`id` = '".mysql_real_escape_string($type.'_'.$id)."', 
-								`name` = '".mysql_real_escape_string($title)."', 
-								`url` = '".mysql_real_escape_string("https://ok.ru/group/$id")."', 
-								`avatar` = '".mysql_real_escape_string($avatar)."'
+								`id` = '".Mysql::escape($type.'_'.$id)."', 
+								`name` = '".Mysql::escape($title)."', 
+								`url` = '".Mysql::escape("https://ok.ru/group/$id")."', 
+								`avatar` = '".Mysql::escape($avatar)."'
 							ON DUPLICATE KEY UPDATE
 								`url` = VALUES(`url`), 
 								`name` = VALUES(`name`), 
 								`avatar` = VALUES(`avatar`)
-						") or die("MYSQL ERROR: ".mysql_error());
+						");
 					}
 					
 					// Парсим дату топика
@@ -564,41 +564,38 @@ foreach ($sources_hash as $type => $type_sources) {
 unlink(H."../tmp/grabber_lock");
 
 function insert_to_db($data) {
-	$req = mysql_query("SELECT `data_id` FROM `vk_grabber_data_index` WHERE 
-		`source_id` = '".mysql_real_escape_string($data->source_id)."' AND 
-		`source_type` = '".mysql_real_escape_string($data->source_type)."' AND 
-		`remote_id` = '".mysql_real_escape_string($data->remote_id)."'");
-	if (!$req)
-		die("MYSQL ERROR 1: ".mysql_error());
+	$req = Mysql::query("SELECT `data_id` FROM `vk_grabber_data_index` WHERE 
+		`source_id` = '".Mysql::escape($data->source_id)."' AND 
+		`source_type` = '".Mysql::escape($data->source_type)."' AND 
+		`remote_id` = '".Mysql::escape($data->remote_id)."'");
 	
-	$data_id = mysql_num_rows($req) ? mysql_result($req, 0) : 0;
+	$data_id = $req->num() ? $req->result() : 0;
 	
 	$good = 0;
 	if (!$data_id) {
 		++$good;
-		mysql_query("
+		$data_id = Mysql::query("
 			INSERT INTO `vk_grabber_data` SET
-				`text`			= '".mysql_real_escape_string($data->text)."', 
-				`owner`			= '".mysql_real_escape_string($data->owner)."', 
-				`attaches`		= '".mysql_real_escape_string(gzdeflate(serialize($data->attaches)))."'
-		") or die("MYSQL ERROR 2: ".mysql_error());
-		$data_id = mysql_insert_id();
+				`text`			= '".Mysql::escape($data->text)."', 
+				`owner`			= '".Mysql::escape($data->owner)."', 
+				`attaches`		= '".Mysql::escape(gzdeflate(serialize($data->attaches)))."'
+		")->id();
 	} else {
-		mysql_query("
+		Mysql::query("
 			UPDATE `vk_grabber_data` SET
-				`text`			= '".mysql_real_escape_string($data->text)."', 
-				`owner`			= '".mysql_real_escape_string($data->owner)."', 
-				`attaches`		= '".mysql_real_escape_string(gzdeflate(serialize($data->attaches)))."'
+				`text`			= '".Mysql::escape($data->text)."', 
+				`owner`			= '".Mysql::escape($data->owner)."', 
+				`attaches`		= '".Mysql::escape(gzdeflate(serialize($data->attaches)))."'
 			WHERE
 				`id` = ".$data_id."
-		") or die("MYSQL ERROR 3: ".mysql_error());
+		");
 	}
 	
-	mysql_query("
+	Mysql::query("
 		INSERT INTO `vk_grabber_data_index` SET
-			`source_id`		= '".mysql_real_escape_string($data->source_id)."', 
-			`source_type`	= '".mysql_real_escape_string($data->source_type)."', 
-			`remote_id`		= '".mysql_real_escape_string($data->remote_id)."', 
+			`source_id`		= '".Mysql::escape($data->source_id)."', 
+			`source_type`	= '".Mysql::escape($data->source_type)."', 
+			`remote_id`		= '".Mysql::escape($data->remote_id)."', 
 			`data_id`		= ".$data_id.", 
 			`time`			= ".$data->time.", 
 			`likes`			= ".$data->likes.", 
@@ -614,7 +611,7 @@ function insert_to_db($data) {
 			`reposts`		= VALUES(`reposts`), 
 			`images_cnt`	= VALUES(`images_cnt`), 
 			`gifs_cnt`		= VALUES(`gifs_cnt`)
-	") or die("MYSQL ERROR 4: ".mysql_error());
+	");
 	
 	return $good;
 }

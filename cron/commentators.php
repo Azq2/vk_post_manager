@@ -2,8 +2,8 @@
 require dirname(__FILE__)."/../inc/init.php";
 $q = new Http;
 
-$re22q = mysql_query("SELECT * FROM `vk_groups` ORDER BY pos ASC");
-while ($comm = mysql_fetch_assoc($re22q)) {
+$re22q = Mysql::query("SELECT * FROM `vk_groups` ORDER BY pos ASC");
+while ($comm = $re22q->fetch()) {
 	echo "==== ".$comm['name']." ====\n";
 	
 	$commentators = array();
@@ -29,14 +29,14 @@ while ($comm = mysql_fetch_assoc($re22q)) {
 		foreach ($ret->response->items as $item) {
 			echo "https://vk.com/wall".$item->owner_id."_".$item->id."\n";
 			
-			mysql_query("REPLACE INTO `vk_posts` SET
+			Mysql::query("REPLACE INTO `vk_posts` SET
 				`post_id` = ".(int) $item->id.", 
 				`group_id` = ".(int) $item->owner_id.", 
 				`likes` = ".(int) $item->likes->count.", 
 				`comments` = ".(int) $item->comments->count.", 
 				`reposts` = ".(int) $item->reposts->count.", 
 				`date` = ".(int) $item->date."
-			") or die("err: ".mysql_error());
+			");
 			
 			$j = 0;
 			if ($item->comments->count) {
@@ -59,13 +59,13 @@ while ($comm = mysql_fetch_assoc($re22q)) {
 						die("ERROR: ".print_r($ret2, 1));
 					
 					foreach ($ret2->response->items as $c) {
-						mysql_query("REPLACE INTO `vk_posts_comments` SET
+						Mysql::query("REPLACE INTO `vk_posts_comments` SET
 							`id` = ".(int) $c->id.", 
 							`post_id` = ".(int) $item->id.", 
 							`group_id` = ".(int) $item->owner_id.", 
 							`user_id` = ".(int) $c->from_id.", 
 							`date` = ".(int) $c->date."
-						") or die("err: ".mysql_error());
+						");
 					}
 					
 					$j += 100;
@@ -96,11 +96,11 @@ while ($comm = mysql_fetch_assoc($re22q)) {
 						die("ERROR: ".print_r($ret2, 1));
 					
 					foreach ($ret2->response->items as $c) {
-						mysql_query("REPLACE INTO `vk_posts_likes` SET
+						Mysql::query("REPLACE INTO `vk_posts_likes` SET
 							`post_id` = ".(int) $item->id.", 
 							`group_id` = ".(int) $item->owner_id.", 
 							`user_id` = ".(int) $c."
-						") or die("err: ".mysql_error());
+						");
 					}
 					
 					$j += 100;
@@ -130,7 +130,7 @@ while ($comm = mysql_fetch_assoc($re22q)) {
 						die("ERROR: ".print_r($ret2, 1));
 					
 					foreach ($ret2->response->items as $c) {
-						mysql_query("REPLACE INTO `vk_posts_reposts` SET
+						Mysql::query("REPLACE INTO `vk_posts_reposts` SET
 							`post_id` = ".(int) $item->id.", 
 							`group_id` = ".(int) $item->owner_id.", 
 							`user_id` = ".(int) $c->from_id.", 
@@ -138,7 +138,7 @@ while ($comm = mysql_fetch_assoc($re22q)) {
 							`likes` = ".(int) @$c->likes->count.", 
 							`comments` = ".(int) @$c->comments->count.", 
 							`reposts` = ".(int) @$c->reposts->count."
-						") or die("err: ".mysql_error());
+						");
 					}
 					
 					$j += 100;

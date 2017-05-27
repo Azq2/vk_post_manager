@@ -95,7 +95,7 @@ while (true) {
 			}
 			file_put_contents($file, json_encode($queue));
 			
-			$url = mysql_result(mysql_query("SELECT `url` FROM `vk_grabber_data_owners` WHERE `id` = 'VK_-".$queue['gid']."'"), 0);
+			$url = Mysql::query("SELECT `url` FROM `vk_grabber_data_owners` WHERE `id` = 'VK_-".$queue['gid']."'")->result();
 			
 			// Скачиваем документы
 			if (is_array($queue['documents']) && !isset($queue['out']['error'])) {

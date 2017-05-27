@@ -1,79 +1,4 @@
 <?php
-if (!function_exists('mysql_fetch_assoc')) {
-	static $_mysql_link;
-	function mysql_pconnect($host, $user, $passwd) {
-		global $_mysql_link;
-		return ($_mysql_link = mysqli_connect("p:".$host, $user, $passwd));
-	}
-	
-	function mysql_connect($host, $user, $passwd) {
-		global $_mysql_link;
-		return ($_mysql_link = mysqli_connect($host, $user, $passwd));
-	}
-	
-	function mysql_select_db($db) {
-		global $_mysql_link;
-		return mysqli_select_db($_mysql_link, $db);
-	}
-	
-	function mysql_set_charset($charset) {
-		global $_mysql_link;
-		return mysqli_set_charset($_mysql_link, $charset);
-	}
-	
-	function mysql_query($query) {
-		global $_mysql_link;
-		$req = mysqli_query($_mysql_link, $query);
-		if ($req === false)
-			die("error($query): ".mysql_error()."\n");
-		return $req;
-	}
-	
-	function mysql_error() {
-		global $_mysql_link;
-		return mysqli_error($_mysql_link);
-	}
-	
-	function mysql_fetch_assoc($query) {
-		return mysqli_fetch_assoc($query);
-	}
-	
-	function mysql_num_rows($query) {
-		return mysqli_num_rows($query);
-	}
-	
-	function mysql_fetch_row($query) {
-		return mysqli_fetch_row($query);
-	}
-	
-	function mysql_fetch_array($query) {
-		return mysqli_fetch_array($query);
-	}
-	
-	function mysql_result($query) {
-		$row = mysqli_fetch_row($query);
-		return $row[0];
-	}
-	
-	function mysql_real_escape_string($query) {
-		global $_mysql_link;
-		return mysqli_real_escape_string($_mysql_link, $query);
-	}
-	
-	function mysql_free_result($query) {
-		return mysqli_free_result($query);
-	}
-	
-	function mysql_num_fields($query) {
-		return mysqli_num_fields($query);
-	}
-	
-	function mysql_field_name($query, $i) {
-		$res = mysqli_fetch_fields($query);
-		return $res[$i]->name;
-	}
-}
-
 function vk_api_error($res) {
 	if (!$res)
 		return "Ошибка подключения к API";
@@ -207,8 +132,8 @@ function pics_uploader(&$out, $q, $gid, $images, $progress = false) {
 function define_oauth() {
 	$types = ['VK' => 1, 'OK' => 1, 'VK_SCHED' => 1];
 	
-	$req = mysql_query("SELECT * FROM `vk_oauth`");
-	while ($res = mysql_fetch_assoc($req)) {
+	$req = Mysql::query("SELECT * FROM `vk_oauth`");
+	while ($res = $req->fetch()) {
 		if (isset($types[$res['type']]))
 			define($res['type'].'_USER_ACCESS_TOKEN', $res['access_token']);
 	}
@@ -257,7 +182,7 @@ function array_val($array, $key, $val = NULL) {
 }
 
 function e($s) {
-	return mysql_real_escape_string($s);
+	return Mysql::escape($s);
 }
 
 function request($ch, $url, $data = NULL) {
@@ -579,6 +504,8 @@ class Http {
 	public $last_http_code = 0;
 	public $last_http_redirect = '';
 	
+	private static $oauth = false;
+	
 	public function __construct() {
 		$this->ch = curl_init();
 		curl_setopt_array($this->ch, array(
@@ -588,6 +515,11 @@ class Http {
 			CURLOPT_HEADER				=> true, 
 			CURLOPT_VERBOSE				=> false
 		));
+		
+		if (!self::$oauth) {
+			define_oauth();
+			self::$oauth = true;
+		}
 	}
 	
 	public function dumpLastReqState() {

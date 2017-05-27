@@ -22,8 +22,8 @@ $action = isset($_REQUEST['a']) ? preg_replace("/[^a-z0-9_-]+/i", "", $_REQUEST[
 $curl = new Url($_SERVER['REQUEST_URI']);
 
 $comms = [];
-$req = mysql_query("SELECT * FROM `vk_groups` ORDER BY pos ASC");
-while ($res = mysql_fetch_assoc($req))
+$req = Mysql::query("SELECT * FROM `vk_groups` ORDER BY pos ASC");
+while ($res = $req->fetch())
 	$comms[$res['id']] = $res;
 
 $gid = (int) array_val($_REQUEST, 'gid', reset($comms)['id']);
@@ -44,17 +44,17 @@ switch ($action) {
 			if (!preg_match("/^[\w\d_]+$/i", $type))
 				die('type: '.htmlspecialchars($type));
 			
-			mysql_query("
+			Mysql::query("
 				INSERT INTO `vk_oauth` SET
-					`type`			= '".mysql_real_escape_string($type)."', 
-					`access_token`	= '".mysql_real_escape_string($access_token)."', 
-					`refresh_token`	= '".mysql_real_escape_string($refresh_token)."', 
+					`type`			= '".Mysql::escape($type)."', 
+					`access_token`	= '".Mysql::escape($access_token)."', 
+					`refresh_token`	= '".Mysql::escape($refresh_token)."', 
 					`expires`		= $expires
 				ON DUPLICATE KEY UPDATE
 					`access_token`	= VALUES(`access_token`), 
 					`refresh_token`	= VALUES(`refresh_token`), 
 					`expires`		= VALUES(`expires`)
-			") or die("MYSQL ERROR: ".mysql_error());
+			");
 			header("Location: ?a=oauth&ok=1");
 		} else {
 			$redirect_url = str_replace("/index.php", "/", $_SERVER['REQUEST_SCHEME'].'://'.$_SERVER['HTTP_HOST'].$_SERVER['DOCUMENT_URI']."auth.php");
@@ -133,8 +133,8 @@ switch ($action) {
 		$content_filter = array_val($_REQUEST, 'content', 'pics');
 		
 		$sources = [];
-		$req = mysql_query("SELECT * FROM `vk_grabber_sources` WHERE group_id = $gid ORDER BY id DESC");
-		while ($res = mysql_fetch_assoc($req))
+		$req = Mysql::query("SELECT * FROM `vk_grabber_sources` WHERE group_id = $gid ORDER BY id DESC");
+		while ($res = $req->fetch())
 			$sources[$res['id']] = $res;
 		
 		$view = [
@@ -185,12 +185,12 @@ switch ($action) {
 				$remote_id = isset($_POST['remote_id']) ? $_POST['remote_id'] : '';
 				
 				if ($source_id && $source_type && $remote_id) {
-					mysql_query("
+					Mysql::query("
 						INSERT IGNORE INTO `vk_grabber_blacklist` SET
 							group_id = $gid, 
-							source_id = '".mysql_real_escape_string($source_id)."', 
-							source_type = '".mysql_real_escape_string($source_type)."', 
-							remote_id = '".mysql_real_escape_string($remote_id)."'
+							source_id = '".Mysql::escape($source_id)."', 
+							source_type = '".Mysql::escape($source_type)."', 
+							remote_id = '".Mysql::escape($remote_id)."'
 					");
 				}
 				mk_ajax(['success' => true]);
@@ -207,12 +207,12 @@ switch ($action) {
 				$sources_hash = [];
 				foreach ($sources as $s) {
 					if ($s['enabled'])
-						$sources_hash[$s['type']][] = "'".mysql_real_escape_string($s['id'])."'";
+						$sources_hash[$s['type']][] = "'".Mysql::escape($s['id'])."'";
 				}
 				
 				$sources_where = [];
 				foreach ($sources_hash as $type => $ids)
-					$sources_where[] = "(d.`source_type` = '".mysql_real_escape_string($type)."' AND d.`source_id` IN (".implode(",", $ids)."))\n";
+					$sources_where[] = "(d.`source_type` = '".Mysql::escape($type)."' AND d.`source_id` IN (".implode(",", $ids)."))\n";
 				
 				// Фильтр по типу контента
 				if ($content_filter == 'pics')
@@ -230,7 +230,7 @@ switch ($action) {
 					if (isset($_REQUEST['exclude'])) {
 						$exclude = [];
 						foreach (explode(",", $_REQUEST['exclude']) as $t)
-							$exclude[] = "'".mysql_real_escape_string($t)."'";
+							$exclude[] = "'".Mysql::escape($t)."'";
 						if ($exclude)
 							$where[] = 'CONCAT(d.`source_type`, "_", d.`remote_id`) NOT IN ('.implode(", ", $exclude).')';
 					}
@@ -268,41 +268,40 @@ switch ($action) {
 					LIMIT $O, $L
 				";
 				
-				$req = mysql_query($sql);
+				$req = Mysql::query($sql);
 				if (!$req) {
 					mk_ajax([
 						'success' 	=> false, 
-						'sql'		=> $sql, 
-						'error'		=> mysql_error()
+						'sql'		=> $sql
 					]);
 					exit;
 				}
 				
-				$req2 = mysql_query("SELECT FOUND_ROWS()");
-				$count = mysql_result($req2, 0);
+				$req2 = Mysql::query("SELECT FOUND_ROWS()");
+				$count = $req2->result();
 				
 				// Получаем массив id данных и 
 				$meta = [];
 				$items = [];
-				while ($res = mysql_fetch_assoc($req)) {
+				while ($res = $req->fetch()) {
 					$items[$res['data_id']] = 1;
 					$meta[$res['data_id']] = $res;
 				}
-				mysql_free_result($req);
-				mysql_free_result($req2);
+				$req->free();
+				$req2->free();
 				$time_list = microtime(true) - $time_list;
 				
 				if ($items) {
 					// Получаем овнеров
 					$owners = [];
-					$req = mysql_query("SELECT * FROM `vk_grabber_data_owners`");
-					while ($res = mysql_fetch_assoc($req))
+					$req = Mysql::query("SELECT * FROM `vk_grabber_data_owners`");
+					while ($res = $req->fetch())
 						$owners[$res['id']] = $res;
-					mysql_free_result($req);
+					$req->free();
 					
 					$time_data = microtime(true);
-					$req = mysql_query("SELECT * FROM `vk_grabber_data` WHERE `id` IN (".implode(",", array_keys($items)).")");
-					while ($res = mysql_fetch_assoc($req)) {
+					$req = Mysql::query("SELECT * FROM `vk_grabber_data` WHERE `id` IN (".implode(",", array_keys($items)).")");
+					while ($res = $req->fetch()) {
 						$res = array_merge($res, $meta[$res['id']]);
 						$owner = $owners[$res['source_type'].'_'.$res['owner']];
 						$res['owner_name'] = $owner['name'];
@@ -311,7 +310,7 @@ switch ($action) {
 						$res['attaches'] = unserialize(gzinflate($res['attaches']));
 						$items[$res['id']] = $res;
 					}
-					mysql_free_result($req);
+					$req->free();
 					$time_data = microtime(true) - $time_data;
 				}
 				
@@ -380,10 +379,10 @@ switch ($action) {
 				$source_id = array_val($_GET, 'id', '');
 				$source_type = array_val($_GET, 'type', '');
 				
-				mysql_query("UPDATE `vk_grabber_sources` SET `enabled` = ".($sub_action == 'on' ? 1 : 0)."
+				Mysql::query("UPDATE `vk_grabber_sources` SET `enabled` = ".($sub_action == 'on' ? 1 : 0)."
 					WHERE
-						id = '".mysql_real_escape_string($source_id)."' AND
-						type = '".mysql_real_escape_string($source_type)."' AND 
+						id = '".Mysql::escape($source_id)."' AND
+						type = '".Mysql::escape($source_type)."' AND 
 						group_id = $gid");
 				
 				header("Location: ".Url::mk('?')->set('a', 'grabber')->set('gid', $gid)->url());
@@ -394,10 +393,10 @@ switch ($action) {
 				$source_id = array_val($_GET, 'id', '');
 				$source_type = array_val($_GET, 'type', '');
 				
-				mysql_query("DELETE FROM `vk_grabber_sources`
+				Mysql::query("DELETE FROM `vk_grabber_sources`
 					WHERE
-						id = '".mysql_real_escape_string($source_id)."' AND
-						type = '".mysql_real_escape_string($source_type)."' AND 
+						id = '".Mysql::escape($source_id)."' AND
+						type = '".Mysql::escape($source_type)."' AND 
 						group_id = $gid");
 				
 				header("Location: ".Url::mk('?')->set('a', 'grabber')->set('gid', $gid)->url());
@@ -458,11 +457,11 @@ switch ($action) {
 				}
 				
 				if ($source_type) {
-					mysql_query("INSERT INTO `vk_grabber_sources`
+					Mysql::query("INSERT INTO `vk_grabber_sources`
 						SET
-							id = '".mysql_real_escape_string($source_id)."', 
-							name = '".mysql_real_escape_string($source_name)."', 
-							type = '".mysql_real_escape_string($source_type)."', 
+							id = '".Mysql::escape($source_id)."', 
+							name = '".Mysql::escape($source_name)."', 
+							type = '".Mysql::escape($source_type)."', 
 							group_id = $gid
 						ON DUPLICATE KEY UPDATE
 							name = VALUES(name)");
@@ -521,17 +520,17 @@ switch ($action) {
 	break;
 	
 	case "returns":
-		$req = mysql_query("SELECT type, uid, COUNT(IF (type = 0, 1, NULL)) as cnt_leave, COUNT(IF (type = 1, 1, NULL)) as cnt_join
+		$req = Mysql::query("SELECT type, uid, COUNT(IF (type = 0, 1, NULL)) as cnt_leave, COUNT(IF (type = 1, 1, NULL)) as cnt_join
 				FROM `vk_join_stat` WHERE cid = $gid
 				GROUP BY uid ORDER BY cnt_join DESC");
 		$users = array();
-		while ($row = mysql_fetch_assoc($req)) {
+		while ($row = $req->fetch()) {
 			if ($row['cnt_join'] > 1 || $row['cnt_leave'] > 1) {
 				$stat[] = $row;
 				$users[] = $row['uid'];
 			}
 		}
-		mysql_free_result($req);
+		$req->free();
 		$users = array_unique($users);
 		
 		mk_page(array(
@@ -548,7 +547,7 @@ switch ($action) {
 		$stat = array();
 		
 		$date = (new DateTime())
-			->setTimestamp(mysql_result(mysql_query("SELECT MIN(date) FROM vk_posts WHERE group_id = -$gid"), 0));
+			->setTimestamp(Mysql::query("SELECT MIN(date) FROM vk_posts WHERE group_id = -$gid")->result());
 		$date = (new DateTime('2016-01-01'));
 		while ($date->getTimestamp() && $date->getTimestamp() < time()) {
 			$start = mktime(0, 0, 0, $date->format("n"), $date->format("j"), $date->format("Y"));
@@ -559,23 +558,23 @@ switch ($action) {
 			$posts = array();
 			$users_posts = array();
 			
-			$req = mysql_query("SELECT * FROM vk_posts WHERE date >= $start AND date <= $end AND group_id = -$gid");
-			while ($row = mysql_fetch_assoc($req))
+			$req = Mysql::query("SELECT * FROM vk_posts WHERE date >= $start AND date <= $end AND group_id = -$gid");
+			while ($row = $req->fetch())
 				$posts[] = $row['post_id'];
 			
 			// Репосты
 			$reposts = 0;
-			$req2 = mysql_query("SELECT DISTINCT user_id, post_id FROM vk_posts_reposts WHERE date >= $start AND date <= $end AND group_id = -$gid");
-			while ($row = mysql_fetch_assoc($req2)) {
+			$req2 = Mysql::query("SELECT DISTINCT user_id, post_id FROM vk_posts_reposts WHERE date >= $start AND date <= $end AND group_id = -$gid");
+			while ($row = $req2->fetch()) {
 				$users[] = $row['user_id'];
 				$users_posts[] = $row['post_id'];
 				++$reposts;
 			}
 			
 			// Камменты
-			$req2 = mysql_query("SELECT DISTINCT user_id, post_id FROM vk_posts_comments WHERE date >= $start AND date <= $end AND group_id = -$gid");
+			$req2 = Mysql::query("SELECT DISTINCT user_id, post_id FROM vk_posts_comments WHERE date >= $start AND date <= $end AND group_id = -$gid");
 			$comments = 0;
-			while ($row = mysql_fetch_assoc($req2)) {
+			while ($row = $req2->fetch()) {
 				$users[] = $row['user_id'];
 				$users_posts[] = $row['post_id'];
 				++$comments;
@@ -584,8 +583,8 @@ switch ($action) {
 			// ЛАйки
 			$likes = 0;
 			if ($posts) {
-				$req2 = mysql_query("SELECT DISTINCT user_id, post_id FROM vk_posts_likes WHERE post_id IN (".implode(", ", $posts).") AND group_id = -$gid");
-				while ($row = mysql_fetch_assoc($req2)) {
+				$req2 = Mysql::query("SELECT DISTINCT user_id, post_id FROM vk_posts_likes WHERE post_id IN (".implode(", ", $posts).") AND group_id = -$gid");
+				while ($row = $req2->fetch()) {
 					$users[] = $row['user_id'];
 					$users_posts[] = $row['post_id'];
 					++$likes;
@@ -621,32 +620,32 @@ switch ($action) {
 		$user_id = (int) array_val($_GET, 'id', 0);
 		
 		// Репосты
-		$req = mysql_query("SELECT COUNT(*) FROM vk_posts_reposts WHERE user_id = $user_id AND group_id = -$gid");
-		$reposts = mysql_result($req, 0);
+		$req = Mysql::query("SELECT COUNT(*) FROM vk_posts_reposts WHERE user_id = $user_id AND group_id = -$gid");
+		$reposts = $req->result();
 		
 		// Репосты 30 дней
-		$req = mysql_query("SELECT COUNT(*) FROM vk_posts_reposts WHERE user_id = $user_id AND group_id = -$gid
+		$req = Mysql::query("SELECT COUNT(*) FROM vk_posts_reposts WHERE user_id = $user_id AND group_id = -$gid
 			AND date BETWEEN CURDATE() - INTERVAL 30 DAY AND CURDATE()");
-		$reposts30 = mysql_result($req, 0);
+		$reposts30 = $req->result();
 		
 		// Лайки
-		$req = mysql_query("SELECT COUNT(*) FROM vk_posts_likes WHERE user_id = $user_id AND group_id = -$gid");
-		$likes = mysql_result($req, 0);
+		$req = Mysql::query("SELECT COUNT(*) FROM vk_posts_likes WHERE user_id = $user_id AND group_id = -$gid");
+		$likes = $req->result();
 		
 		// Камменты
-		$req = mysql_query("SELECT COUNT(*) FROM vk_posts_comments WHERE user_id = $user_id AND group_id = -$gid");
-		$comments = mysql_result($req, 0);
+		$req = Mysql::query("SELECT COUNT(*) FROM vk_posts_comments WHERE user_id = $user_id AND group_id = -$gid");
+		$comments = $req->result();
 		
 		// Камменты 30 дней
-		$req = mysql_query("SELECT COUNT(*) FROM vk_posts_comments WHERE user_id = $user_id AND group_id = -$gid
+		$req = Mysql::query("SELECT COUNT(*) FROM vk_posts_comments WHERE user_id = $user_id AND group_id = -$gid
 			AND date BETWEEN CURDATE() - INTERVAL 30 DAY AND CURDATE()");
-		$comments30 = mysql_result($req, 0);
+		$comments30 = $req->result();
 		
 		$joins = array();
-		$req = mysql_query("SELECT * FROM `vk_join_stat` WHERE cid = $gid AND uid = $user_id GROUP BY time ASC");
+		$req = Mysql::query("SELECT * FROM `vk_join_stat` WHERE cid = $gid AND uid = $user_id GROUP BY time ASC");
 		$last_time = 0;
 		$time_in_comm = 0;
-		while ($res = mysql_fetch_assoc($req)) {
+		while ($res = $req->fetch()) {
 			if ($res['type'] == 0) {
 				$time_in_comm += $res['time'] - $last_time;
 				$joins[count($joins) - 1]['time_in_comm'] = 0;
@@ -716,44 +715,44 @@ switch ($action) {
 		
 		$filter = array_val($_GET, 'filter', "all");
 		
-		$req = mysql_query("SELECT user_id, SUM(likes) as likes, SUM(reposts) as reposts, SUM(comments) as comments, COUNT(*) as c 
+		$req = Mysql::query("SELECT user_id, SUM(likes) as likes, SUM(reposts) as reposts, SUM(comments) as comments, COUNT(*) as c 
 			FROM `vk_posts_reposts` WHERE group_id = -$gid GROUP BY user_id");
-		while ($row = mysql_fetch_assoc($req)) {
+		while ($row = $req->fetch()) {
 			if ($row['c'] > 0) {
 				$users[] = $row['user_id'];
 				$stat['reposts'][] = $row;
 			}
 		}
-		mysql_free_result($req);
+		$req->free();
 		$users = array_unique($users);
 		
-		$req = mysql_query("SELECT user_id, COUNT(*) as c FROM `vk_posts_likes` as a WHERE 
+		$req = Mysql::query("SELECT user_id, COUNT(*) as c FROM `vk_posts_likes` as a WHERE 
 			EXISTS(select 0 from vk_join_stat as b WHERE b.uid = a.user_id AND b.cid = $gid) AND group_id = -$gid GROUP BY user_id");
-		while ($row = mysql_fetch_assoc($req)) {
+		while ($row = $req->fetch()) {
 			if ($row['c'] > 0) {
 				$users[] = $row['user_id'];
 				$stat['likes'][] = $row;
 			}
 		}
-		mysql_free_result($req);
+		$req->free();
 		$users = array_unique($users);
 		
-		$req = mysql_query("SELECT user_id, COUNT(*) as c
+		$req = Mysql::query("SELECT user_id, COUNT(*) as c
 			FROM `vk_posts_comments` WHERE group_id = -$gid GROUP BY user_id");
-		while ($row = mysql_fetch_assoc($req)) {
+		while ($row = $req->fetch()) {
 			if ($row['c'] > 0) {
 				$users[] = $row['user_id'];
 				$stat['comments'][] = $row;
 			}
 		}
-		mysql_free_result($req);
+		$req->free();
 		$users = array_unique($users);
 		
 		$join_data = array();
 		if ($users) {
 			$users = array_unique($users);
-			$req = mysql_query("SELECT * FROM `vk_join_stat` WHERE uid IN(".implode(", ", $users).") AND cid = $gid GROUP BY uid ORDER BY id DESC");
-			while ($row = mysql_fetch_assoc($req))
+			$req = Mysql::query("SELECT * FROM `vk_join_stat` WHERE uid IN(".implode(", ", $users).") AND cid = $gid GROUP BY uid ORDER BY id DESC");
+			while ($row = $req->fetch())
 				$join_data[$row['uid']] = $row;
 		}
 		
@@ -815,8 +814,8 @@ switch ($action) {
 		if ($post_type == 'post')
 			die;
 		
-		$req = mysql_query("SELECT MAX(`fake_date`) FROM `vk_posts_queue`");
-		$fake_date = max(time() + 3600 * 24 * 60, mysql_num_rows($req) ? mysql_result($req, 0) : 0) + 3600;
+		$req = Mysql::query("SELECT MAX(`fake_date`) FROM `vk_posts_queue`");
+		$fake_date = max(time() + 3600 * 24 * 60, $req->num() ? $req->result() : 0) + 3600;
 		
 		$res = $q->vkApi($post_type == 'suggest' ? "wall.post" : "wall.edit", [
 			'post_id'		=> $id, 
@@ -834,13 +833,13 @@ switch ($action) {
 			$output['success'] = true;
 			$output['date'] = display_date($fake_date);
 			
-			mysql_query("
+			Mysql::query("
 				INSERT INTO `vk_posts_queue`
 				SET
 					`fake_date`	= $fake_date, 
 					`group_id`	= $gid, 
 					`id`		= ".(isset($res->response->post_id) ? (int) $res->response->post_id : $id)."
-			") or die("ERROR: ".mysql_error());
+			");
 		}
 		
 		mk_ajax($output);
@@ -878,7 +877,7 @@ switch ($action) {
 			
 			$interval = round($interval / 300) * 300;
 			
-			mysql_query("UPDATE `vk_groups` SET `period_from` = $from, `period_to` = $to, `interval` = $interval WHERE `id` = $gid");
+			Mysql::query("UPDATE `vk_groups` SET `period_from` = $from, `period_to` = $to, `interval` = $interval WHERE `id` = $gid");
 		}
 		header("Location: ".preg_replace("/[\s:]/si", "", isset($_REQUEST['return']) ? $_REQUEST['return'] : '?'));
 	break;
@@ -951,8 +950,8 @@ switch ($action) {
 		$total_join = 0;
 		$total_leave = 0;
 		
-		$req = mysql_query("SELECT * FROM `vk_join_stat` WHERE `cid` = $gid $where ORDER BY `id` DESC");
-		while ($res = mysql_fetch_assoc($req)) {
+		$req = Mysql::query("SELECT * FROM `vk_join_stat` WHERE `cid` = $gid $where ORDER BY `id` DESC");
+		while ($res = $req->fetch()) {
 			$date = false;
 			if ($output == 'day')
 				$key = date("Y-m-d", $res['time']);
@@ -1206,8 +1205,8 @@ function add_queued_wall_post(&$out, $attachments, $text) {
 	global $q, $gid, $comm;
 	
 	if (!isset($out['error'])) {
-		$req = mysql_query("SELECT MAX(`fake_date`) FROM `vk_posts_queue`");
-		$fake_date = max(time() + 3600 * 24 * 60, mysql_num_rows($req) ? mysql_result($req, 0) : 0) + 3600;
+		$req = Mysql::query("SELECT MAX(`fake_date`) FROM `vk_posts_queue`");
+		$fake_date = max(time() + 3600 * 24 * 60, $req->num() ? $req->result() : 0) + 3600;
 		
 		$data = array(
 			'owner_id'		=> -$gid, 
@@ -1225,13 +1224,13 @@ function add_queued_wall_post(&$out, $attachments, $text) {
 			$out['link'] = 'https://vk.com/wall-'.$gid.'_'.$res->response->post_id;
 			$out['post_id'] = $res->response->post_id;
 			
-			mysql_query("
+			Mysql::query("
 				INSERT INTO `vk_posts_queue`
 				SET
 					`fake_date`	= $fake_date, 
 					`group_id`	= $gid, 
 					`id`		= ".(int) $res->response->post_id."
-			") or die("ERROR: ".mysql_error());
+			");
 		}
 	}
 	$out['success'] = !isset($out['error']);
@@ -1266,7 +1265,8 @@ function mk_page($args) {
 				'join_visual'		=> 'График вступления'
 			], 
 			'active' => isset($_REQUEST['a']) ? $_REQUEST['a'] : 'index'
-		])
+		]), 
+		'mysql'	=> isset($_COOKIE['debug']) ? Mysql::getQueriesList() : []
 	];
 	header("Content-Type: text/html; charset=UTF-8");
 	echo Tpl::render("main.html", $def + $args);
