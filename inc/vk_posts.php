@@ -175,12 +175,15 @@ function get_comments($q, $comm) {
 				$post->orig_date = $post->date;
 				$post->date = time() + (100 * 24 * 3600) + (24 * 3600 * $queue[$post->id]['n']); // Костыли для сортировки
 			}
-			$postponed[] = $post;
+			$postponed[$post->id] = $post;
 		} else {
 			// Предложка
-			$suggests[] = $post;
+			$suggests[$post->id] = $post;
 		}
 	}
+	
+	$postponed = array_values($postponed);
+	$suggests = array_values($suggests);
 	
 	$postponed = process_queue($comm, $postponed);
 	
@@ -230,8 +233,8 @@ function fix_post_date($post_time, $comm) {
 	}
 	
 	// Выравниваем по 10 минут
-	if ($post_time && ($post_time % 300 != 0))
-		$post_time = round($post_time / 300) * 300;
+	if ($post_time && ($post_time % 60 != 0))
+		$post_time = round($post_time / 60) * 60;
 	
 	return $post_time;
 }

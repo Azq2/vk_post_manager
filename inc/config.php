@@ -4,11 +4,13 @@ define('DB_USER', 'root');
 define('DB_PASS', 'qwerty');
 define('DB_NAME', 'test');
 
-define('WEBUI_PASSWORD', '**********');
+define('WEBUI_PASSWORD', '********');
 
-define('VK_APP_ID', '5406173');
-define('VK_APP_SECRET', '**********'); // да похуй
+define('VK_APP_ID', '********');
+define('VK_APP_SECRET', '********'); // да похуй
 
-define('OK_APP_ID', '1250582272');
-define('OK_APP_SECRET', '**********');
-define('OK_APP_PUBLIC', '**********');
+define('OK_APP_ID', '********');
+define('OK_APP_SECRET', '********');
+define('OK_APP_PUBLIC', '********');
+
+define('ANTICAPTCHA_KEY', '********');

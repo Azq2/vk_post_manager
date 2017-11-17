@@ -22,8 +22,9 @@
 			
 			<div class="row">
 				<?= $sections_tabs ?>
-				<div class="pad_t">
+				<div class="pad_t oh">
 					<?= $comm_tabs ?>
+					<span class="right grey"><?= $smm_money ?> р.</span>
 				</div>
 			</div>
 			

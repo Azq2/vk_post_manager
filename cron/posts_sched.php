@@ -5,11 +5,9 @@ if (php_sapi_name() != "cli")
 require __DIR__."/../inc/init.php";
 require __DIR__."/../inc/vk_posts.php";
 
-if (file_exists(H."../tmp/posts_sched") && (isset($argv[1]) && $argv[1] != "lock")) {
-	echo "Lock file exists!";
-	exit;
-}
-file_put_contents(H."../tmp/posts_sched", 1);
+$lock_fp = fopen(H."../tmp/posts_sched", "w+");
+if (!$lock_fp || !flock($lock_fp, LOCK_EX | LOCK_NB))
+	die("Lock!\n");
 
 $q = new Http;
 $q->vkSetUser('VK_SCHED');
@@ -106,18 +104,25 @@ while ($comm = $req->fetch()) {
 				if (isset($output['captcha'])) {
 					echo "\t=> #".$item->id." - CAPCHA: ".$output['captcha']['url']."\n";
 					
-					if (!isset($_SERVER['XUJ'])) {
-						sleep(120);
-						continue;
+					if (!isset($_SERVER['XUJ'])) { // Ввод с антикапчей
+						echo "\tTRY ANICAPTCHA...\n";
+						$code = \Z\Core\Net\Anticaptcha::resolve(base64_encode(file_get_contents($output['captcha']['url'])));
+						if ($code) {
+							$_REQUEST['vk_captcha_sid'] = $output['captcha']['sid'];
+							$_REQUEST['vk_captcha_key'] = $code;
+							echo "\tok, code = ".$_REQUEST['vk_captcha_key']."\n";
+						} else {
+							echo "\terror, code not resolved. Trying sleep 120 sec...\n";
+							sleep(120);
+						}
+					} else { // Ручной ввод
+						echo "\tCODE: ";
+						
+						$_REQUEST['vk_captcha_sid'] = $output['captcha']['sid'];
+						$_REQUEST['vk_captcha_key'] = trim(fgets(STDIN));
+						
+						echo "\tok, code = ".$_REQUEST['vk_captcha_key']."\n";
 					}
-					
-					echo "\tCODE: ";
-					
-					$_REQUEST['vk_captcha_sid'] = $output['captcha']['sid'];
-					$_REQUEST['vk_captcha_key'] = trim(fgets(STDIN));
-					
-					echo "\tok, code = ".$_REQUEST['vk_captcha_key']."\n";
-					
 					continue;
 				}
 				
@@ -133,4 +138,5 @@ while ($comm = $req->fetch()) {
 	}
 }
 
-unlink(H."../tmp/posts_sched");
+flock($lock_fp, LOCK_UN);
+fclose($lock_fp);

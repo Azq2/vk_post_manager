@@ -29,7 +29,7 @@ class Mysql {
 			$link = new mysqli($parts[0], $db_config['user'], $db_config['pass'], NULL, isset($parts[1]) ? $parts[1] : NULL);
 			if ($link->connect_error)
 				die("MYSQL CONNECT: ".$link->connect_error);
-			$link->set_charset('utf8');
+			$link->set_charset('utf8mb4');
 			$link->select_db($db_config['db']);
 			self::$link = $link;
 		}
@@ -61,8 +61,8 @@ class Mysql {
 	
 	public static function value($str) {
 		if (is_array($str)) {
-			$tmp = array();
-			foreach ($tmp as $v)
+			$tmp = [];
+			foreach ($str as $v)
 				$tmp[] = self::value($v);
 			return implode(", ", $tmp);
 		}
@@ -74,6 +74,8 @@ class Mysql {
 	}
 	
 	public static function query($query, $args = []) {
+		$args = func_get_args();
+		array_shift($args);
 		$query = self::prepare($query, $args);
 		// echo "\n\n[SQL] ".preg_replace("/\s+/", " ", $query)."\n\n";
 		
@@ -86,7 +88,7 @@ class Mysql {
 		$result = new MysqlResult($link, $r);
 		
 		if (!$r)
-			die("MYSQL ERROR: ".$link->error.", QUERY: \n".$query."\n");
+			throw new Exception("MYSQL ERROR: ".$link->error.", QUERY: \n".$query."\n");
 		
 		if (self::$debug && !preg_match("/^\s*(FLUSH|EXPLAIN|SHOW|FLUSH)/i", $query)) {
 			$cost = self::query("SHOW SESSION STATUS LIKE 'Last_query_cost'")->result(1);

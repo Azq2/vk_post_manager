@@ -367,7 +367,18 @@ $('body').on('click', '.js-page_input_btn', function (e) {
 		if (res.error) {
 			alert(res.error);
 			toggle_spinner(false);
-		} else {
+		} else if (res.link) { // Сразу запостился
+			toggle_spinner(false);
+			wrap.html('<a href="' + res.link + '" target="_blank"><b class="green">Пост успешно добавлен в очередь. </b></a>');
+			
+			// Блэклистим
+			$.api("?a=grabber&sa=blacklist", {
+				gid: settings.gid, 
+				source_id: wrap.data('gid'), 
+				source_type: wrap.data('type'), 
+				remote_id: wrap.data('id')
+			});
+		} else { // Ждём скачивания аттачей
 			check_queue(res.id);
 		}
 	}, function () {

@@ -29,8 +29,8 @@ class MysqlResult {
 		return $this->res->fetch_assoc();
 	}
 	
-	public function fetchObject($class_name = NULL, $params = NULL) {
-		return $this->res->fetch_object($class_name, $params);
+	public function fetchObject() {
+		return $this->res->fetch_object();
 	}
 	
 	public function fetchAll($assoc = true) {

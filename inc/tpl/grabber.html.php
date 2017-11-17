@@ -1,6 +1,4 @@
 
-<script type="text/javascript" src="https://vk.com/js/api/openapi.js?143" async="async"></script>
-
 <link rel="stylesheet" href="//cdn.jsdelivr.net/emojione/2.2.7/assets/css/emojione.min.css"/>
 <link rel="stylesheet"  href="i/lib/emojionearea.css" />
 
