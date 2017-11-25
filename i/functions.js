@@ -134,6 +134,19 @@ window.pagenav = pagenav;
 //
 })();
 
+function getHumanSize(size) {
+	if (size >= 1024 * 1024)
+		return Math.ceil(size / 1024 / 1024).toFixed(2) + " Mb";
+	return Math.ceil(size / 1024).toFixed(2) + " Kb";
+}
+
+function createObjectURL(file) {
+	var url = !window.URL || !window.URL.createObjectURL ? window.webkitURL : window.URL;
+	if (url && url.createObjectURL)
+		return url.createObjectURL(file);
+	return null;
+}
+
 function modal_window(content) {
 	$('#modal_overlay').toggleClass('hide', !content);
 	return $('#modal_content').html(content || '');

@@ -72,7 +72,7 @@ while ($comm = $req->fetch()) {
 				}
 				
 				// Обновляем фейковое время в БД
-				Mysql::query("UPDATE `vk_posts_queue` SET `fake_date` WHERE `group_id` = $gid AND `id` = ".$p->id);
+				Mysql::query("UPDATE `vk_posts_queue` SET `fake_date` = $fake_date WHERE `group_id` = $gid AND `id` = ".$p->id);
 			}
 			
 			for ($i = 0; $i < 10; ++$i) {

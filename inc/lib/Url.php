@@ -11,7 +11,7 @@ class Url implements \ArrayAccess, \IteratorAggregate {
 	public $fragment = '';
 	
 	public function __construct($url = '') {
-		$parts = parse_url($url);
+		$parts = parse_url("$url");
 		$this->scheme = array_val($parts, 'scheme', 'http');
 		$this->host = array_val($parts, 'host', '');
 		$this->port = array_val($parts, 'port', 80);
@@ -71,7 +71,7 @@ class Url implements \ArrayAccess, \IteratorAggregate {
 	
 	public function set($key, $value = NULL) {
 		if (is_array($key)) {
-			array_merge($this->query, $key);
+			$this->query = array_merge($this->query, $key);
 		} else {
 			$this->query[$key] = $value;
 		}

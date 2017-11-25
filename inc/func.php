@@ -164,7 +164,7 @@ function pics_uploader(&$out, $q, $gid, $images, $progress = false) {
 						$attachments[] = $att;
 						
 						if ($progress)
-							$progress($att);
+							$progress($att, $file->response[0]);
 					}
 					break;
 				}

@@ -164,6 +164,21 @@ $('body').on('click', '.js-toggle_btn', function (e) {
 		});
 	}
 	retry();
+}).on('file_uploaded', '.js-post', function (e, data) {
+	var post = $(this), 
+		gid = post.data('id').split('_')[0], 
+		id = post.data('id').split('_')[1], 
+		post_data = VK_POST_DATA[id];
+	
+	post_data.attachments.push(data.response.id);
+	
+	post.find('.js-post_attaches').removeClass('hide').append(data.response.file);
+	
+	
+}).on('file_upload_start', '.js-post', function (e) {
+	$(this).find('.js-post_accept, .js-post_delete').attr("disabled", "disabled");
+}).on('file_upload_end', '.js-post', function (e) {
+	$(this).find('.js-post_accept, .js-post_delete').removeAttr("disabled");
 });
 
 var last_user_search;

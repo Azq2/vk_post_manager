@@ -4,6 +4,7 @@
 <script src="https://cdn.jsdelivr.net/emojione/2.2.7/lib/js/emojione.min.js"></script>
 <script src="https://cdn.rawgit.com/mervick/emojionearea/master/dist/emojionearea.min.js"></script>
 <script type="text/javascript" src="i/main.js?<?= time(); ?>"></script>
+<script type="text/javascript" src="i/upload.js?<?= time(); ?>"></script>
 
 <div class="row"><?= $tabs ?></div>
 

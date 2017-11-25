@@ -229,18 +229,5 @@ function checkButtons() {
 	$('#do_upload_btn_wrap').toggle(files.length > 0);
 }
 
-function getHumanSize(size) {
-	if (size >= 1024 * 1024)
-		return Math.ceil(size / 1024 / 1024).toFixed(2) + " Mb";
-	return Math.ceil(size / 1024).toFixed(2) + " Kb";
-}
-
-function createObjectURL(file) {
-	var url = !window.URL || !window.URL.createObjectURL ? window.webkitURL : window.URL;
-	if (url && url.createObjectURL)
-		return url.createObjectURL(file);
-	return null;
-}
-
 //
 });

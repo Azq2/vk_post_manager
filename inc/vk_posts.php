@@ -1,5 +1,22 @@
 <?php
 
+function get_best_fake_date($q, $gid, $offset = 0) {
+		$postponed = $q->vkApi("wall.get", [
+			'owner_id'		=> -$gid, 
+			'filter'		=> 'postponed', 
+			'offset'		=> $offset, 
+			'count'			=> 100
+		]);
+		if (!$offset && $postponed->response->count > 100)
+			return get_best_fake_date($q, $gid, $postponed->response->count - 1);
+		
+		$generic_date = time() + 3600 * 24 * 60;
+		if (!$postponed->response->count)
+			return $generic_date;
+		
+		return max($generic_date, $postponed->response->items[count($postponed->response->items) - 1]->date + 3600);
+}
+
 function get_posts_queue($gid) {
 	$queue = [];
 	
