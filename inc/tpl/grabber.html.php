@@ -1,12 +1,5 @@
 
-<link rel="stylesheet" href="//cdn.jsdelivr.net/emojione/2.2.7/assets/css/emojione.min.css"/>
-<link rel="stylesheet"  href="i/lib/emojionearea.css" />
-
-<script src="//cdn.jsdelivr.net/emojione/2.2.7/lib/js/emojione.min.js"></script>
-<script src="//cdnjs.cloudflare.com/ajax/libs/Shuffle/4.1.1/shuffle.min.js"></script>
-<script src="i/lib/emojionearea.js"></script>
-
-<script type="text/javascript" src="i/grabber.js?<?= time(); ?>"></script>
+<script type="text/javascript">require(['grabber'])</script>
 
 <div class="hide"
 	data-gid="<?= $gid ?>"

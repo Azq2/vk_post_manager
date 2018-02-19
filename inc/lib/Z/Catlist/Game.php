@@ -18,6 +18,8 @@ class Game extends \Z\Core\App {
 		
 		$this->vk = new \Z\Core\Net\VK();
 		$this->vk->setCommToken($this->app->token);
+		
+		$this->settings = Game\Settings::instance();
 	}
 	
 	public function setUser($user_id) {
@@ -134,9 +136,9 @@ class Game extends \Z\Core\App {
 			
 			case "bathroom":
 				$menu = [
-					"0|меню|назад"					=> "menu", 
-					"1|лоток|туалет"				=> "toilet", 
-					"2|купать|покупать|искупать"	=> "wash_cat", 
+					"0|меню|назад"						=> "menu", 
+					"1|лоток|туалет"					=> "toilet", 
+					"2|купать|покупать|искупать|купать"	=> "wash_cat", 
 				];
 				if ($this->menuRouter($msg, $menu))
 					return;
@@ -174,8 +176,9 @@ class Game extends \Z\Core\App {
 				$menu = [
 					"0|меню|назад"				=> "menu", 
 					"1|породистые|коты"			=> "catshop", 
-					"2|корм|еда"				=> "foodshop", 
-					"3|мебель"					=> "furnitureshop", 
+					"2|корм|еда"				=> "food_shop", 
+					"3|мебель"					=> "furniture_shop", 
+					"4|игрушки"					=> "toys_shop", 
 				];
 				if ($this->menuRouter($msg, $menu))
 					return;
@@ -183,12 +186,108 @@ class Game extends \Z\Core\App {
 				$this->sendMessage($this->user->user_id, $this->L("shop_menu"));
 			break;
 			
+			case "food_shop":
+			case "furniture_shop":
+			case "toys_shop":
+				$type = str_replace("_shop", "", $this->user->action);
+				$products = \Z\Catlist\Game\Shop\Product::findAll(['deleted' => 0, 'type' => $type]);
+				
+				// Рандомная сортировка с сохранением порядка при перелистывании
+				$list_changed = false;
+				if ($state) {
+					$new_products = [];
+					foreach ($state->ids as $id)
+						$new_products[$id] = NULL;
+					foreach ($products as $n => $product)
+						$new_products[$product->id] = $product;
+					$new_products = array_values($new_products);
+					
+					foreach ($new_products as $product) {
+						if (is_null($product)) {
+							$list_changed = true;
+							break;
+						}
+					}
+					
+					if (!$list_changed)
+						$products = $new_products;
+				}
+				
+				if (!$state) {
+					$state = (object) ['ids' => [], 'offset' => 0];
+					foreach ($products as $n => $product)
+						$state->ids[] = $product->id;
+					$this->user->setAction($this->user->action, $state)->save();
+				}
+				
+				if ($msg) {
+					if ($this->matchWords($msg->body, "ещё")) {
+						$state->offset += $this->settings->on_page;
+						$this->user->setAction($this->user->action, $state)->save();
+					} elseif ($this->matchWords($msg->body, "начало")) {
+						$state->offset = 0;
+						$this->user->setAction($this->user->action, $state)->save();
+					}
+				}
+				
+				$images = [];
+				$list = [];
+				$j = 0; $i = 0;
+				foreach ($products as $product) {
+					if ($i >= $state->offset) {
+						$list[] = $this->L("shop_{$type}_list_item", [
+							'n'				=> $i + 1, 
+							'title'			=> $product->title, 
+							'description'	=> $product->description, 
+							'amount'		=> $product->amount, 
+							'price'			=> $product->price, 
+						]);
+						
+						if (!$list_changed && $msg && $this->matchWords($msg->body, ($i + 1)."|".$cat->title)) {
+							$this->user->setAction($this->user->action, [
+								'product_id'	=> $product->id, 
+								'action'		=> 'buy_product'
+							])->save();
+							return $this->handleMessage();
+						}
+						
+						$images[] = H.'../files/catlist/shop/'.$product->photo.'.jpg';
+						++$j;
+						
+						if ($j >= $this->settings->on_page)
+							break;
+					}
+					++$i;
+				}
+				
+				$pagination = "";
+				if (count($products) - ($state->offset + $this->settings->on_page) > 0) {
+					$pagination = $this->L("shop_more");
+				} elseif (count($products) > $this->settings->on_page) {
+					$pagination = $this->L("shop_rewind");
+				}
+				
+				if ($msg) {
+					if ($this->matchWords($msg->body, "0|назад|меню")) {
+						$this->user->setAction('menu')->save();
+						return $this->handleMessage();
+					}
+				}
+				
+				$this->sendMessage($this->user->user_id, $this->L("shop_{$type}_list", [
+					'list'			=> implode("\n", $list), 
+					'pagination'	=> $pagination
+				]), $images);
+			break;
+			
 			case "catshop":
 			case "shelter":
 				$prefix = $this->user->action;
 				
-				if ($this->user->cats >= 2) {
-					$this->sendMessage($this->user->user_id, $this->L("{$prefix}_limit", ['cnt' => 2]));
+				$limit = $prefix == 'catshop' ? $this->settings->max_cats : $this->settings->max_free_cats;
+				
+				if ($this->user->cats >= $limit) {
+					$this->sendMessage($this->user->user_id, $this->L("{$prefix}_limit", ['cnt' => $this->settings->max_cats]));
 					$this->user->setAction("menu")->save();
 					return;
 				}
@@ -382,7 +481,7 @@ class Game extends \Z\Core\App {
 					
 					if ($msg) {
 						if ($this->matchWords($msg->body, "ещё")) {
-							$state->offset += 10;
+							$state->offset += $this->settings->on_page;
 							$this->user->setAction($prefix, $state)->save();
 						} elseif ($this->matchWords($msg->body, "начало")) {
 							$state->offset = 0;
@@ -414,16 +513,16 @@ class Game extends \Z\Core\App {
 							$images[] = H.'../files/catlist/cats/'.$cat['photo'].'.jpg';
 							++$j;
 							
-							if ($j >= 10)
+							if ($j >= $this->settings->on_page)
 								break;
 						}
 						++$i;
 					}
 					
 					$pagination = "";
-					if (count($cats) - ($state->offset + 10) > 0) {
+					if (count($cats) - ($state->offset + $this->settings->on_page) > 0) {
 						$pagination = $this->L("{$prefix}_more");
-					} elseif (count($cats) > 10) {
+					} elseif (count($cats) > $this->settings->on_page) {
 						$pagination = $this->L("{$prefix}_rewind");
 					}
 					

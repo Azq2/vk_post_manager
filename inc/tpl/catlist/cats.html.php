@@ -1,12 +1,5 @@
 
-<link rel="stylesheet" href="//cdn.jsdelivr.net/emojione/2.2.7/assets/css/emojione.min.css"/>
-<link rel="stylesheet"  href="i/lib/emojionearea.css" />
-
-<script src="//cdn.jsdelivr.net/emojione/2.2.7/lib/js/emojione.min.js"></script>
-<script src="//cdnjs.cloudflare.com/ajax/libs/Shuffle/4.1.1/shuffle.min.js"></script>
-<script src="i/lib/emojionearea.js"></script>
-
-<script type="text/javascript" src="i/catlist.js?<?= time(); ?>"></script>
+<script type="text/javascript">require(['catlist'])</script>
 
 <div class="row">
 	<?= $tabs ?>
@@ -16,7 +9,14 @@
 	<?= $price_tabs ?>
 </div>
 
-<div class="wrapper bord" id="cats_type" data-type="<?= $type ?>">
+<div class="wrapper js-page_spinner_switch">
+	<div class="row center grey">
+		<img src="//s.spac.me/i/spinner2.gif" width="16" height="16" alt="" class="m" />
+		<span class="m">Загрузка...</span>
+	</div>
+</div>
+
+<div class="wrapper bord hide js-page_spinner_switch" id="cats_type" data-type="<?= $type ?>">
 	<div class="row header">
 		Добавить котейку в приют
 	</div>
@@ -65,7 +65,7 @@
 	</div>
 </div>
 
-<div class="wrapper">
+<div class="wrapper hide js-page_spinner_switch">
 <?php foreach ($cats as $m): ?>
 	<div class="row">
 		<form action="<?= $form_action ?>" method="POST" class="js-cats_save" data-id="<?= $m['id'] ?>">

@@ -1,5 +1,9 @@
-
-<script type="text/javascript">require(['main'])</script>
+<script type="text/javascript" id="suggested_data" data-list="<?= $list ?>" data-gid="<?= $gid ?>">
+define('suggested/preload', function () {
+	return <?= json_encode($comments, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) ?>
+})
+require(['suggested']);
+</script>
 
 <div class="row"><?= $tabs ?></div>
 
@@ -57,24 +61,17 @@
 	</div>
 </div>
 
-<div class="wrapper js-page_spinner_switch">
-	<div class="row center grey">
-		<img src="/i/img/spinner2.gif" width="16" height="16" alt="" class="m" />
-		<span class="m">Загрузка...</span>
-	</div>
-</div>
-
-<div class="js-page_spinner_switch hide">
-	<?php if ($comments): ?>
-	<?php
-		foreach ($comments as $c)
-			echo '<div class="wrapper">'.$c.'</div>';
-	?>
-	<?php else: ?>
-	<div class="row">
-		Нет постов. 
-	</div>
+<div id="vk_posts">
+	<?php if (!$comments): ?>
+		<div class="row center grey">
+			Постов ещё нет, но вы держитесь!
+		</div>
 	<?php endif; ?>
 </div>
 
-<script type="text/javascript">var VK_POST_DATA = <?= $json ?>;</script>
+<div id="vk_posts_error" class="row red hide"></div>
+
+<div id="vk_posts_spinner" class="row center grey">
+	<img src="/i/img/spinner2.gif" alt="" class="m" />
+	<span class="m">Загружаем посты...</span>
+</div>

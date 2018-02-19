@@ -386,6 +386,200 @@ function count_delta($time) {
 	return implode(" ", $out); 
 }
 
+function vk_extract_thumbs($att) {
+	$ret = [];
+	foreach ($att as $k => $v) {
+		if (preg_match('/^photo_(\d+)$/', $k, $m))
+			$ret[$m[1]] = $v;
+	}
+	return $ret;
+}
+
+function vk_normalize_attaches($item) {
+	$attaches = [];
+	$images_cnt = 0;
+	$gifs_cnt = 0;
+	
+	if (isset($item->geo)) {
+		list ($lat, $lng) = explode(" ", $item->geo->coordinates);
+		$attaches[] = [
+			'id' => 'geo'.md5($lat.','.$lng), 
+			'type' => 'geo', 
+			'lat' => $lat, 
+			'lng' => $lng
+		];
+	}
+	
+	if (isset($item->attachments)) {
+		foreach ($item->attachments as $att_data) {
+			$att = $att_data->{$att_data->type};
+			$att->type = $att_data->type;
+			
+			if ($att->type == 'photo' || $att->type == 'posted_photo' || $att->type == 'graffiti') {
+				++$images_cnt;
+				
+				$thumbs = vk_extract_thumbs($att);
+				
+				if (!$thumbs) {
+					var_dump($item);
+					die("Photo without thumbs!!!!\n");
+				}
+				
+				if (!isset($att->width)) {
+					$last = end($thumbs);
+					list ($att->width, $att->height) = getimagesize($last);
+				}
+				
+				$attaches[] = [
+					'id' => $att->type.$att->owner_id.'_'.$att->id, 
+					'type' => 'photo', 
+					'w' => $att->width, 
+					'h' => $att->height, 
+					'thumbs' => $thumbs 
+				];
+			} else if ($att->type == 'video') {
+				$attaches[] = [
+					'id' => $att->type.$att->owner_id.'_'.$att->id, 
+					'type' => 'video', 
+					'w' => isset($att->width) ? $att->width : 0, 
+					'h' => isset($att->height) ? $att->height : 0, 
+					'title' => $att->title, 
+					'description' => $att->description, 
+					'thumbs' => vk_extract_thumbs($att), 
+					'url' => "https://vk.com/".$att->type.$att->owner_id.'_'.$att->id
+				];
+			} else if ($att->type == 'album') {
+				$attaches[] = [
+					'id' => $att->type.$att->owner_id.'_'.$att->id, 
+					'type' => 'album', 
+					'w' => $att->thumb->width, 
+					'h' => $att->thumb->height, 
+					'title' => $att->title, 
+					'description' => $att->description, 
+					'thumbs' => vk_extract_thumbs($att->thumb), 
+					'url' => 'https://vk.com/'.$att->type.$att->owner_id.'_'.$att->id
+				];
+			} else if ($att->type == 'market_album') {
+				$attaches[] = [
+					'id' => $att->type.$att->owner_id.'_'.$att->id, 
+					'type' => 'market_album', 
+					'w' => $att->photo->width, 
+					'h' => $att->photo->height, 
+					'title' => $att->title, 
+					'thumbs' => vk_extract_thumbs($att->photo)
+				];
+			} else if ($att->type == 'app') {
+				$attaches[] = [
+					'id' => $att->type.$att->owner_id.'_'.$att->id, 
+					'thumbs' => vk_extract_thumbs($att->thumb)
+				];
+			} else if ($att->type == 'note') {
+				$attaches[] = [
+					'id' => $att->type.$att->user_id.'_'.$att->id, 
+					'title' => $att->title, 
+					'text' => $att->text, 
+					'thumbs' => vk_extract_thumbs($att->thumb)
+				];
+			} else if ($att->type == 'doc') {
+				if (preg_match("/^(gif|png|jpg|jpeg|bmp)$/i", $att->ext)) {
+					if (preg_match("/^(gif)$/i", $att->ext))
+						++$gifs_cnt;
+					else
+						++$images_cnt;
+				}
+				
+				$width = 0;
+				$height = 0;
+				$thumbs = [];
+				if (isset($att->preview, $att->preview->photo)) {
+					foreach ($att->preview->photo->sizes as $p) {
+						if ($width < $p->width) {
+							$width = $p->width;
+							$height = $p->height;
+						}
+						$thumbs[$p->width] = $p->src;
+					}
+				}
+				
+				$mp4 = null;
+				if (isset($att->preview, $att->preview->video))
+					$mp4 = $att->preview->video->src;
+				
+				$attaches[] = [
+					'id' => $att->type.$att->owner_id.'_'.$att->id, 
+					'type' => 'doc', 
+					'ext' => $att->ext, 
+					'title' => $att->title, 
+					'w' => $width, 
+					'h' => $height, 
+					'thumbs' => $thumbs, 
+					'url' => $att->url, 
+					'mp4' => $mp4, 
+					'page_url' => "https://vk.com/".$att->type.$att->owner_id.'_'.$att->id
+				];
+			} else if ($att->type == 'page') {
+				$attaches[] = [
+					'id' => $att->type.'-'.$att->group_id.'_'.$att->id, 
+					'type' => 'page', 
+					'title' => $att->title, 
+					'url' => $att->view_url
+				];
+			} else if ($att->type == 'audio') {
+				$attaches[] = [
+					'id' => $att->type.$att->owner_id.'_'.$att->id, 
+					'type' => 'audio', 
+					'title' => $att->artist.' - '.$att->title
+				];
+			} else if ($att->type == 'poll') {
+				$answers = [];
+				foreach ($att->answers as $a)
+					$answers[] = $a->text;
+				
+				$attaches[] = [
+					'id' => $att->type.$att->owner_id.'_'.$att->id, 
+					'type' => 'poll', 
+					'question' => $att->question, 
+					'answers' => $answers, 
+					'anon' => $att->anonymous
+				];
+			} else if ($att->type == 'link') {
+				$attaches[] = [
+					'id' => 'link_'.md5($att->url), 
+					'type' => 'link', 
+					'url' => $att->url, 
+					'title' => $att->title, 
+					'description' => $att->description
+				];
+			} else if ($att->type == 'market') {
+				list ($width, $height) = getimagesize($att->thumb_photo);
+				
+				$attaches[] = [
+					'id' => $att->type.$att->owner_id.'_'.$att->id, 
+					'type' => 'market', 
+					'price' => $att->price->text, 
+					'title' => $att->title, 
+					'description' => $att->description, 
+					'thumbs' => [
+						$width => $att->thumb_photo
+					], 
+					'w' => $width, 
+					'h' => $height, 
+					'url' => "https://vk.com/".$att->type.$att->owner_id.'_'.$att->id
+				];
+			} else {
+				var_dump($att);
+				die("UNK ATTACH: ".$att->type);
+			}
+		}
+	}
+	
+	return (object) [
+		'attaches'	=> $attaches, 
+		'gifs'		=> $gifs_cnt, 
+		'images'	=> $images_cnt
+	];
+}
+
 function vk($method, $args = array()) {
 	static $ch;
 	

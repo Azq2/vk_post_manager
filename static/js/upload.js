@@ -1,10 +1,10 @@
-$(function () {
+define(['jquery'], function ($) {
 //
 var tpl = {
 	select: function () {
 		var html = 
 			'<label class="lbl">Выбери файл (или несколько через зажатый Ctrl):</label><br />' + 
-			'<input type="file" multiple="multiple" name="file" value="" />';
+			'<input type="file" multiple="multiple" name="file" value="" accept="image/*" />';
 		return html;
 	}, 
 	file: function (data) {
@@ -24,7 +24,8 @@ var tpl = {
 						'<div class="file-thumb-center"></div>' + 
 						'<img src="//s.spac.me/i/transparent.gif" alt="" class="js-file_thumb" />' + 
 					'</td>' + 
-					'<td style="width:100%">' + 
+					//~ '<td style="width:100%">' + 
+					//~ '<td style="width:100%">' + 
 						'<b class="darkblue">' + html_wrap(data.name) + '</b> <span class="grey">(' + data.size + ')</span>' + 
 						'<div>' + 
 							'<div class="js-upload_info" class="grey">Ожидает загрузки...</div>' + 
@@ -47,77 +48,79 @@ var files = [],
 	cur_file, 
 	upload;
 
-$('.js-upload_form').each(function () {
-	var el = $(this), 
-		input_wrap = el.find('.js-upload_input'), 
-		files_wrap = el.find('.js-upload_files');
-	
-	el.removeClass('js-upload_form');
-	
-	input_wrap.html(tpl.select());
-	
-	files_wrap.on('click', '.js-file_delete', function (e) {
-		e.preventDefault();
+$(function () {
+	$('.js-upload_form').each(function () {
+		var el = $(this), 
+			input_wrap = el.find('.js-upload_input'), 
+			files_wrap = el.find('.js-upload_files');
 		
-		var file = $(this).parents('.js-upload_file');
+		el.removeClass('js-upload_form');
 		
-		var new_files = [];
-		for (var i = 0; i < files.length; ++i) {
-			if (files[i].id == file.prop("id")) {
-				if (files[i].xhr) {
-					files[i].xhr.abort();
-					files[i].xhr = null;
-					files[i].el.trigger('file_upload_end');
-					cur_file = null;
+		input_wrap.html(tpl.select());
+		
+		files_wrap.on('click', '.js-file_delete', function (e) {
+			e.preventDefault();
+			
+			var file = $(this).parents('.js-upload_file');
+			
+			var new_files = [];
+			for (var i = 0; i < files.length; ++i) {
+				if (files[i].id == file.prop("id")) {
+					if (files[i].xhr) {
+						files[i].xhr.abort();
+						files[i].xhr = null;
+						files[i].el.trigger('file_upload_end');
+						cur_file = null;
+					}
+				} else {
+					new_files.push(files[i]);
 				}
-			} else {
-				new_files.push(files[i]);
 			}
-		}
-		files = new_files;
-		
-		file.remove();
-		files_wrap.toggleClass('hide', !files.length);
-		
-		uploadNextFile();
-	});
-	
-	input_wrap.find('input').on('change', function (e) {
-		files_wrap.find('.js-file_error').remove();
-	
-		$.each(this.files, function (_, blob) {
-			var file = {
-				id: 'upload_file_' + Date.now(), 
-				blob: blob, 
-				action: el.data('action')
-			};
+			files = new_files;
 			
-			var errors = [];
-			if (blob.size > 20 * 1024 * 1024)
-				errors.push('Слишком жирный файл <s>как твои ляхи</s> (' + getHumanSize(blob.size) + ' <s>Кг</s>)');
-			else if (!/\.(jpg|jpeg|bmp|gif|png)$/i.test(blob.name))
-				errors.push('Сейчас бы в 2к17 не знать как выглядит картинка и грузить вместо неё всякую дичь -_-');
+			file.remove();
+			files_wrap.toggleClass('hide', !files.length);
 			
-			file.el = $(tpl.file({
-				id: file.id, 
-				name: blob.name, 
-				size: getHumanSize(blob.size), 
-				errors: errors
-			}));
-			
-			files_wrap.removeClass('hide').append(file.el);
-			
-			if (!errors.length) {
-				setTimeout(function () {
-					file.el.find('.js-file_thumb').prop("src", createObjectURL(blob));
-				}, 0);
-				files.push(file);
-			}
+			uploadNextFile();
 		});
 		
-		this.value = "";
+		input_wrap.find('input').on('change', function (e) {
+			files_wrap.find('.js-file_error').remove();
 		
-		uploadNextFile();
+			$.each(this.files, function (_, blob) {
+				var file = {
+					id: 'upload_file_' + Date.now(), 
+					blob: blob, 
+					action: el.data('action')
+				};
+				
+				var errors = [];
+				if (blob.size > 20 * 1024 * 1024)
+					errors.push('Слишком жирный файл <s>как твои ляхи</s> (' + getHumanSize(blob.size) + ' <s>Кг</s>)');
+				else if (!/\.(jpg|jpeg|bmp|gif|png)$/i.test(blob.name))
+					errors.push('Сейчас бы в 2к17 не знать как выглядит картинка и грузить вместо неё всякую дичь -_-');
+				
+				file.el = $(tpl.file({
+					id: file.id, 
+					name: blob.name, 
+					size: getHumanSize(blob.size), 
+					errors: errors
+				}));
+				
+				files_wrap.removeClass('hide').append(file.el);
+				
+				if (!errors.length) {
+					setTimeout(function () {
+						file.el.find('.js-file_thumb').prop("src", createObjectURL(blob));
+					}, 0);
+					files.push(file);
+				}
+			});
+			
+			this.value = "";
+			
+			uploadNextFile();
+		});
 	});
 });
 

@@ -1,4 +1,4 @@
-(function () {
+define(['jquery'], function ($) {
 //
 var tpl = {
 	captcha: function (data) {
@@ -132,7 +132,7 @@ function pagenav(url, offset, chunk, total) {
 }
 window.pagenav = pagenav;
 //
-})();
+});
 
 function getHumanSize(size) {
 	if (size >= 1024 * 1024)

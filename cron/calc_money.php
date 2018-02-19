@@ -35,6 +35,9 @@ while ($comm = $req->fetch()) {
 			die("ERROR: ".print_r($ret, 1));
 		
 		foreach ($ret->response->items as $item) {
+			if (isset($item->is_pinned) && $item->is_pinned)
+				continue;
+			
 			if ($item->date < $smm_money->last_date) {
 				$stop = true;
 			} elseif (!$item->marked_as_ads) {

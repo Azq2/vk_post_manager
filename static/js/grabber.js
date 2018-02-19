@@ -1,9 +1,9 @@
-$(function () {
+define(['jquery', 'upload', 'emojionearea', 'functions'], function ($) {
 //
 var TOPICS_CHUNK = 10, 
 	LOAD_CHUNK = 100;
 
-var settings = $('#grabber_data').data(), 
+var settings, 
 	all_topics = {}, 
 	all_topics_array = [], 
 	topics_offset = 0, 
@@ -12,21 +12,13 @@ var settings = $('#grabber_data').data(),
 	remote_loading = false, 
 	editor, 
 	max_offset, 
-	uniq_id = '[' + settings.gid + '_' + settings.sort + '_' + settings.mode + ']', 
+	uniq_id, 
 	exclude = [], 
 	queue_size = 0;
 
-function prepareText(text) {
-	var URL_RE = /(?:([!()?.,\s\n\r]|^)((https?:\/\/)?((?:[a-z0-9_\-]+\.)+(?:[a-z]{2,7}|xn--p1ai|xn--j1amh|xn--80asehdb|xn--80aswg))(\/.*?)?(\#.*?)?)(?:[.!:;,*()]*([\s\r\n]|$))|([!()?.,\s\n\r]|^)((https?:\/\/)?((?:[a-z0-9а-яєґї_\-]+\.)+(?:рф|укр|онлайн|сайт|срб|su))(\/.*?)?(\#.*?)?)(?:[.!:;,*()]*([\s\r\n]|$))|([!()?.,\s\n\r]|^)((https?:\/\/)((?:[a-z0-9а-яєґї_\-]+\.)+(?:[a-z]{2,7}|рф|укр|онлайн|сайт|срб|su))(\/.*?)?(\#.*?)?)(?:[.!:;,*()]*([\s\r\n]|$)))/gi;
-	return emojione.toImage(text.replace(/\[(club|public|id)(\d+)\|([^\]]+)\]/gim, function (_, type, id, title) {
-		return '<a href="https://vk.com/' + type + id + '" target="_blank">' + title + '</a>';
-	}).replace(URL_RE, function () {
-		var m = arguments, 
-			offset = m[4] ? 0 : (m[7 + 4] ? 7 : 14), 
-			url = m[offset + 2];
-		return m[offset + 1] + '<a href="' + url + '" target="_blank">' + url + '</a>' + m[offset + 7];
-	})).replace(/\r\n|\r|\n/gi, "<br />");
-}
+var $window = $(window), 
+	$document = $(document), 
+	lock_scroll_events = false;
 
 var tpl = {
 	attaches: function (data) {
@@ -228,100 +220,166 @@ var tpl = {
 	}
 };
 
-window.onbeforeunload = function() { 
-	return queue_size > 0 ? "Посты ещё добавляются. Точна???" : undefined; 
-};
+$(init);
 
-remote_topics_offset = +window.localStorage["saved_offset_" + uniq_id] || 0;
-$('#post_offset').val(remote_topics_offset);
+function prepareText(text) {
+	var URL_RE = /(?:([!()?.,\s\n\r]|^)((https?:\/\/)?((?:[a-z0-9_\-]+\.)+(?:[a-z]{2,7}|xn--p1ai|xn--j1amh|xn--80asehdb|xn--80aswg))(\/.*?)?(\#.*?)?)(?:[.!:;,*()]*([\s\r\n]|$))|([!()?.,\s\n\r]|^)((https?:\/\/)?((?:[a-z0-9а-яєґї_\-]+\.)+(?:рф|укр|онлайн|сайт|срб|su))(\/.*?)?(\#.*?)?)(?:[.!:;,*()]*([\s\r\n]|$))|([!()?.,\s\n\r]|^)((https?:\/\/)((?:[a-z0-9а-яєґї_\-]+\.)+(?:[a-z]{2,7}|рф|укр|онлайн|сайт|срб|su))(\/.*?)?(\#.*?)?)(?:[.!:;,*()]*([\s\r\n]|$)))/gi;
+	return emojione.toImage(text.replace(/\[(club|public|id)(\d+)\|([^\]]+)\]/gim, function (_, type, id, title) {
+		return '<a href="https://vk.com/' + type + id + '" target="_blank">' + title + '</a>';
+	}).replace(URL_RE, function () {
+		var m = arguments, 
+			offset = m[4] ? 0 : (m[7 + 4] ? 7 : 14), 
+			url = m[offset + 2];
+		return m[offset + 1] + '<a href="' + url + '" target="_blank">' + url + '</a>' + m[offset + 7];
+	})).replace(/\r\n|\r|\n/gi, "<br />");
+}
 
-$('body').on('click', '.js-page_input_btn', function (e) {
-	e.preventDefault();
-	var page = Math.max(1, +$(this).parents('.js-pagenav').find('.js-page_input').val() || 0);
-	$('#post_offset').val((page - 1) * LOAD_CHUNK);
-	$('#post_offset_btn').click();
-}).on('click', '.js-page', function (e) {
-	e.preventDefault();
-	var page = $(this).data('p');
-	$('#post_offset').val((page - 1) * LOAD_CHUNK);
-	$('#post_offset_btn').click();
-}).on('click', '#post_offset_btn', function (e) {
-	e.preventDefault();
-	window.localStorage["saved_offset_" + uniq_id] = $('#post_offset').val();
-	location.href = location.href;
-}).on('click', '.js-post_anchor', function (e) {
-	e.preventDefault();
-	window.localStorage["saved_offset_" + uniq_id] = $(this).data('n');
-	location.href = location.href;
-}).on('click', '.js-post_delete', function (e) {
-	e.preventDefault();
-	var btn = $(this), 
-		wrap = btn.parents('.js-post');
+function init() {
+	settings = $('#grabber_data').data();
+	uniq_id = '[' + settings.gid + '_' + settings.sort + '_' + settings.mode + ']';
 	
-	wrap.remove();
+	$window.on('scroll', onScroll);
 	
-	$.api("?a=grabber&sa=blacklist", {
-		gid: settings.gid, 
-		source_id: wrap.data('gid'), 
-		source_type: wrap.data('type'), 
-		remote_id: wrap.data('id')
-	});
-}).on('click', '.js-post_queue', function (e) {
-	e.preventDefault();
-	var btn = $(this), 
-		wrap = btn.parents('.js-post'), 
-		post_id = wrap.data('type') + '_' + wrap.data('gid') + '_' + wrap.data('id'), 
-		post = all_topics[post_id];
-	
-	if (btn.attr("disabled"))
-		return;
-	
-	var toggle_spinner = function (f) {
-		f ? btn.attr("disabled", "disabled") : btn.removeAttr("disabled");
-		btn.find('.js-spinner').toggleClass('hide', !f);
-		wrap.find('.js-status_text').addClass('hide');
-		
-		f ? ++queue_size : --queue_size;
+	window.onbeforeunload = function() { 
+		return queue_size > 0 ? "Посты ещё добавляются. Точна???" : undefined; 
 	};
-	
-	toggle_spinner(true);
-	
-	var attaches = {};
-	wrap.find('.js-attach:not(.deleted)').each(function () {
-		attaches[$(this).data('id')] = 1;
-	});
-	
-	console.log(attaches);
-	
-	var images = [], documents = [];
-	for (var i = 0; i < post.attaches.length; ++i) {
-		var att = post.attaches[i];
-		console.log(att.id, att.type);
-	
-		if (attaches[att.id]) {
-			if (att.type == 'doc') {
-				documents.push(att.url);
-			} else if (att.type == 'photo') {
-				var url;
-				for (var k in att.thumbs) {
-					if (!att.thumbs.hasOwnProperty(k))
-						continue;
-					url = att.thumbs[k];
+
+	remote_topics_offset = +window.localStorage["saved_offset_" + uniq_id] || 0;
+	$('#post_offset').val(remote_topics_offset);
+
+	$('body').on('click', '.js-page_input_btn', function (e) {
+		e.preventDefault();
+		var page = Math.max(1, +$(this).parents('.js-pagenav').find('.js-page_input').val() || 0);
+		$('#post_offset').val((page - 1) * LOAD_CHUNK);
+		$('#post_offset_btn').click();
+	}).on('click', '.js-page', function (e) {
+		e.preventDefault();
+		var page = $(this).data('p');
+		$('#post_offset').val((page - 1) * LOAD_CHUNK);
+		$('#post_offset_btn').click();
+	}).on('click', '#post_offset_btn', function (e) {
+		e.preventDefault();
+		window.localStorage["saved_offset_" + uniq_id] = $('#post_offset').val();
+		location.href = location.href;
+	}).on('click', '.js-post_anchor', function (e) {
+		e.preventDefault();
+		window.localStorage["saved_offset_" + uniq_id] = $(this).data('n');
+		location.href = location.href;
+	}).on('click', '.js-post_delete', function (e) {
+		e.preventDefault();
+		var btn = $(this), 
+			wrap = btn.parents('.js-post');
+		
+		wrap.remove();
+		
+		$.api("?a=grabber&sa=blacklist", {
+			gid: settings.gid, 
+			source_id: wrap.data('gid'), 
+			source_type: wrap.data('type'), 
+			remote_id: wrap.data('id')
+		});
+	}).on('click', '.js-post_queue', function (e) {
+		e.preventDefault();
+		var btn = $(this), 
+			wrap = btn.parents('.js-post'), 
+			post_id = wrap.data('type') + '_' + wrap.data('gid') + '_' + wrap.data('id'), 
+			post = all_topics[post_id];
+		
+		if (btn.attr("disabled"))
+			return;
+		
+		var toggle_spinner = function (f) {
+			f ? btn.attr("disabled", "disabled") : btn.removeAttr("disabled");
+			btn.find('.js-spinner').toggleClass('hide', !f);
+			wrap.find('.js-status_text').addClass('hide');
+			
+			f ? ++queue_size : --queue_size;
+		};
+		
+		toggle_spinner(true);
+		
+		var attaches = {};
+		wrap.find('.js-attach:not(.deleted)').each(function () {
+			attaches[$(this).data('id')] = 1;
+		});
+		
+		console.log(attaches);
+		
+		var images = [], documents = [];
+		for (var i = 0; i < post.attaches.length; ++i) {
+			var att = post.attaches[i];
+			console.log(att.id, att.type);
+		
+			if (attaches[att.id]) {
+				if (att.type == 'doc') {
+					documents.push(att.url);
+				} else if (att.type == 'photo') {
+					var url;
+					for (var k in att.thumbs) {
+						if (!att.thumbs.hasOwnProperty(k))
+							continue;
+						url = att.thumbs[k];
+					}
+					images.push(url);
 				}
-				images.push(url);
 			}
 		}
-	}
-	
-	var check_queue = function (id) {
-		$.api("?a=grabber&sa=queue_done", {
+		
+		var check_queue = function (id) {
+			$.api("?a=grabber&sa=queue_done", {
+				gid: settings.gid, 
+				id: id
+			}, function (res) {
+				if (res.error) {
+					toggle_spinner(false);
+					alert(res.error);
+				} else if (res.link) {
+					toggle_spinner(false);
+					wrap.html('<a href="' + res.link + '" target="_blank"><b class="green">Пост успешно добавлен в очередь. </b></a>');
+					
+					// Блэклистим
+					$.api("?a=grabber&sa=blacklist", {
+						gid: settings.gid, 
+						source_id: wrap.data('gid'), 
+						source_type: wrap.data('type'), 
+						remote_id: wrap.data('id')
+					});
+				} else {
+					if (res.queue) {
+						if (!('downloaded' in res.queue)) {
+							status = '[1 / 3] Ожидаем очереди...';
+						} else if (res.queue.downloaded < res.queue.total) {
+							status = '[2 / 3] Скачано: ' + res.queue.downloaded + ' из ' + res.queue.total;
+						} else if (res.queue.uploaded < res.queue.total) {
+							status = '[3 / 3] Выгружено: ' + res.queue.uploaded + ' из ' + res.queue.total;
+						} else {
+							status = 'Создаём запись...';
+						}
+						wrap.find('.js-status_text').html(status).removeClass('hide');
+					}
+					
+					setTimeout(function () {
+						check_queue(id);
+					}, 1000);
+				}
+			}, function () {
+				setTimeout(function () {
+					check_queue(id);
+				}, 500);
+				toggle_spinner(false);
+			});
+		};
+		
+		$.api("?a=grabber&sa=queue", {
 			gid: settings.gid, 
-			id: id
+			text: wrap.find('textarea').prop("emojioneArea").getText(), 
+			images: images, 
+			documents: documents
 		}, function (res) {
 			if (res.error) {
-				toggle_spinner(false);
 				alert(res.error);
-			} else if (res.link) {
+				toggle_spinner(false);
+			} else if (res.link) { // Сразу запостился
 				toggle_spinner(false);
 				wrap.html('<a href="' + res.link + '" target="_blank"><b class="green">Пост успешно добавлен в очередь. </b></a>');
 				
@@ -332,126 +390,72 @@ $('body').on('click', '.js-page_input_btn', function (e) {
 					source_type: wrap.data('type'), 
 					remote_id: wrap.data('id')
 				});
-			} else {
-				if (res.queue) {
-					if (!('downloaded' in res.queue)) {
-						status = '[1 / 3] Ожидаем очереди...';
-					} else if (res.queue.downloaded < res.queue.total) {
-						status = '[2 / 3] Скачано: ' + res.queue.downloaded + ' из ' + res.queue.total;
-					} else if (res.queue.uploaded < res.queue.total) {
-						status = '[3 / 3] Выгружено: ' + res.queue.uploaded + ' из ' + res.queue.total;
-					} else {
-						status = 'Создаём запись...';
-					}
-					wrap.find('.js-status_text').html(status).removeClass('hide');
-				}
-				
-				setTimeout(function () {
-					check_queue(id);
-				}, 1000);
+			} else { // Ждём скачивания аттачей
+				check_queue(res.id);
 			}
 		}, function () {
-			setTimeout(function () {
-				check_queue(id);
-			}, 500);
+			alert('Страшная ошибка!!11 Мб нет интернета?');
 			toggle_spinner(false);
 		});
-	};
-	
-	$.api("?a=grabber&sa=queue", {
-		gid: settings.gid, 
-		text: wrap.find('textarea').prop("emojioneArea").getText(), 
-		images: images, 
-		documents: documents
-	}, function (res) {
-		if (res.error) {
-			alert(res.error);
-			toggle_spinner(false);
-		} else if (res.link) { // Сразу запостился
-			toggle_spinner(false);
-			wrap.html('<a href="' + res.link + '" target="_blank"><b class="green">Пост успешно добавлен в очередь. </b></a>');
+	}).on('click', '.js-attach_remove', function (e) {
+		e.preventDefault();
+		e.stopPropagation();
+		e.stopImmediatePropagation();
+		$(this).parents('.js-attach').toggleClass('deleted');
+	}).on('click', '.js-gif', function (e) {
+		e.preventDefault();
+		var el = $(this), 
+			gif = el.data('gif'), 
+			mp4 = el.data('mp4'), 
+			w = el.data('height'), 
+			h = el.data('width'), 
+			video = el.find('video')[0], 
+			img = el.find('img.preview');
+		
+		if (el.data('oldMaxWidth')) {
+			el.css("max-width", el.data('oldMaxWidth'));
+			el.removeData('oldMaxWidth');
+			el.find('.js-gif_hide').removeClass('hide');
 			
-			// Блэклистим
-			$.api("?a=grabber&sa=blacklist", {
-				gid: settings.gid, 
-				source_id: wrap.data('gid'), 
-				source_type: wrap.data('type'), 
-				remote_id: wrap.data('id')
+			if (mp4) {
+				video.pause()
+			} else {
+				img.replaceWith(img.clone(true).prop("src", el.data('oldGif')));
+				el.removeData('oldGif');
+			}
+		} else {
+			el.data('oldMaxWidth', el.css("max-width"));
+			el.css("max-width", w);
+			el.find('.js-gif_hide').addClass('hide');
+			
+			if (mp4) {
+				video.load();
+				video.play();
+			} else {
+				el.data('oldGif', img.prop("src"));
+				img.replaceWith(img.clone(true).prop("src", gif));
+			}
+		}
+		
+		console.log(gif, mp4);
+	}).on('click', '.js-post_edit', function (e) {
+		e.preventDefault();
+		var wrap = $(this).parents('.js-post');
+		wrap.addClass('post-edit');
+		wrap.find('textarea')
+			.val(all_topics[wrap.data('type') + '_' + wrap.data('gid') + '_' + wrap.data('id')].text)
+			.emojioneArea({
+				pickerPosition: "bottom", 
+				filtersPosition: "bottom", 
+				autocomplete: false, 
+				tonesStyle: "checkbox"
 			});
-		} else { // Ждём скачивания аттачей
-			check_queue(res.id);
-		}
-	}, function () {
-		alert('Страшная ошибка!!11 Мб нет интернета?');
-		toggle_spinner(false);
+		
+		var top = wrap.offset().top;
+		if (top < $(window).scrollTop() || top > $(window).scrollTop() + $(window).innerHeight())
+			$('html, body').scrollTop(top);
 	});
-}).on('click', '.js-attach_remove', function (e) {
-	e.preventDefault();
-	e.stopPropagation();
-	e.stopImmediatePropagation();
-	$(this).parents('.js-attach').toggleClass('deleted');
-}).on('click', '.js-gif', function (e) {
-	e.preventDefault();
-	var el = $(this), 
-		gif = el.data('gif'), 
-		mp4 = el.data('mp4'), 
-		w = el.data('height'), 
-		h = el.data('width'), 
-		video = el.find('video')[0], 
-		img = el.find('img.preview');
-	
-	if (el.data('oldMaxWidth')) {
-		el.css("max-width", el.data('oldMaxWidth'));
-		el.removeData('oldMaxWidth');
-		el.find('.js-gif_hide').removeClass('hide');
-		
-		if (mp4) {
-			video.pause()
-		} else {
-			img.replaceWith(img.clone(true).prop("src", el.data('oldGif')));
-			el.removeData('oldGif');
-		}
-	} else {
-		el.data('oldMaxWidth', el.css("max-width"));
-		el.css("max-width", w);
-		el.find('.js-gif_hide').addClass('hide');
-		
-		if (mp4) {
-			video.load();
-			video.play();
-		} else {
-			el.data('oldGif', img.prop("src"));
-			img.replaceWith(img.clone(true).prop("src", gif));
-		}
-	}
-	
-	console.log(gif, mp4);
-}).on('click', '.js-post_edit', function (e) {
-	e.preventDefault();
-	var wrap = $(this).parents('.js-post');
-	wrap.addClass('post-edit');
-	wrap.find('textarea')
-		.val(all_topics[wrap.data('type') + '_' + wrap.data('gid') + '_' + wrap.data('id')].text)
-		.emojioneArea({
-			pickerPosition: "bottom", 
-			filtersPosition: "bottom", 
-			autocomplete: false, 
-			tonesStyle: "checkbox"
-		});
-	
-	var top = wrap.offset().top;
-	if (top < $(window).scrollTop() || top > $(window).scrollTop() + $(window).innerHeight())
-		$('html, body').scrollTop(top);
-});
 
-var $window = $(window), 
-	$document = $(document), 
-	lock_scroll_events = false;
-$window.on('scroll', onScroll);
-
-init();
-
-function init() {
 	loadPosts();
 	$('#garbber_init_spinner').addClass('hide');
 }
@@ -503,6 +507,8 @@ function loadPosts() {
 			
 			console.log(res.sql);
 			console.log('data: ' + res.time_data + ', list: ' + res.time_list);
+			
+			console.log(res.items);
 			
 			if (res.items.length) {
 				console.log("loaded " + res.items.length + "with chunk " + LOAD_CHUNK);

@@ -1,4 +1,4 @@
-$(function () {
+define(['jquery', 'upload', 'emojionearea', 'functions'], function ($) {
 //
 var tpl = {
 	file: function (data) {
@@ -49,91 +49,95 @@ var files = [],
 	cur_file, 
 	upload = false;
 
-$('#file_input').on('change', function (e) {
-	$('.js-file_error').remove();
+$(function () {
+	$('.js-page_spinner_switch').toggleClass('hide');
 	
-	$.each(this.files, function (_, blob) {
-		var file = {
-			id: 'xuj_' + Date.now(), 
-			blob: blob
-		};
+	$('#file_input').on('change', function (e) {
+		$('.js-file_error').remove();
 		
-		var errors = [];
-		if (blob.size > 20 * 1024 * 1024)
-			errors.push('Слишком жирный файл <s>как твои ляхи</s> (' + getHumanSize(blob.size) + ' <s>Кг</s>)');
-		else if (!/\.(jpg|jpeg|bmp|gif|png)$/i.test(blob.name))
-			errors.push('Сейчас бы в 2к16 не знать как выглядит картинка и грузить вместо неё всякую дичь -_-');
-		
-		$('#selected_files').append(tpl.file({
-			id: file.id, 
-			name: blob.name, 
-			size: getHumanSize(blob.size), 
-			errors: errors
-		}));
-		
-		$('#file_descr_' + file.id).emojioneArea({
-			pickerPosition: "bottom", 
-			filtersPosition: "bottom", 
-			autocomplete: false, 
-			tonesStyle: "checkbox"
+		$.each(this.files, function (_, blob) {
+			var file = {
+				id: 'xuj_' + Date.now(), 
+				blob: blob
+			};
+			
+			var errors = [];
+			if (blob.size > 20 * 1024 * 1024)
+				errors.push('Слишком жирный файл <s>как твои ляхи</s> (' + getHumanSize(blob.size) + ' <s>Кг</s>)');
+			else if (!/\.(jpg|jpeg|bmp|gif|png)$/i.test(blob.name))
+				errors.push('Сейчас бы в 2к16 не знать как выглядит картинка и грузить вместо неё всякую дичь -_-');
+			
+			$('#selected_files').append(tpl.file({
+				id: file.id, 
+				name: blob.name, 
+				size: getHumanSize(blob.size), 
+				errors: errors
+			}));
+			
+			$('#file_descr_' + file.id).emojioneArea({
+				pickerPosition: "bottom", 
+				filtersPosition: "bottom", 
+				autocomplete: false, 
+				tonesStyle: "checkbox"
+			});
+			$('#file_caption_' + file.id).emojioneArea({
+				pickerPosition: "bottom", 
+				filtersPosition: "bottom", 
+				autocomplete: false, 
+				inline: true,
+				tonesStyle: "checkbox"
+			});
+			
+			if (!errors.length) {
+				setTimeout(function () {
+					$('#file_thumb_' + file.id).prop("src", createObjectURL(blob));
+				}, 0);
+				files.push(file);
+			}
 		});
-		$('#file_caption_' + file.id).emojioneArea({
-			pickerPosition: "bottom", 
-			filtersPosition: "bottom", 
-			autocomplete: false, 
-			inline: true,
-			tonesStyle: "checkbox"
-		});
+		checkButtons();
 		
-		if (!errors.length) {
-			setTimeout(function () {
-				$('#file_thumb_' + file.id).prop("src", createObjectURL(blob));
-			}, 0);
-			files.push(file);
-		}
+		this.value = "";
 	});
-	checkButtons();
-	
-	this.value = "";
-});
 
-$('.js-do_upload_btn').on('click', function (e) {
-	e.preventDefault();
-	
-	var el = $(this);
-	
-	if (el.data('skip') && files.length) {
-		$('#' + files[0].id).remove();
-		files.shift();
+	$('.js-do_upload_btn').on('click', function (e) {
+		e.preventDefault();
 		
-		if (!files.length)
-			location.reload();
-	}
-	
-	$('.js-file_error').remove();
-	$('.js-file_state_none').hide();
-	$('.js-file_state_upload').show();
-	$('#upload_error_wrap').hide();
-	
-	uploadNextFile();
-});
-
-$('body').on('click', '.js-file_delete', function (e) {
-	e.preventDefault();
-	var el = $(this), 
-		wrap = el.parents('.js-file');
-	
-	for (var i = 0, l = files.length; i < l; ++i) {
-		if (files[i].id == wrap.attr("id")) {
-			files.splice(i, 1);
-			break;
+		var el = $(this);
+		
+		if (el.data('skip') && files.length) {
+			$('#' + files[0].id).remove();
+			files.shift();
+			
+			if (!files.length)
+				location.reload();
 		}
-	}
-	wrap.remove();
-	checkButtons();
-	
-	if (!files.length && upload)
-		location.reload();
+		
+		$('.js-file_error').remove();
+		$('.js-file_state_none').hide();
+		$('.js-file_state_upload').show();
+		$('#upload_error_wrap').hide();
+		
+		uploadNextFile();
+	});
+
+	$('body').on('click', '.js-file_delete', function (e) {
+		e.preventDefault();
+		var el = $(this), 
+			wrap = el.parents('.js-file');
+		
+		for (var i = 0, l = files.length; i < l; ++i) {
+			if (files[i].id == wrap.attr("id")) {
+				files.splice(i, 1);
+				break;
+			}
+		}
+		wrap.remove();
+		checkButtons();
+		
+		if (!files.length && upload)
+			location.reload();
+	});
 });
 
 function uploadNextFile() {
