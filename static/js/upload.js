@@ -1,10 +1,23 @@
-define(['jquery'], function ($) {
+define(['jquery', 'api'], function ($) {
 //
 var tpl = {
 	select: function () {
 		var html = 
-			'<label class="lbl">Выбери файл (или несколько через зажатый Ctrl):</label><br />' + 
-			'<input type="file" multiple="multiple" name="file" value="" accept="image/*" />';
+			'<div>' + 
+				'<label class="lbl">Выбери файл (или несколько через зажатый Ctrl):</label><br />' + 
+				'<input type="file" multiple="multiple" class="js-file_input" name="file" value="" accept="image/*" /><br />' + 
+			'</div>' + 
+			'<div class="pad_t">' + 
+				'<label class="lbl">Ссылка на файл:</label><br />' + 
+				'<table width="100%"><tr>' + 
+					'<td width="100%">' + 
+						'<input type="text" name="file_url" class="js-file_url" value="" />' + 
+					'</td>' + 
+					'<td style="padding-left: 4px">' + 
+						'<input type="submit" value="Скачать" class="btn js-file_url_btn" />' + 
+					'</td>' + 
+				'</tr></table>' + 
+			'</div>';
 		return html;
 	}, 
 	file: function (data) {
@@ -18,15 +31,14 @@ var tpl = {
 				'</div>';
 		
 		var html = 
-			'<div class="pad_t pad_b js-upload_file" id="' + data.id + '">' + 
+			'<div class="pad_t pad_b js-upload_file oh break-word" id="' + data.id + '">' + 
 				'<table style="width: 100%"><tr>' + 
 					'<td class="left post-preview file-thumb">' + 
 						'<div class="file-thumb-center"></div>' + 
 						'<img src="//s.spac.me/i/transparent.gif" alt="" class="js-file_thumb" />' + 
 					'</td>' + 
-					//~ '<td style="width:100%">' + 
-					//~ '<td style="width:100%">' + 
-						'<b class="darkblue">' + html_wrap(data.name) + '</b> <span class="grey">(' + data.size + ')</span>' + 
+					'<td style="width:100%">' + 
+						'<b class="darkblue">' + html_wrap(data.name) + '</b>' + (data.size ? ' <span class="grey">(' + data.size + ')</span>' : '') + 
 						'<div>' + 
 							'<div class="js-upload_info" class="grey">Ожидает загрузки...</div>' + 
 							'<div class="progress" style="margin-top: 3px">' + 
@@ -48,89 +60,241 @@ var files = [],
 	cur_file, 
 	upload;
 
-$(function () {
-	$('.js-upload_form').each(function () {
-		var el = $(this), 
-			input_wrap = el.find('.js-upload_input'), 
-			files_wrap = el.find('.js-upload_files');
-		
-		el.removeClass('js-upload_form');
-		
-		input_wrap.html(tpl.select());
-		
-		files_wrap.on('click', '.js-file_delete', function (e) {
-			e.preventDefault();
-			
-			var file = $(this).parents('.js-upload_file');
-			
-			var new_files = [];
-			for (var i = 0; i < files.length; ++i) {
-				if (files[i].id == file.prop("id")) {
-					if (files[i].xhr) {
-						files[i].xhr.abort();
-						files[i].xhr = null;
-						files[i].el.trigger('file_upload_end');
-						cur_file = null;
-					}
-				} else {
-					new_files.push(files[i]);
-				}
+$.fn.genericUploader = function () {
+	var forms = this;
+	if (!forms.hasClass('js-upload_form'))
+		forms = forms.find('.js-upload_form');
+	forms.each(function () {
+		var el = $(this);
+		initForm(el);
+	});
+};
+
+$.urlUploader = function (options) {
+	options = $.extend({
+		gid:			0, 
+		files:			[], 
+		images:			[], 
+		documents:		[], 
+		onStateChanged:	false, 
+		onDone:			false, 
+		onError:		false, 
+		action:			""
+	}, options);
+	
+	var upload_id;
+	
+	var check_upload = function () {
+		if (upload_id) {
+			api_data = {id: upload_id, type: "url"};
+		} else {
+			api_data = {
+				files:			options.files, 
+				images:			options.images, 
+				documents:		options.documents, 
+				type:			"url"
 			}
-			files = new_files;
-			
-			file.remove();
-			files_wrap.toggleClass('hide', !files.length);
-			
-			uploadNextFile();
+		}
+		
+		$.api(options.action, api_data, function (res) {
+			if (res.data) {
+				options.onDone && options.onDone(res);
+			} else if (res.queue) {
+				upload_id = res.id;
+				
+				var status;
+				if (!('downloaded' in res.queue)) {
+					status = '[1 / 3] Ожидаем очереди...';
+				} else if (res.queue.downloaded < res.queue.total) {
+					status = '[2 / 3] Скачано: ' + res.queue.downloaded + ' из ' + res.queue.total;
+				} else if (res.queue.uploaded < res.queue.total) {
+					status = '[3 / 3] Выгружено: ' + res.queue.uploaded + ' из ' + res.queue.total;
+				} else {
+					status = 'Ожидаем чуда...';
+				}
+				
+				options.onStateChanged && options.onStateChanged({status: status});
+				
+				setTimeout(check_upload, 300);
+			} else if (res.error) {
+				options.onError && options.onError(res.error);
+			}
+		}, function () {
+			setTimeout(check_upload, 300);
 		});
+	}
+	
+	check_upload();
+	
+	return this;
+};
+
+function initForm(el) {
+	var input_wrap = el.find('.js-upload_input'), 
+		files_wrap = el.find('.js-upload_files');
+	
+	el.removeClass('js-upload_form');
+	
+	input_wrap.html(tpl.select());
+	
+	input_wrap.on('click', '.js-file_url_btn', function (e) {
+		e.preventDefault();
 		
-		input_wrap.find('input').on('change', function (e) {
-			files_wrap.find('.js-file_error').remove();
+		var url_input = input_wrap.find('.js-file_url');
 		
-			$.each(this.files, function (_, blob) {
-				var file = {
-					id: 'upload_file_' + Date.now(), 
-					blob: blob, 
-					action: el.data('action')
-				};
+		var file = {
+			id:		'upload_url_' + Date.now(), 
+			url:	$.trim(url_input.val()), 
+			action:	el.data('action'), 
+		};
+		
+		if (!file.url.length)
+			return;
+		
+		var errors = [];
+		if (file.url.substr(0, 2) == '//')
+			file.url = 'http:' + file.url;
+		else if (file.url.substr(0, 2) == '/')
+			errors.push('Кривая ссылка.');
+		else if (!file.url.match(/^(http|https):\/\//))
+			file.url = 'http://' + file.url;
+		
+		file.el = $(tpl.file({
+			id:		file.id, 
+			name:	file.url, 
+			errors:	errors
+		}));
+		
+		file.el.find('.js-file_thumb').prop("src", "/i/img/link_2x.png");
+		
+		files_wrap.removeClass('hide').append(file.el);
+		
+		if (!errors.length) {
+			url_input.val('');
+			
+			file.el.trigger('file_upload_start');
+			$.urlUploader({
+				action:		file.action, 
+				files:		[file.url], 
 				
-				var errors = [];
-				if (blob.size > 20 * 1024 * 1024)
-					errors.push('Слишком жирный файл <s>как твои ляхи</s> (' + getHumanSize(blob.size) + ' <s>Кг</s>)');
-				else if (!/\.(jpg|jpeg|bmp|gif|png)$/i.test(blob.name))
-					errors.push('Сейчас бы в 2к17 не знать как выглядит картинка и грузить вместо неё всякую дичь -_-');
-				
-				file.el = $(tpl.file({
-					id: file.id, 
-					name: blob.name, 
-					size: getHumanSize(blob.size), 
-					errors: errors
-				}));
-				
-				files_wrap.removeClass('hide').append(file.el);
-				
-				if (!errors.length) {
-					setTimeout(function () {
-						file.el.find('.js-file_thumb').prop("src", createObjectURL(blob));
-					}, 0);
-					files.push(file);
+				onError: function (err) {
+					if (file.deleted)
+						return;
+					
+					file.el.trigger('file_upload_end');
+					file.el.html(tpl.file({
+						name: file.url, 
+						errors: [err || 'Не смогли загрузить файл!']
+					}));
+				}, 
+				onStateChanged: function (e) {
+					if (file.deleted)
+						return;
+					
+					file.el.find('.js-upload_info').html(e.status);
+				}, 
+				onDone: function (res) {
+					if (file.deleted)
+						return;
+					
+					file.el.trigger('file_upload_end');
+					file.el.trigger('file_uploaded', {
+						file: file, 
+						response: res
+					});
+					file.el.find('.js-file_delete').click();
 				}
 			});
 			
-			this.value = "";
-			
-			uploadNextFile();
-		});
+			files.push(file);
+		}
 	});
-});
+	
+	files_wrap.on('click', '.js-file_delete', function (e) {
+		e.preventDefault();
+		
+		var file = $(this).parents('.js-upload_file');
+		
+		var new_files = [];
+		for (var i = 0; i < files.length; ++i) {
+			if (files[i].id == file.prop("id")) {
+				if (files[i].xhr) {
+					files[i].xhr.abort();
+					files[i].xhr = null;
+					files[i].el.trigger('file_upload_end');
+					
+					if (cur_file && cur_file.id == files[i].id)
+						cur_file = null;
+				}
+				
+				files[i].deleted = true;
+			} else {
+				new_files.push(files[i]);
+			}
+		}
+		files = new_files;
+		
+		file.remove();
+		files_wrap.toggleClass('hide', !files.length);
+		
+		uploadNextFile();
+	});
+	
+	input_wrap.find('.js-file_input').on('change', function (e) {
+		files_wrap.find('.js-file_error').remove();
+	
+		$.each(this.files, function (_, blob) {
+			var file = {
+				id: 'upload_file_' + Date.now(), 
+				blob: blob, 
+				action: el.data('action'), 
+				type: 'upload'
+			};
+			
+			var errors = [];
+			if (blob.size > 20 * 1024 * 1024)
+				errors.push('Слишком жирный файл <s>как твои ляхи</s> (' + getHumanSize(blob.size) + ' <s>Кг</s>)');
+			else if (!/\.(jpg|jpeg|bmp|gif|png)$/i.test(blob.name))
+				errors.push('Сейчас бы в 2к17 не знать как выглядит картинка и грузить вместо неё всякую дичь -_-');
+			
+			file.el = $(tpl.file({
+				id: file.id, 
+				name: blob.name, 
+				size: getHumanSize(blob.size), 
+				errors: errors
+			}));
+			
+			files_wrap.removeClass('hide').append(file.el);
+			
+			if (!errors.length) {
+				setTimeout(function () {
+					file.el.find('.js-file_thumb').prop("src", createObjectURL(blob));
+				}, 0);
+				files.push(file);
+			}
+		});
+		
+		this.value = "";
+		
+		uploadNextFile();
+	});
+}
 
 function uploadNextFile() {
 	if (cur_file || !files.length)
 		return;
 	
-	upload = true;
+	for (var i = 0; i < files.length; ++i) {
+		if (files[i].type == 'upload') {
+			cur_file = files[i];
+			break;
+		}
+	}
 	
-	cur_file = files[0];
+	if (!cur_file)
+		return;
+	
+	upload = true;
 	
 	var form = new FormData();
 	form.append('file', cur_file.blob);

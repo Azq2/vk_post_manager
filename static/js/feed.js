@@ -1,34 +1,23 @@
-define(['jquery', 'class', 'utils', 'emojione'], function ($, Class, utils, emojione) {
+define(['jquery', 'class', 'utils', 'emojione', 'upload', 'meme'], function ($, Class, utils, emojione) {
 //
 var tpl = {
-	attaches: function (data) {
+	attaches: function (data, custom) {
 		var attaches = [];
-		
-		var find_thumb = function (hash, size) {
-			var ret;
-			for (var w in hash) {
-				if (!hash.hasOwnProperty(w))
-					continue;
-				if ((!ret && w > size) || w <= size)
-					ret = {src: hash[w], w: +w};
-				if (ret)
-					ret.orig_src = hash[w];
-			}
-			
-			if (!ret)
-				console.log('find_thumb(', hash, size, ') = ', ret);
-			
-			return ret;
-		};
 		
 		for (var i = 0; i < data.length; ++i) {
 			var att = data[i];
 			var html = '';
 			
+			var deleted = custom.checkAttach && custom.checkAttach(att);
+			
+			// Костыль!
+			if (deleted)
+				att.deleted = true;
+			
 			var att_id = att.id;
 			if (att.type == 'photo' || (att.type == 'doc' && !('length' in att.thumbs))) {
 				var aspect = att.w / att.h, 
-					thumb = find_thumb(att.thumbs, 640), 
+					thumb = findBestThumb(att.thumbs, 640), 
 					photo_w = thumb.w, 
 					photo_h = Math.round(thumb.w / aspect);
 				
@@ -39,8 +28,6 @@ var tpl = {
 						Math.min(320 / aspect, photo_w) : 
 						Math.min(320, photo_w), 
 					tile = att.type == 'doc' ? '100%' : (photo_h / photo_w > 1.2 ? '25%' : '50%');
-				
-				var deleted = att.type == 'doc' && !att.ext.match(/^png|jpg|jpeg|bmp|webp|gif$/);
 				
 				html += 
 					'<div class="center post-pic' + (deleted ? ' deleted' : '') + ' js-attach' + (att.ext == 'gif' ? ' js-gif' : '') + '" ' + 
@@ -56,43 +43,76 @@ var tpl = {
 								'<video poster="' + thumb.src + '" src="' + att.mp4 + '" class="preview" preload="none" />' : 
 								'<img src="' + thumb.src + '" alt="" class="preview" />'
 							) + 
-							'<span class="post-attach_remove js-attach_remove inl post-show_edit">' + 
-								'<img src="/i/img/remove_image.png" alt="" />' + 
-							'</span>' + 
+							(!deleted && att.type == 'photo' ? 
+								'<span class="post-attach_edit js-attach_edit inl post-show_edit">' + 
+									'<img src="/i/img/edit_image.png" alt="" />' + 
+								'</span>' : ''
+							) + 
+							(!deleted ? 
+								'<span class="post-attach_remove js-attach_remove inl post-show_edit">' + 
+									'<img src="/i/img/remove_image.png" alt="" />' + 
+								'</span>' : ''
+							) + 
 							(att.ext == 'gif' ? '<img src="/i/img/play.svg" alt="" class="post-doc_play js-gif_hide" />' : '') + 
 							(att.type == 'doc' ? '<div class="post-doc_title js-gif_hide"><b>' + utils.htmlWrap(att.title) + '</b></div>' : '') + 
 						'</a>' + 
 					'</div>';
 			} else if (att.type == 'doc') {
-				console.log(att);
 				html += 
-					'<div class="post-attach deleted js-attach" data-id="' + att_id + '">' + 
-						'<b>Документ:</b> <a href="' + (att.page_url || att.url) + '" target="_blank">' + 
+					'<div class="post-attach' + (deleted ? ' deleted' : '') + ' js-attach" data-id="' + att_id + '">' + 
+						'<b class="m">Документ:</b> <a href="' + (att.page_url || att.url) + '" target="_blank" class="m">' + 
 							utils.htmlWrap(att.title) + 
 						'</a>' + 
+						(!deleted ? 
+							'<a href="#" class="post-show_edit inl js-attach_remove right">' + 
+								'<img src="/i/img/remove.png" alt="" class="m" /> ' + 
+							'</a>' : ''
+						) + 
 					'</div>';
 			} else if (att.type == 'audio') {
 				html += 
-					'<div class="post-attach deleted js-attach" data-id="' + att_id + '">' + 
-						'<b>Аудио:</b> ' + utils.htmlWrap(att.title) + 
+					'<div class="post-attach' + (deleted ? ' deleted' : '') + ' js-attach" data-id="' + att_id + '">' + 
+						'<b class="m">Аудио:</b> <span class="m">' + utils.htmlWrap(att.title) + '</span>' + 
+						(!deleted ? 
+							'<a href="#" class="post-show_edit inl js-attach_remove right">' + 
+								'<img src="/i/img/remove.png" alt="" class="m" /> ' + 
+							'</a>' : ''
+						) + 
 					'</div>';
 			} else if (att.type == 'link') {
 				html += 
-					'<div class="post-attach deleted js-attach" data-id="' + att_id + '">' + 
-						'<b>Ссылка:</b> <a href="' + utils.htmlWrap(att.url) + '" target="_blank">' + 
+					'<div class="post-attach' + (deleted ? ' deleted' : '') + ' js-attach" data-id="' + att_id + '">' + 
+						'<b class="m">Ссылка:</b> <a href="' + utils.htmlWrap(att.url) + '" target="_blank" class="m">' + 
 							utils.htmlWrap(att.title) + 
-						'</a><br />' + 
+						'</a>' + 
+						(!deleted ? 
+							'<a href="#" class="post-show_edit inl js-attach_remove right">' + 
+								'<img src="/i/img/remove.png" alt="" class="m" /> ' + 
+							'</a>' : ''
+						) + 
+						'<br />' + 
 						utils.htmlWrap(att.description) + 
 					'</div>';
 			} else if (att.type == 'geo') {
 				html += 
-					'<div class="post-attach deleted js-attach" data-id="' + att_id + '">' + 
-						'<b>GEO:</b> ' + att.lat + ", " + att.lng + 
+					'<div class="post-attach' + (deleted ? ' deleted' : '') + ' js-attach" data-id="' + att_id + '">' + 
+						'<b class="m">GEO:</b> <span class="m">' + att.lat + ", " + att.lng + '</span>' + 
+						(!deleted ? 
+							'<a href="#" class="post-show_edit inl js-attach_remove right">' + 
+								'<img src="/i/img/remove.png" alt="" class="m" /> ' + 
+							'</a>' : ''
+						) + 
 					'</div>';
 			} else if (att.type == 'poll') {
 				html += 
-					'<div class="post-attach deleted js-attach oh" data-id="' + att + '">' + 
-						'<b>Опрос:</b> ' + utils.htmlWrap(att.question) + (att.anon ? ' <span class="grey right">Анонимный</span>' : '') + '<br />';
+					'<div class="post-attach' + (deleted ? ' deleted' : '') + ' js-attach oh" data-id="' + att_id + '">' + 
+						'<b class="m">Опрос:</b> <span class="m">' + utils.htmlWrap(att.question) + (att.anon ? ' <span class="grey">(Анонимный)</span>' : '') + '</span>' + 
+						(!deleted ? 
+							'<a href="#" class="post-show_edit inl js-attach_remove right">' + 
+								'<img src="/i/img/remove.png" alt="" class="m" /> ' + 
+							'</a>' : ''
+						) + 
+						'<br />';
 				if (att.answers) {
 					for (var j = 0; j < att.answers.length; ++j)
 						html += (j + 1) + ') ' + utils.htmlWrap(att.answers[j]) + '<br />';
@@ -100,7 +120,7 @@ var tpl = {
 				html += '</div>';
 			} else if (att.type == 'album' || att.type == 'market_album' || att.type == 'market' || att.type == 'video') {
 				var aspect = att.w / att.h, 
-					thumb = find_thumb(att.thumbs, 640), 
+					thumb = findBestThumb(att.thumbs, 640), 
 					photo_w = thumb.w, 
 					photo_h = Math.round(thumb.w / aspect);
 				
@@ -115,7 +135,7 @@ var tpl = {
 					max_width = Math.min(photo_w, 320);
 				
 				html += 
-					'<div class="center post-pic deleted js-attach" ' + 
+					'<div class="center post-pic' + (deleted ? ' deleted' : '') + ' js-attach" ' + 
 							'style="padding: 10px 0;margin: 0 2px;display: inline-block;max-width: ' + max_width + 'px; width: 100%;" data-id="' + att_id + '">' + 
 						'<a href="' + att.url + '" target="_blank" class="aspect oh" style="padding-top: ' + (aspect * 100) + '%">' + 
 							'<img src="' + thumb.src + '" alt="" class="preview" />' + 
@@ -123,6 +143,11 @@ var tpl = {
 								'<b>' + names[att.type] + ': ' + utils.htmlWrap(att.title) + '</b><br />' + 
 								utils.htmlWrap(att.description) + 
 							'</div>' + 
+							(!deleted ? 
+								'<span class="post-attach_remove js-attach_remove inl post-show_edit">' + 
+									'<img src="/i/img/remove_image.png" alt="" />' + 
+								'</span>' : ''
+							) + 
 						'</a>' + 
 					'</div>';
 			} else {
@@ -133,7 +158,7 @@ var tpl = {
 			attaches.push(html);
 		}
 		
-		return attaches.length ? '<div class="post-attaches">' + attaches.join('') + '</div>' : '';
+		return attaches;
 	}, 
 	post: function (data, custom) {
 		var url, owner_url;
@@ -151,6 +176,8 @@ var tpl = {
 		
 		if (data.special)
 			post_class = ' row-yellow';
+		
+		var attaches = tpl.attaches(data.attaches || [], custom);
 		
 		var html =
 			'<div class="row js-post wrapper' + post_class + '" data-id="' + data.remote_id + '" data-type="' + data.source_type + '" data-gid="' + data.source_id + '">' + 
@@ -174,16 +201,23 @@ var tpl = {
 						'<div class="post-text post-hide_edit emoji">' + prepareText(utils.htmlWrap(data.text)) + '</div>' + 
 					'</div>' + 
 				'</div>' + 
-				'<div class="post-show_edit pad_t">' + 
-					'<textarea rows="10" class="js-post_textarea" name="text"></textarea>' + 
+				'<div class="js-post_attach_editor hide"></div>' + 
+				'<div class="js-post_editor">' + 
+					'<div class="post-show_edit pad_t">' + 
+						'<textarea rows="10" class="js-post_textarea" name="text"></textarea>' + 
+						'<div class="js-upload_form pad_t" data-action="/?a=vk_upload&amp;gid=' + custom.gid + '" data-id="vk_upload">' + 
+							'<div class="js-upload_input"></div>' + 
+							'<div class="js-upload_files pad_t hide"></div>' + 
+						'</div>' + 
+					'</div>' + 
+					'<div class="js-post_attaches post-attaches' + (!attaches.length ? ' hide' : '') + '">' + attaches.join('') + '</div>' + 
+					'<div class="pad_t oh' + (!data.likes && !data.comments && !data.reposts ? ' hide' : '') + '">' + 
+						'<img src="/i/img/like.svg" class="m" width="16" height="16" /> <span class="darkblue">' + data.likes + '</span>&nbsp;&nbsp;&nbsp;' + 
+						'<img src="/i/img/comment.svg" class="m" width="16" height="16" /> <span class="darkblue">' + data.comments + '</span>&nbsp;&nbsp;&nbsp;' + 
+						'<img src="/i/img/repost.svg" class="m" width="16" height="16" /> <span class="darkblue">' + data.reposts + '</span>' + 
+					'</div>' + 
+					custom.toolbar + 
 				'</div>' + 
-				tpl.attaches(data.attaches || []) + 
-				'<div class="pad_t oh' + (!data.likes && !data.comments && !data.reposts ? ' hide' : '') + '">' + 
-					'<img src="/i/img/like.svg" class="m" width="16" height="16" /> <span class="darkblue">' + data.likes + '</span>&nbsp;&nbsp;&nbsp;' + 
-					'<img src="/i/img/comment.svg" class="m" width="16" height="16" /> <span class="darkblue">' + data.comments + '</span>&nbsp;&nbsp;&nbsp;' + 
-					'<img src="/i/img/repost.svg" class="m" width="16" height="16" /> <span class="darkblue">' + data.reposts + '</span>' + 
-				'</div>' + 
-				custom.toolbar + 
 			'</div>';
 		return html;
 	},
@@ -197,19 +231,73 @@ var VkFeed = Class({
 		var self = this;
 		
 		self.opts = $.extend({
-			showPeriod: false
+			showPeriod:		false, 
+			checkAttach: 	false
 		}, options);
 		
 		self.posts = {};
 		self.actions = {};
 		self.wrap = wrap;
 		self.last_period = 0;
+		self.busy = 0;
 		
-		wrap.on('click', '.js-attach_remove', function (e) {
+		wrap.on('meme:save', function (e, data) {
+			wrap.find('.js-post_editor').removeClass('hide');
+			wrap.find('.js-post_attach_editor')
+				.addClass('hide')
+				.memeEditor(false);
+			
+			alert('Not implemented here :)');
+		}).on('meme:cancel', function (e) {
+			wrap.find('.js-post_editor').removeClass('hide');
+			wrap.find('.js-post_attach_editor')
+				.addClass('hide')
+				.memeEditor(false);
+		}).on('click', '.js-attach_edit', function (e) {
 			e.preventDefault();
 			e.stopPropagation();
 			e.stopImmediatePropagation();
-			$(this).parents('.js-attach').toggleClass('deleted');
+			
+			var el = $(this), 
+				att_wrap = el.parents('.js-attach'), 
+				wrap = el.parents('.js-post'), 
+				post_id = wrap.data('type') + '_' + wrap.data('gid') + '_' + wrap.data('id'), 
+				post = self.posts[post_id];
+			
+			var att;
+			for (var i = 0, l = post.attaches.length; i < l; ++i) {
+				att = post.attaches[i];
+				if (att_wrap.data("id") == att.id)
+					break;
+			}
+			
+			wrap.find('.js-post_editor').addClass('hide');
+			wrap.find('.js-post_attach_editor')
+				.data('id', att.id)
+				.removeClass('hide')
+				.memeEditor({
+					image:	findBestThumb(att.thumbs, 99999).src, 
+					width:	att.w, 
+					height:	att.h
+				});
+		}).on('click', '.js-attach_remove', function (e) {
+			e.preventDefault();
+			e.stopPropagation();
+			e.stopImmediatePropagation();
+			
+			var el = $(this), 
+				att_wrap = el.parents('.js-attach'), 
+				wrap = el.parents('.js-post'), 
+				post_id = wrap.data('type') + '_' + wrap.data('gid') + '_' + wrap.data('id'), 
+				post = self.posts[post_id];
+			
+			for (var i = 0, l = post.attaches.length; i < l; ++i) {
+				var att = post.attaches[i];
+				if (att_wrap.data("id") == att.id) {
+					att_wrap.toggleClass('deleted');
+					att.deleted = att_wrap.hasClass('deleted');
+				}
+			}
 		}).on('click', '.js-gif', function (e) {
 			e.preventDefault();
 			var el = $(this), 
@@ -246,6 +334,12 @@ var VkFeed = Class({
 			}
 		}).on('click', '.js-post_action', function (e) {
 			e.preventDefault();
+			
+			if (self.busy) {
+				alert("Дождитесь загрузки файла!");
+				return;
+			}
+			
 			var wrap = $(this).parents('.js-post'), 
 				el = $(this), 
 				action = el.data('action'), 
@@ -258,6 +352,21 @@ var VkFeed = Class({
 				wrap:		wrap, 
 				target:		el
 			});
+		}).on('file_uploaded', '.js-post', function (e, data) {
+			e.preventDefault();
+			var el = $(this), 
+				post_id = el.data('type') + '_' + el.data('gid') + '_' + el.data('id'), 
+				post = self.posts[post_id];
+			
+			post.attaches.push(data.response.data.attaches[0])
+			el.find('.js-post_attaches').removeClass('hide').append(tpl.attaches(data.response.data.attaches, {
+				checkAttach:	self.opts.checkAttach, 
+				gid:			self.opts.gid
+			}).join(''));
+		}).on('file_upload_start', '.js-post', function (e) {
+			++self.busy;
+		}).on('file_upload_end', '.js-post', function (e) {
+			--self.busy;
 		});
 		
 		self.addAction('edit', function (e) {
@@ -273,6 +382,8 @@ var VkFeed = Class({
 					tonesStyle: "checkbox"
 				});
 			
+			wrap.genericUploader();
+			
 			var top = wrap.offset().top;
 			if (top < $(window).scrollTop() || top > $(window).scrollTop() + $(window).innerHeight())
 				$('html, body').scrollTop(top);
@@ -281,11 +392,6 @@ var VkFeed = Class({
 	addAction: function (name, callback) {
 		var self = this;
 		self.actions[name] = callback;
-		return self;
-	}, 
-	execAction: function (name, post) {
-		var self = this;
-		self.actions[name] && self.actions[name].apply(self, [post]);
 		return self;
 	}, 
 	addPosts: function (posts, options) {
@@ -309,15 +415,32 @@ var VkFeed = Class({
 			}
 			
 			html += tpl.post(post, {
-				toolbar: options.toolbar ? options.toolbar(post) : ''
+				toolbar:		options.toolbar ? options.toolbar(post) : '', 
+				checkAttach:	self.opts.checkAttach, 
+				gid:			self.opts.gid
 			});
 		}
 		
 		self.wrap.append(html);
-		
-		console.log('addPosts');
 	}
 });
+
+function findBestThumb(hash, size) {
+	var ret;
+	for (var w in hash) {
+		if (!hash.hasOwnProperty(w))
+			continue;
+		if ((!ret && w > size) || w <= size)
+			ret = {src: hash[w], w: +w};
+		if (ret)
+			ret.orig_src = hash[w];
+	}
+	
+	if (!ret)
+		console.log('findBestThumb(', hash, size, ') = ', ret);
+	
+	return ret;
+}
 
 function calcPostDelta(delta) {
 	var out = "";

@@ -85,7 +85,7 @@ foreach ($res->{$list} as $item) {
 		'likes'			=> 0, 
 		'reposts'		=> 0, 
 		'comments'		=> 0, 
-		'anon'			=> true, 
+		'anon'			=> !isset($item->signer_id) || !$item->signer_id, 
 		'owner_name'	=> isset($user->name) ? $user->name : $user->first_name." ".$user->last_name, 
 		'owner_avatar'	=> $user->photo_50, 
 		'owner_url'		=> "/".(isset($user->screen_name) && $user->screen_name ? $user->screen_name : 'id'.$user->id), 

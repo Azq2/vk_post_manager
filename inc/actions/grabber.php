@@ -55,15 +55,26 @@ switch ($sub_action) {
 		$source_id = isset($_POST['source_id']) ? $_POST['source_id'] : '';
 		$source_type = isset($_POST['source_type']) ? $_POST['source_type'] : '';
 		$remote_id = isset($_POST['remote_id']) ? $_POST['remote_id'] : '';
+		$restore = isset($_POST['restore']) ? $_POST['restore'] : '';
 		
 		if ($source_id && $source_type && $remote_id) {
-			Mysql::query("
-				INSERT IGNORE INTO `vk_grabber_blacklist` SET
-					group_id = $gid, 
-					source_id = '".Mysql::escape($source_id)."', 
-					source_type = '".Mysql::escape($source_type)."', 
-					remote_id = '".Mysql::escape($remote_id)."'
-			");
+			if ($restore) {
+				Mysql::query("
+					DELETE FROM `vk_grabber_blacklist` WHERE
+						group_id = $gid AND
+						source_id = '".Mysql::escape($source_id)."' AND
+						source_type = '".Mysql::escape($source_type)."' AND
+						remote_id = '".Mysql::escape($remote_id)."'
+				");
+			} else {
+				Mysql::query("
+					INSERT IGNORE INTO `vk_grabber_blacklist` SET
+						group_id = $gid, 
+						source_id = '".Mysql::escape($source_id)."', 
+						source_type = '".Mysql::escape($source_type)."', 
+						remote_id = '".Mysql::escape($remote_id)."'
+				");
+			}
 		}
 		mk_ajax(['success' => true]);
 		exit;
@@ -167,9 +178,11 @@ switch ($sub_action) {
 		$req2->free();
 		$time_list = microtime(true) - $time_list;
 		
+		$owners = [];
+		$time_data = 0;
+		
 		if ($items) {
 			// Получаем овнеров
-			$owners = [];
 			$req = Mysql::query("SELECT * FROM `vk_grabber_data_owners`");
 			while ($res = $req->fetch())
 				$owners[$res['id']] = $res;

@@ -36,6 +36,9 @@ $comm = $comms[$gid];
 if (!preg_match("/^[a-z_\/-]+$/si", $action) || !file_exists(dirname(__FILE__)."/inc/actions/$action.php"))
 	$action = "index";
 
+if ($action == "index")
+	$action = "suggested";
+
 require_once dirname(__FILE__)."/inc/actions/$action.php";
 
 function add_queued_wall_post(&$out, $attachments, $text) {

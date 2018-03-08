@@ -1,5 +1,5 @@
 
-<script type="text/javascript">require(['grabber'])</script>
+<script type="text/javascript">require(['grabber<?= isset($_GET['xuj']) ? 2 : '' ?>'])</script>
 
 <div class="hide"
 	data-gid="<?= $gid ?>"

@@ -26,7 +26,8 @@ var tpl = {
 					'В очередь' + 
 				'</button> ' + 
 				
-				'<button class="btn btn-green js-post_action m" data-action="anon" data-state="1">Анон</button> ' + 
+				'<button class="btn btn-green' + (!post.anon ? ' btn-disabled' : '') + ' js-post_action m" data-action="anon">Анон</button> ' + 
+				
 				'<div class="right">' + 
 					'<button class="btn btn-delete js-post_action m" data-action="delete">&nbsp;x&nbsp;</button>' + 
 				'</div>' + 
@@ -43,6 +44,8 @@ var tpl = {
 					'<img src="/i/img/spinner.gif" alt="" class="m js-spinner hide" /> ' + 
 					'Сохранить' + 
 				'</button> ' + 
+				
+				'<button class="btn btn-green' + (!post.anon ? ' btn-disabled' : '') + ' js-post_action post-show_edit m inl" data-action="anon">Анон</button> ' + 
 				
 				'<div class="right">' + 
 					'<button class="btn btn-delete js-post_action m" data-action="delete">&nbsp;x&nbsp;</button>' + 
@@ -64,11 +67,14 @@ var tpl = {
 		}
 		return '';
 	}, 
-	error: function (err) {
-		return '<span class="red">' + err + '</span>';
+	error: function (msg) {
+		return '<span class="red">' + msg + '</span>';
 	}, 
-	spinner: function (text) {
-		return '<img src="/i/img/spinner2.gif" alt="" class="m" /> <span class="m">' + text + '</span>';
+	success: function (msg) {
+		return '<span class="green">' + msg + '</span>';
+	}, 
+	spinner: function (msg) {
+		return '<img src="/i/img/spinner2.gif" alt="" class="m" /> <span class="m">' + msg + '</span>';
 	}
 };
 
@@ -83,7 +89,8 @@ function init() {
 	options = $('#suggested_data').data();
 	
 	feed = new VkFeed($('#vk_posts'), {
-		showPeriod: true
+		showPeriod:	true, 
+		gid:		options.gid
 	});
 	
 	feed.addAction('anon', function (e) {
@@ -91,13 +98,91 @@ function init() {
 		e.target.toggleClass('btn-disabled', !e.post.anon);
 	});
 	
-	feed.addAction('queue', function (e) {
-		console.log('add post to queue');
-	});
+	var post_save = function (e) {
+		var el = e.target, 
+			wrap = e.wrap, 
+			status = wrap.find('.js-post_status_text'), 
+			post = e.post, 
+			textarea = wrap.find('.js-post_textarea'), 
+			emojiarea = textarea.data('emojioneArea');
+		
+		if (el.attr("disabled"))
+			return;
+		
+		var post_data = {
+			gid:		options.gid, 
+			id:			e.post.id, 
+			signed:		e.post.anon ? 0 : 1, 
+			type:		post.type, 
+			message:	$.trim(emojiarea ? emojiarea.getText() : post.text), 
+			attachments: []
+		};
+		
+		for (var i = 0, l = post.attaches.length; i < l; ++i) {
+			var att = post.attaches[i];
+			
+			if (att.deleted)
+				continue;
+			
+			if (att.type == 'geo') {
+				post_data.lat = att.lat;
+				post_data.long = att.lng;
+			} else if (att.type == 'link') {
+				post_data.attachments.push(att.url);
+			} else {
+				post_data.attachments.push(att.id);
+			}
+		}
+		
+		status.removeClass('hide');
+		
+		if (!post_data.message.length && !post_data.attachments.length) {
+			status.html(tpl.error('Пост должен быть или с вложениями или с текстом.'));
+			return;
+		}
+		
+		post_data.attachments = post_data.attachments.join(',');
+		
+		var lang = ({
+			queue: {
+				action:		"/?a=queue", 
+				spinner:	"Добавляем в очередь...", 
+				success:	"Пост успешно добавлен в очередь.", 
+				fail:		"Ошибка добавления в очередь! Попробуйте снова."
+			}, 
+			save: {
+				action:		"/?a=post/edit", 
+				spinner:	"Сохраняем пост...", 
+				success:	"Пост успешно отредактирован.", 
+				fail:		"Ошибка сохранения! Попробуйте снова."
+			}
+		})[e.type];
+		
+		status.html(tpl.spinner(lang.spinner));
+		el.attr('disabled', 'disabled');
+		
+		$.api(lang.action, post_data, function (res) {
+			el.removeAttr('disabled');
+			if (res.success) {
+				status.html(tpl.success(lang.success));
+				
+				if (e.type == 'queue') {
+					wrap.find('.js-post_toolbar').addClass('hide');
+					
+					if (emojiarea)
+						emojiarea.disable();
+				}
+			} else {
+				status.html(tpl.error(res.error));
+			}
+		}, function () {
+			el.removeAttr('disabled');
+			status.html(tpl.error(lang.fail));
+		});
+	};
 	
-	feed.addAction('save', function (e) {
-		console.log('save edited post');
-	});
+	feed.addAction('queue', post_save);
+	feed.addAction('save', post_save);
 	
 	feed.addAction('delete', function (e) {
 		var el = e.target, 
@@ -126,7 +211,7 @@ function init() {
 				wrap.find('.js-post_toolbar').toggleClass('hide', !restore);
 				wrap.find('.js-post_toolbar_deleted').toggleClass('hide', restore);
 			} else {
-				status.text(tpl.error(res.error));
+				status.html(tpl.error(res.error));
 			}
 		}, function () {
 			el.removeAttr('disabled');
@@ -156,6 +241,49 @@ function init() {
 		
 		loadCachedPosts(TOPICS_CHUNK);
 	}
+	
+	
+	$('#group_settings').on('change click keyup keydown', 'input', function () {
+		recalcFreqSettings();
+		$('#group_settings').find('.js-btn_save').show();
+	}).on('click', '.js-interval_incr', function (e) {
+		e.preventDefault();
+		var el = $(this), 
+			form = $('#group_settings')[0];
+		
+		var interval = +form.elements.hh.value * 3600 + +form.elements.mm.value * 60;
+		interval += 300 * el.data('dir');
+		var h = Math.floor(interval / 3600), 
+			m = Math.round((interval - h * 3600) / 60);
+		
+		form.elements.hh.value = pad(h);
+		form.elements.mm.value = pad(m);
+		
+		$(form.elements.hh).trigger('change');
+		recalcFreqSettings();
+	});
+	
+	recalcFreqSettings();
+}
+
+function recalcFreqSettings() {
+	var $form = $('#group_settings'), 
+		form  = $form[0];
+	var interval = +form.elements.hh.value * 3600 + +form.elements.mm.value * 60, 
+		from = +form.elements.from_hh.value * 3600 + +form.elements.from_mm.value * 60, 
+		to = +form.elements.to_hh.value * 3600 + +form.elements.to_mm.value * 60;
+	
+	if (to < from)
+		to += 24 * 3600;
+	
+	var count = 0;
+	while (from <= to) {
+		from += interval;
+		from = Math.round(from / 300) * 300;
+		++count;
+	}
+	
+	$('#post_cnt').text(count).css("color", count > 50 ? 'red' : '');
 }
 
 function toggleSpinner(flag) {

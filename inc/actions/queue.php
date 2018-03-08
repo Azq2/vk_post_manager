@@ -15,8 +15,7 @@ if ($post_type == 'post')
 $req = Mysql::query("SELECT MAX(`fake_date`) FROM `vk_posts_queue`");
 $fake_date = max(time() + 3600 * 24 * 60, $req->num() ? $req->result() : 0) + 3600;
 
-$res = $q->vkApi($post_type == 'suggest' ? "wall.post" : "wall.edit", [
-	'post_id'		=> $id, 
+$api_data = [
 	'owner_id'		=> -$gid, 
 	'signed'		=> $signed, 
 	'message'		=> $message, 
@@ -24,7 +23,12 @@ $res = $q->vkApi($post_type == 'suggest' ? "wall.post" : "wall.edit", [
 	'long'			=> $long, 
 	'attachments'	=> $attachments, 
 	'publish_date'	=> $fake_date
-]);
+];
+
+if ($id)
+	$api_data['post_id'] = $id;
+
+$res = $q->vkApi(($post_type == 'suggest' || $post_type == 'new') ? "wall.post" : "wall.edit", $api_data);
 
 $output['post_type'] = $post_type;
 if (parse_vk_error($res, $output)) {

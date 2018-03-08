@@ -36,9 +36,51 @@ while (true) {
 			++$n;
 			
 			$queue['out'] = [];
-			$queue['total'] = count($queue['images']) + count($queue['documents']);
+			$queue['total'] = count($queue['images']) + count($queue['documents']) + count($queue['files']);
 			$queue['downloaded'] = 0;
 			$queue['uploaded'] = 0;
+			file_put_contents($file, json_encode($queue));
+			
+			// Скачиваем хуй пойми что
+			if (is_array($queue['files']) && !isset($queue['out']['error'])) {
+				foreach ($queue['files'] as $i => $img) {
+					echo "=> download: $img [".($i + 1)." / ".count($queue['files'])."]\n";
+					
+					$tmp_file = realpath(H."../tmp/download")."/file_".md5($id.$img).".bin";
+					$time = microtime(true);
+					system("wget --tries 10 ".escapeshellarg($img)." -O ".escapeshellarg($tmp_file), $x);
+					$time = microtime(true) - $time;
+					if ($x != 0 || !file_exists($tmp_file) || !filesize($tmp_file)) {
+						$queue['out']['error'] = 'wget('.$img.') = '.$x;
+						break;
+					} else {
+						$mime = strtolower(mime_content_type($tmp_file));
+						$image_types = ['image/png', 'image/jpg', 'image/jpeg', 'image/bmp', 'image/webp'];
+						
+						if (in_array($mime, $image_types)) {
+							// Картинки
+							$images[] = [
+								'path' => realpath($tmp_file), 
+								'caption' => ''
+							];
+						} else if ($mime == 'image/gif') {
+							// Документы
+							$images[] = [
+								'path' => realpath($tmp_file), 
+								'title' => $url ? "vk.com$url" : "image.gif", 
+								'document' => true
+							];
+						} else {
+							$queue['out']['error'] = 'error ('.$img.') = неизвестный тип файла ['.$mime.']';
+							break;
+						}
+					}
+					echo "==> OK (".round($time, 2)." s)\n";
+					
+					++$queue['downloaded'];
+					file_put_contents($file, json_encode($queue));
+				}
+			}
 			file_put_contents($file, json_encode($queue));
 			
 			// Скачиваем картинки
@@ -60,34 +102,6 @@ while (true) {
 						];
 					}
 					echo "==> OK (".round($time, 2)." s)\n";
-					
-					/*
-					$time = microtime(true);
-					$data = file_get_contents($img);
-					$time = microtime(true) - $time;
-					echo "==> OK (".round($time, 2)." s)\n";
-					if ($data) {
-						$tmp_file = H."../tmp/pic_".md5($id.$img).".png";
-						$fp = fopen($tmp_file, "w");
-						if ($fp) {
-							flock($fp, LOCK_EX);
-							fwrite($fp, $data);
-							flock($fp, LOCK_UN);
-							fclose($fp);
-							
-							$images[] = [
-								'path' => realpath($tmp_file), 
-								'caption' => ''
-							];
-						} else {
-							$queue['out']['error'] = 'fopen('.$tmp_file.')';
-							break;
-						}
-					} else {
-						$queue['out']['error'] = 'file_get_contents('.$img.')';
-						break;
-					}
-					*/
 					
 					++$queue['downloaded'];
 					file_put_contents($file, json_encode($queue));
@@ -117,34 +131,6 @@ while (true) {
 						];
 					}
 					echo "==> OK (".round($time, 2)." s)\n";
-					/*
-					$time = microtime(true);
-					$data = file_get_contents($img);
-					$time = microtime(true) - $time;
-					echo "==> OK (".round($time, 2)." s)\n";
-					if ($data) {
-						$tmp_file = H."../tmp/doc_".md5($id.$img).".png";
-						$fp = fopen($tmp_file, "w");
-						if ($fp) {
-							flock($fp, LOCK_EX);
-							fwrite($fp, $data);
-							flock($fp, LOCK_UN);
-							fclose($fp);
-							
-							$images[] = [
-								'path' => realpath($tmp_file), 
-								'title' => $url ? "vk.com$url" : "image.gif", 
-								'document' => true
-							];
-						} else {
-							$queue['out']['error'] = 'fopen('.$tmp_file.')';
-							break;
-						}
-					} else {
-						$queue['out']['error'] = 'file_get_contents('.$img.')';
-						break;
-					}
-					*/
 					
 					++$queue['downloaded'];
 					file_put_contents($file, json_encode($queue));
@@ -152,10 +138,27 @@ while (true) {
 			}
 			file_put_contents($file, json_encode($queue));
 			
+			$attaches = [];
+			$attaches_ids = [];
 			if (!isset($queue['out']['error'])) {
 				// Pагружаем в ВК
-				$queue['attaches'] = pics_uploader($queue['out'], $q, $queue['gid'], $images, function ($att) use (&$queue, $file) {
+				pics_uploader($queue['out'], $q, $queue['gid'], $images, function ($att, $att_obj) use (&$queue, $file, &$attaches, &$attaches_ids) {
 					++$queue['uploaded'];
+					
+					$attaches_ids[] = $att;
+					
+					if (strpos($att, "doc") === 0) {
+						$attaches[] = (object) [
+							'type'	=> 'doc', 
+							'doc'	=> $att_obj
+						];
+					} else {
+						$attaches[] = (object) [
+							'type'	=> 'photo', 
+							'photo'	=> $att_obj
+						];
+					}
+					
 					echo "=> upload: $att [".$queue['uploaded']." / ".$queue['total']."]\n";
 					file_put_contents($file, json_encode($queue));
 				});
@@ -164,9 +167,13 @@ while (true) {
 			
 			if (isset($queue['out']['error'])) {
 				echo "ERROR: ".$queue['out']['error']."\n";
-				unset($queue['attaches']);
-				file_put_contents($file, json_encode($queue));
+			} else {
+				$queue['attaches'] = $attaches_ids;
+				$queue['attaches_data'] = vk_normalize_attaches((object) [
+					'attachments' => $attaches
+				]);
 			}
+			file_put_contents($file, json_encode($queue));
 		} else {
 			echo "=> already done\n";
 		}

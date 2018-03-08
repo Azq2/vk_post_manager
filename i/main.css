@@ -2,6 +2,12 @@ body {
 	margin: 0
 }
 
+.post-edit .post-pic {
+	display: block !important;
+	width: auto !important;
+	min-width: 150px
+}
+
 textarea, html, body, table, button, input {
 	font-family: Arial;
 	font-size: 16px
@@ -242,7 +248,7 @@ table, td, th, tr {
 	word-break: break-word;
 }
 .post-preview {
-	margin-right: 4px;
+	margin-right: 10px;
 }
 .post-preview_ico {
 	position: absolute;
@@ -300,6 +306,12 @@ table, td, th, tr {
 	position: absolute;
 	top: 0;
 	right: 0;
+	padding: 20px;
+}
+.post-pic .post-attach_edit {
+	position: absolute;
+	top: 0;
+	left: 0;
 	padding: 20px;
 }
 .post-edit .post-hide_edit {
@@ -362,10 +374,20 @@ li {
 	color: #fff;
 }
 
+.btn-colorpicker {
+	border: 1px solid #c5d3e1;
+	padding: 6px 7px;
+	min-width: 50px
+}
+
 .spell {
 	display: inline-block;
 	position: relative;
 	background: url(wave.gif) bottom repeat-x;
+}
+
+.inl_bl {
+	display: inline-block;
 }
 
 .grey, .lbl {
@@ -455,4 +477,91 @@ li {
 	background: pink;
 	display: inline-block;
 	vertical-align: bottom;
+}
+
+.break-word {
+	word-wrap: break-word;
+	word-break: break-word;
+}
+
+/* meme editor */
+@font-face {
+    font-family: 'ImpactExternal';
+    src: url('/static/fonts/impact.ttf');
+}
+.meme-textbox {
+	position: absolute;
+	top: 0;
+	left: 0;
+	right: 0;
+	background: rgba(0,0,0,0.5);
+	word-wrap: break-word;
+	word-break: break-word;
+	text-align: center;
+	color: white;
+	font-size: 20px;
+}
+
+.meme canvas {
+	box-shadow: 0 0 7px rgba(93, 109, 157, 0.9)
+}
+
+/* Colorpicker */
+.colorpicker {
+	text-align: left
+}
+.colorpicker table {
+	border-collapse: collapse;
+	border: 0
+}
+.colorpicker-rect {
+	display: inline-block;
+	width: 150px;
+	height: 150px;
+	position: relative;
+	border: 1px solid #c0d4e2;
+	margin-right: 10px
+}
+.colorpicker-rect > div {
+	position: absolute;
+	top: 0; bottom: 0; left: 0; right: 0;
+	background-image: url(/static/img/colorpicker/overlay.png)
+}
+.colorpicker-gradient_cursor {
+	position: absolute;
+	background-image: url(/static/img/colorpicker/cursor.png);
+	width: 8px;
+	height: 8px;
+	margin-top: -4px;
+	margin-left: -4px;
+}
+.colorpicker-color {
+	display: inline-block;
+	height: 35px;
+	width: 100%;
+	border: 1px solid #c0d4e2;
+}
+.colorpicker-row {
+	margin-top: 7px
+}
+.colorpicker-spectrum {
+	background-image: url(/static/img/colorpicker/colors.png);
+	width: 17px; height: 150px;
+	display: inline-block;
+	position: relative;
+	border: 1px solid #c0d4e2;
+	margin-right: 10px
+}
+.colorpicker-spectrum_cursor {
+	position: absolute;
+	left: 0; right: 0;
+	background: #c0d4e2;
+	height: 1px;
+}
+
+@media all and (max-width: 319px) {
+	.colorpicker-big { display: none }
+}
+@media all and (min-width: 320px) {
+	.colorpicker-small { display: none }
 }

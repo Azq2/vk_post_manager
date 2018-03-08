@@ -90,7 +90,7 @@ function mk_ajax($data) {
 //	$out = ob_get_clean();
 	header("Content-Type: application/json; charset=UTF-8");
 //	$data['stdout'] = $out;
-	echo json_encode($data, JSON_PRETTY_PRINT);
+	echo json_encode($data, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE);
 }
 
 function pics_uploader(&$out, $q, $gid, $images, $progress = false) {
