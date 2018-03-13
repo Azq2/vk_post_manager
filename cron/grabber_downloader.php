@@ -32,6 +32,8 @@ while (true) {
 			$delete = true;
 		}
 		
+		$image_types = ['image/png', 'image/jpg', 'image/jpeg', 'image/bmp', 'image/webp'];
+		
 		if (!isset($queue['attaches']) && !$delete && !isset($queue['out'], $queue['out']['error'])) {
 			++$n;
 			
@@ -40,6 +42,14 @@ while (true) {
 			$queue['downloaded'] = 0;
 			$queue['uploaded'] = 0;
 			file_put_contents($file, json_encode($queue));
+			
+			if ($queue['cover']) {
+				$cover = imagecreatefromfile($queue['cover']);
+				if (!$cover)
+					$queue['out']['error'] = 'GD не смог прочитать обложку.';
+				
+				unlink($queue['cover']);
+			}
 			
 			// Скачиваем хуй пойми что
 			if (is_array($queue['files']) && !isset($queue['out']['error'])) {
@@ -55,9 +65,17 @@ while (true) {
 						break;
 					} else {
 						$mime = strtolower(mime_content_type($tmp_file));
-						$image_types = ['image/png', 'image/jpg', 'image/jpeg', 'image/bmp', 'image/webp'];
 						
 						if (in_array($mime, $image_types)) {
+							if ($cover) {
+								$error = image_watermark($tmp_file, $cover);
+								if ($error) {
+									unlink($tmp_file);
+									$queue['out']['error'] = $error;
+									break;
+								}
+							}
+							
 							// Картинки
 							$images[] = [
 								'path' => realpath($tmp_file), 
@@ -96,6 +114,15 @@ while (true) {
 						$queue['out']['error'] = 'wget('.$img.') = '.$x;
 						break;
 					} else {
+						if ($cover) {
+							$error = image_watermark($tmp_file, $cover);
+							if ($error) {
+								unlink($tmp_file);
+								$queue['out']['error'] = $error;
+								break;
+							}
+						}
+						
 						$images[] = [
 							'path' => realpath($tmp_file), 
 							'caption' => ''
@@ -192,3 +219,17 @@ while (true) {
 		break;
 }
 
+function image_watermark($tmp_file, $cover) {
+	$image = imagecreatefromfile($tmp_file);
+	if (!$image)
+		return 'GD не смог откыть '.$img;
+	
+//	imagesavealpha($image, true);
+//	imagealphablending($image, true);
+	imagecopyresampled($image, $cover, 0, 0, 0, 0, imagesx($image), imagesy($image), imagesx($cover), imagesy($cover));
+	
+	if (!imagepng($image, $tmp_file))
+		return 'GD не смог сохранить '.$img;
+	
+	return false;
+}

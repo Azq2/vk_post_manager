@@ -94,8 +94,12 @@ function mk_page($args) {
 			$revision = max($revision, filemtime($file));
     }
 	
+	$comm = $comms[$gid];
+	$comm['meme'] = $comm['meme'] ? json_decode($comm['meme']) : false;
+	
 	$def = [
 		'revision'	=> $revision, 
+		'comm'		=> $comm, 
 		'smm_money' => number_format($smm_money->money, 2, ',', ' '), 
 		'comm_tabs'	=> switch_tabs([
 			'url' => Url::mk()->set('gid', $gid), 

@@ -241,16 +241,28 @@ var VkFeed = Class({
 		self.last_period = 0;
 		self.busy = 0;
 		
-		wrap.on('meme:save', function (e, data) {
-			wrap.find('.js-post_editor').removeClass('hide');
-			wrap.find('.js-post_attach_editor')
+		wrap.on('meme:save', '.js-post', function (e, result) {
+			var el = $(this);
+			
+			el.find('.js-post_editor').removeClass('hide');
+			el.find('.js-post_attach_editor')
 				.addClass('hide')
 				.memeEditor(false);
 			
-			alert('Not implemented here :)');
-		}).on('meme:cancel', function (e) {
-			wrap.find('.js-post_editor').removeClass('hide');
-			wrap.find('.js-post_attach_editor')
+			result.data.el.find('.js-file_url').val(findBestThumb(result.data.att.thumbs, 99999).src);
+			result.data.el.find('.js-file_url_btn').trigger('click', {
+				cover:	result.image, 
+				data:	result.data.att
+			});
+			
+			var top = result.data.el.offset().top;
+			if (top < $(window).scrollTop() || top > $(window).scrollTop() + $(window).innerHeight())
+				$('html, body').scrollTop(top);
+		}).on('meme:cancel', '.js-post', function (e) {
+			var el = $(this);
+			
+			el.find('.js-post_editor').removeClass('hide');
+			el.find('.js-post_attach_editor')
 				.addClass('hide')
 				.memeEditor(false);
 		}).on('click', '.js-attach_edit', function (e) {
@@ -278,7 +290,8 @@ var VkFeed = Class({
 				.memeEditor({
 					image:	findBestThumb(att.thumbs, 99999).src, 
 					width:	att.w, 
-					height:	att.h
+					height:	att.h, 
+					data:	{att: att, el: wrap}
 				});
 		}).on('click', '.js-attach_remove', function (e) {
 			e.preventDefault();
@@ -358,11 +371,26 @@ var VkFeed = Class({
 				post_id = el.data('type') + '_' + el.data('gid') + '_' + el.data('id'), 
 				post = self.posts[post_id];
 			
-			post.attaches.push(data.response.data.attaches[0])
-			el.find('.js-post_attaches').removeClass('hide').append(tpl.attaches(data.response.data.attaches, {
+			var attaches = tpl.attaches(data.response.data.attaches, {
 				checkAttach:	self.opts.checkAttach, 
 				gid:			self.opts.gid
-			}).join(''));
+			}).join('');
+			
+			var old_att = data.data, 
+				att = data.response.data.attaches[0];
+			
+			if (old_att) {
+				for (var i = 0; i < post.attaches.length; ++i) {
+					if (post.attaches[i].id == old_att.id) {
+						post.attaches[i] = att;
+						break;
+					}
+				}
+				el.find('.js-post_attaches').find('[data-id="' + old_att.id + '"]').replaceWith(attaches);
+			} else {
+				post.attaches.push(att);
+				el.find('.js-post_attaches').removeClass('hide').append(attaches);
+			}
 		}).on('file_upload_start', '.js-post', function (e) {
 			++self.busy;
 		}).on('file_upload_end', '.js-post', function (e) {

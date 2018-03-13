@@ -16,7 +16,15 @@ var tpl = {
 
 $.api = function (url, data, fn_ok, fn_err, fn_hook) {
 	data = $.extend({}, data);
-	$.post(url, data, function (res) {
+	
+	$.ajax({
+		url:			url, 
+		data:			getFormData(data), 
+		processData:	false, 
+		contentType:	false, 
+		method:			"POST", 
+		dataType:		"json"
+	}).done(function (res) {
 		fn_hook && fn_hook(res);
 		if (res.captcha) {
 			var win = modal_window(tpl.captcha({url: res.captcha.url}))
@@ -33,10 +41,25 @@ $.api = function (url, data, fn_ok, fn_err, fn_hook) {
 		} else {
 			fn_ok && fn_ok(res);
 		}
-	}, "json").error(function (e) {
+	}).error(function (e) {
 		fn_err && fn_err();
 	});
 };
+
+function getFormData(data) {
+	var form = new window.FormData();
+	for (var key in data) {
+		if (!Object.prototype.hasOwnProperty.call(data, key))
+			continue;
+		if (data[key] instanceof Array) {
+			for (var i = 0, l = data[key].length; i < l; ++i)
+				form.append(key + "[]", data[key][i]);
+		} else {
+			form.append(key, data[key]);
+		}
+	}
+	return form;
+}
 
 //
 });

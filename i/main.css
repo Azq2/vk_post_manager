@@ -19,16 +19,21 @@ textarea, html, body, table, button, input {
 
 .cursor { cursor: pointer }
 
-input[type="text"], input[type="number"], textarea {
+input[type="text"], input[type="number"], textarea, select {
 	width: 100%;
 	padding: 5px;
 	outline: none;
 	border: 1px solid #c0c6d2;
+	background-color: #fff;
 	box-sizing: border-box;
 	line-height: 18px
 }
 
-input[type="text"][size], input[type="number"][size] {
+select {
+	padding: 6px 5px
+}
+
+input[type="text"][size], input[type="number"][size], select {
 	width: auto
 }
 
@@ -390,6 +395,10 @@ li {
 	display: inline-block;
 }
 
+.inl_bl.hide {
+	display: none;
+}
+
 .grey, .lbl {
 	color: #7a90a0
 }
@@ -488,6 +497,10 @@ li {
 @font-face {
     font-family: 'ImpactExternal';
     src: url('/static/fonts/impact.ttf');
+}
+@font-face {
+    font-family: 'Goudy Old Style External';
+    src: url('/static/fonts/GOUDOS.ttf');
 }
 .meme-textbox {
 	position: absolute;

@@ -12,13 +12,31 @@ switch ($type) {
 			$images		= isset($_REQUEST['images']) ? $_REQUEST['images'] : [];
 			$documents	= isset($_REQUEST['documents']) ? $_REQUEST['documents'] : [];
 			$files		= isset($_REQUEST['files']) ? $_REQUEST['files'] : [];
+			$cover		= isset($_FILES['cover']) ? $_FILES['cover'] : [];
 			
-			if ($images || $documents || $files) {
+			$cover_path = false;
+			if ($cover) {
+				if ($cover['error']) {
+					$out['error'] = 'Ошибка загрузки обложки по секретным номероv #'.$cover['error'];
+				} else if (!getimagesize($cover['tmp_name'])) {
+					$out['error'] = 'Обложка не является картинкой!';
+				} else {
+					$cover_path = '../tmp/cover_'.md5_file($cover['tmp_name']);
+					if (!file_exists(H.$cover_path)) {
+						if (!move_uploaded_file($cover['tmp_name'], H.$cover_path)) {
+							$out['error'] = 'Ошибка переноса обложки.';
+						}
+					}
+				}
+			}
+			
+			if (!isset($out['error']) && ($images || $documents || $files)) {
 				$msg = json_encode([
 					'images'	=> $images, 
 					'documents'	=> $documents, 
 					'files'		=> $files, 
-					'gid'		=> $gid
+					'gid'		=> $gid, 
+					'cover'		=> $cover_path
 				]);
 				
 				$id = md5($msg);

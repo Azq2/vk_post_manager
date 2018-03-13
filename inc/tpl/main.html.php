@@ -12,6 +12,7 @@
 		
 		<script src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.5/require.min.js" integrity="sha256-0SGl1PJNDyJwcV5T+weg2zpEMrh7xvlwO4oXgvZCeZk=" crossorigin="anonymous"></script>
 		<script src="/static/js/init.js?r=<?= $revision ?>" id="loader_modules" data-revision="<?= $revision ?>"></script>
+		<script>define('comm/data', <?= json_encode($comm) ?>);</script>
 	</head>
 	
 	<body>

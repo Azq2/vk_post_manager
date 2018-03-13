@@ -76,6 +76,7 @@ $.urlUploader = function (options) {
 		files:			[], 
 		images:			[], 
 		documents:		[], 
+		cover:			false, 
 		onStateChanged:	false, 
 		onDone:			false, 
 		onError:		false, 
@@ -92,7 +93,8 @@ $.urlUploader = function (options) {
 				files:			options.files, 
 				images:			options.images, 
 				documents:		options.documents, 
-				type:			"url"
+				type:			"url", 
+				cover:			options.cover
 			}
 		}
 		
@@ -137,7 +139,7 @@ function initForm(el) {
 	
 	input_wrap.html(tpl.select());
 	
-	input_wrap.on('click', '.js-file_url_btn', function (e) {
+	input_wrap.on('click', '.js-file_url_btn', function (e, extra) {
 		e.preventDefault();
 		
 		var url_input = input_wrap.find('.js-file_url');
@@ -171,11 +173,12 @@ function initForm(el) {
 		
 		if (!errors.length) {
 			url_input.val('');
-			
+			console.log(extra);
 			file.el.trigger('file_upload_start');
 			$.urlUploader({
 				action:		file.action, 
 				files:		[file.url], 
+				cover:		extra && extra.cover, 
 				
 				onError: function (err) {
 					if (file.deleted)
@@ -200,7 +203,8 @@ function initForm(el) {
 					file.el.trigger('file_upload_end');
 					file.el.trigger('file_uploaded', {
 						file: file, 
-						response: res
+						response: res, 
+						data: extra && extra.data
 					});
 					file.el.find('.js-file_delete').click();
 				}
@@ -221,11 +225,13 @@ function initForm(el) {
 				if (files[i].xhr) {
 					files[i].xhr.abort();
 					files[i].xhr = null;
-					files[i].el.trigger('file_upload_end');
 					
 					if (cur_file && cur_file.id == files[i].id)
 						cur_file = null;
 				}
+				
+				if (!files[i].deleted)
+					files[i].el.trigger('file_upload_end');
 				
 				files[i].deleted = true;
 			} else {

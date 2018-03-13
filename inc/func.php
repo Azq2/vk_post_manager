@@ -1,17 +1,41 @@
 <?php
+function imagecreatefromfile($file) {
+	$size = getimagesize($file);
+	
+	$mime2func = [
+		'image/png'		=> "imagecreatefrompng", 
+		'image/jpg'		=> "imagecreatefromjpeg", 
+		'image/jpeg'	=> "imagecreatefromjpeg", 
+		'image/pjpeg'	=> "imagecreatefromjpeg", 
+		'image/bmp'		=> "imagecreatefrombmp", 
+		'image/webp'	=> "imagecreatefromwebp", 
+		'image/gif'		=> "imagecreatefromgif"
+	];
+	
+	// Пытаемся открыть встроенными средствами GD
+	if (isset($mime2func[$size['mime']]) && function_exists($mime2func[$size['mime']]))
+		return $mime2func[$size['mime']]($file);
+	
+	$image = false;
+	
+	// Пытаемся открыть средствами ImageMagick
+	if (function_exists('imagecreatefrompng')) {
+		$tmp_file = H.'../convert_'.md5(uniqid()).'.png';
+		if (system("convert ".escapeshellarg($file)." ".escapeshellarg($tmp_file)) == 0 && file_exists($tmp_file))
+			$image = imagecreatefrompng($tmp_file);
+		if (file_exists($tmp_file))
+			unlink($tmp_file);
+	}
+	
+	return $image;
+}
+
 function image_resize($src, $dst, $max) {
 	$size = getimagesize($src);
 	if (!$size)
 		return false;
 	
-	$type2func = [
-		IMAGETYPE_GIF	=> "imagecreatefromgif", 
-		IMAGETYPE_JPEG	=> "imagecreatefromjpeg", 
-		IMAGETYPE_PNG	=> "imagecreatefrompng", 
-		IMAGETYPE_BMP	=> "imagecreatefrombmp"
-	];
-	if (!isset($type2func[$size[2]]) || !($img = $type2func[$size[2]]($src)))
-		return false;
+	$img = imagecreatefromfile($src);
 	
 	$width = imagesx($img);
 	$height = imagesy($img);
@@ -87,9 +111,9 @@ function parse_vk_error($res, &$output) {
 }
 
 function mk_ajax($data) {
-//	$out = ob_get_clean();
+	$out = ob_get_clean();
 	header("Content-Type: application/json; charset=UTF-8");
-//	$data['stdout'] = $out;
+	$data['stdout'] = $out;
 	echo json_encode($data, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE);
 }
 

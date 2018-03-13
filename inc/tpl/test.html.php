@@ -6,8 +6,18 @@
 require(['meme'], function (VkFeed) {
 //
 $(function () {
-	$('#meme').memeEditor({
-		image: "https://pp.userapi.com/c841633/v841633613/38bb9/zcibMZkOC88.jpg"
+	$('#meme').on('meme:save', function (e, data) {
+		console.log(data);
+		
+		var a = new FileReader();
+		a.onload = function(e) {
+			var img = new Image();
+			img.src = e.target.result;
+			$('body').prepend(img);
+		};
+		a.readAsDataURL(data.image);
+	}).memeEditor({
+		image: "https://pp.userapi.com/c840335/v840335762/650fa/Qz1p-SvJRHw.jpg"
 	});
 });
 //
