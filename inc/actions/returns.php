@@ -13,7 +13,7 @@ $req->free();
 $users = array_unique($users);
 
 mk_page(array(
-	'title' => 'Пользователи', 
+	'title' => 'Возвраты', 
 	'content' => Tpl::render("returns.html", array(
 		'stat' => &$stat, 
 		'join_stat' => &$join_data, 

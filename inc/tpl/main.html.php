@@ -7,12 +7,15 @@
 		<title><?= $title ?></title>
 		
 		<link rel="stylesheet" type="text/css" href="i/main.css?<?= time(); ?>" />
-		<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/emojione/2.2.7/assets/css/emojione.min.css" integrity="sha256-UZ7fDcAJctmoEcXmC5TPcZswNRqN/mLzj6uNS1GCVYs=" crossorigin="anonymous" />
-		<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/emojionearea/3.4.1/emojionearea.min.css" integrity="sha256-LKawN9UgfpZuYSE2HiCxxDxDgLOVDx2R4ogilBI52oc=" crossorigin="anonymous" />
 		
-		<script src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.5/require.min.js" integrity="sha256-0SGl1PJNDyJwcV5T+weg2zpEMrh7xvlwO4oXgvZCeZk=" crossorigin="anonymous"></script>
-		<script src="/static/js/init.js?r=<?= $revision ?>" id="loader_modules" data-revision="<?= $revision ?>"></script>
-		<script>define('comm/data', <?= json_encode($comm) ?>);</script>
+		<?php if ($logged): ?>
+			<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/emojione/2.2.7/assets/css/emojione.min.css" integrity="sha256-UZ7fDcAJctmoEcXmC5TPcZswNRqN/mLzj6uNS1GCVYs=" crossorigin="anonymous" />
+			<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/emojionearea/3.4.1/emojionearea.min.css" integrity="sha256-LKawN9UgfpZuYSE2HiCxxDxDgLOVDx2R4ogilBI52oc=" crossorigin="anonymous" />
+			<script src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.5/require.min.js" integrity="sha256-0SGl1PJNDyJwcV5T+weg2zpEMrh7xvlwO4oXgvZCeZk=" crossorigin="anonymous"></script>
+			<script src="/static/js/init.js?r=<?= $revision ?>" id="loader_modules" data-revision="<?= $revision ?>"></script>
+			<script>define('comm/data', <?= json_encode($comm) ?>);</script>
+			<script>require(['app']);</script>
+		<?php endif; ?>
 	</head>
 	
 	<body>
@@ -23,13 +26,26 @@
 				</div>
 			</div>
 			
-			<div class="row">
-				<?= $sections_tabs ?>
-				<div class="pad_t oh">
-					<?= $comm_tabs ?>
-					<span class="right grey"><?= $smm_money ?> р.</span>
+			<?php if ($logged): ?>
+				<?php if ($user->can('guest')): ?>
+					<div class="row-error row center">
+						Гостевой режим, доступно только чтение.
+					</div>
+				<?php endif; ?>
+				
+				<div class="oh">
+					<div class="row">
+						<?= $sections_tabs ?>
+						
+						<div class="pad_t oh">
+							<?= $comm_tabs ?>
+							<?php if ($user->can('money')): ?>
+								<span class="right grey"><?= $smm_money ?> р.</span>
+							<?php endif; ?>
+						</div>
+					</div>
 				</div>
-			</div>
+			<?php endif; ?>
 			
 			<?php if ($mysql): ?>
 				<table class="table" width="100%">

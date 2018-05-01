@@ -2,7 +2,7 @@
 
 $out = [];
 
-if ($_POST) {
+if ($_POST && \Z\User::instance()->can('user')) {
 	$type = array_val($_POST, 'type', 'posts');
 	
 	switch ($type) {
@@ -26,7 +26,7 @@ if ($_POST) {
 			$from = $from_hh * 3600 + $from_mm * 60;
 			$interval = $interval_hh * 3600 + $interval_mm * 60;
 			
-			$interval = round($interval / 300) * 300;
+			$interval = round($interval / 60) * 60;
 			
 			Mysql::query("UPDATE `vk_groups` SET `period_from` = $from, `period_to` = $to, `interval` = $interval WHERE `id` = $gid");
 		break;

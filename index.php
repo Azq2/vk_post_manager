@@ -5,17 +5,6 @@ require __DIR__."/inc/vk_posts.php";
 error_reporting(E_ALL);
 ini_set('display_errors', 'On');
 
-// Авторизация
-if (!isset($_COOKIE['password']) || $_COOKIE['password'] !== WEBUI_PASSWORD) {
-	if (!isset($_SERVER['PHP_AUTH_USER']) || $_SERVER['PHP_AUTH_PW'] !== WEBUI_PASSWORD) {
-		header('WWW-Authenticate: Basic realm="Home porn archive"');
-		header('HTTP/1.0 401 Unauthorized');
-		echo 'AYKA LOH.';
-		exit;
-	}
-}
-setcookie('password', WEBUI_PASSWORD, time() + 365 * 24 * 3600 * 2);
-
 $q = new Http;
 $action = isset($_REQUEST['a']) ? preg_replace("/[^a-z0-9\/_-]+/i", "", $_REQUEST['a']) : 'index';
 
@@ -38,6 +27,10 @@ if (!preg_match("/^[a-z_\/-]+$/si", $action) || !file_exists(dirname(__FILE__)."
 
 if ($action == "index")
 	$action = "suggested";
+
+// Если не авторизирован, форсированно показываем только экшен логина
+if (!\Z\User::instance()->logged())
+	$action = "login";
 
 require_once dirname(__FILE__)."/inc/actions/$action.php";
 
@@ -118,11 +111,14 @@ function mk_page($args) {
 //				'activity'			=> 'Активность', 
 //				'returns'			=> 'Возвраты', 
 				'join_visual'		=> 'График вступления', 
-				'game/catlist'		=> 'Котогочи'
+				'game/catlist'		=> 'Котогочи', 
+				'exit'				=> 'Выход ('.\Z\User::instance()->login.')'
 			], 
 			'active' => isset($_REQUEST['a']) ? $_REQUEST['a'] : 'index'
 		]), 
-		'mysql'	=> isset($_COOKIE['debug']) ? Mysql::getQueriesList() : []
+		'logged'	=> \Z\User::instance()->logged(), 
+		'user'		=> \Z\User::instance(), 
+		'mysql'		=> isset($_COOKIE[\Z\Core\Config::get("common.debug_cookie")]) ? Mysql::getQueriesList() : []
 	];
 	header("Content-Type: text/html; charset=UTF-8");
 	echo Tpl::render("main.html", array_merge($def, $args));
