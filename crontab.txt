@@ -1,0 +1,8 @@
+# replace <post_manager_root> to dist path
+# replace <post_manager_logs_root> logs path
+
+*/10 * * * * php <post_manager_root>/cron/posts_sched.php >> <post_manager_logs_root>/cron_posts_sched.php.log
+*/15 * * * * php <post_manager_root>/cron/vk_to_telegram.php >> <post_manager_logs_root>/cron_vk_to_telegram.php.log
+*/15 * * * * php <post_manager_root>/cron/grabber.php >> <post_manager_logs_root>/cron_grabber.php.log
+0 * * * * php <post_manager_root>/cron/calc_money.php >> <post_manager_logs_root>/cron_calc_money.php.log
+*/10 * * * * php <post_manager_root>/vk_stat/cron.php 1 >> <post_manager_logs_root>/vk_stat_cron.php.log

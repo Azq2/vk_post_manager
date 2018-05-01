@@ -53,6 +53,25 @@ CREATE TABLE `vkapp_catlist_reposts` (
   `ctime` int(10) UNSIGNED NOT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 
+CREATE TABLE `vkapp_catlist_settings` (
+  `key` varchar(32) NOT NULL,
+  `type` varchar(32) NOT NULL,
+  `value` text
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+
+CREATE TABLE `vkapp_catlist_shop` (
+  `id` int(10) UNSIGNED NOT NULL,
+  `type` varchar(64) NOT NULL,
+  `title` varchar(1024) NOT NULL,
+  `description` varchar(1024) NOT NULL DEFAULT '',
+  `photo` varchar(1024) NOT NULL DEFAULT '',
+  `width` int(10) UNSIGNED NOT NULL DEFAULT '0',
+  `height` int(10) UNSIGNED NOT NULL DEFAULT '0',
+  `price` decimal(10,2) NOT NULL DEFAULT '0.00',
+  `amount` int(10) UNSIGNED NOT NULL DEFAULT '0',
+  `deleted` tinyint(4) NOT NULL DEFAULT '0'
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+
 CREATE TABLE `vkapp_catlist_users` (
   `user_id` bigint(20) UNSIGNED NOT NULL,
   `ctime` int(10) UNSIGNED NOT NULL DEFAULT '0',
@@ -141,7 +160,10 @@ CREATE TABLE `vk_groups` (
   `name` varchar(255) NOT NULL,
   `period_from` int(10) UNSIGNED NOT NULL DEFAULT '0',
   `period_to` int(10) UNSIGNED NOT NULL DEFAULT '86399',
-  `interval` int(10) UNSIGNED NOT NULL DEFAULT '7200'
+  `interval` int(10) UNSIGNED NOT NULL DEFAULT '7200',
+  `telegram_channel_id` varchar(64) NOT NULL,
+  `telegram_last_vk_id` int(11) NOT NULL DEFAULT '0',
+  `meme` longtext
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 
 CREATE TABLE `vk_join_stat` (
@@ -177,6 +199,11 @@ CREATE TABLE `vk_posts_comments` (
   `date` int(10) UNSIGNED NOT NULL DEFAULT '0'
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 
+CREATE TABLE `vk_posts_fake_date` (
+  `group_id` int(10) UNSIGNED NOT NULL,
+  `fake_date` int(10) UNSIGNED NOT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+
 CREATE TABLE `vk_posts_likes` (
   `post_id` int(10) UNSIGNED NOT NULL,
   `group_id` int(11) NOT NULL,
@@ -206,6 +233,14 @@ CREATE TABLE `vk_smm_money` (
   `last_date` int(11) NOT NULL DEFAULT '0'
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 
+CREATE TABLE `vk_smm_money_out` (
+  `id` int(10) UNSIGNED NOT NULL,
+  `group_id` int(11) NOT NULL,
+  `time` int(10) UNSIGNED NOT NULL,
+  `last_time` int(10) UNSIGNED NOT NULL,
+  `sum` decimal(12,2) NOT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+
 CREATE TABLE `vk_special_posts` (
   `post_id` int(11) NOT NULL,
   `group_id` int(11) NOT NULL
@@ -232,6 +267,12 @@ ALTER TABLE `vkapp_catlist_money_history`
 
 ALTER TABLE `vkapp_catlist_reposts`
   ADD PRIMARY KEY (`user_id`,`owner_id`,`post_id`);
+
+ALTER TABLE `vkapp_catlist_settings`
+  ADD PRIMARY KEY (`key`);
+
+ALTER TABLE `vkapp_catlist_shop`
+  ADD PRIMARY KEY (`id`);
 
 ALTER TABLE `vkapp_catlist_users`
   ADD PRIMARY KEY (`user_id`);
@@ -278,6 +319,9 @@ ALTER TABLE `vk_posts_comments`
   ADD PRIMARY KEY (`id`,`post_id`,`group_id`),
   ADD KEY `user_id` (`user_id`);
 
+ALTER TABLE `vk_posts_fake_date`
+  ADD PRIMARY KEY (`group_id`);
+
 ALTER TABLE `vk_posts_likes`
   ADD PRIMARY KEY (`post_id`,`group_id`,`user_id`),
   ADD KEY `user_id` (`user_id`);
@@ -302,6 +346,8 @@ ALTER TABLE `vkapp_catlist_cats`
   MODIFY `id` int(10) UNSIGNED NOT NULL AUTO_INCREMENT;
 ALTER TABLE `vkapp_catlist_money_history`
   MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
+ALTER TABLE `vkapp_catlist_shop`
+  MODIFY `id` int(10) UNSIGNED NOT NULL AUTO_INCREMENT;
 ALTER TABLE `vkapp_catlist_user_cats`
   MODIFY `id` int(10) UNSIGNED NOT NULL AUTO_INCREMENT;
 ALTER TABLE `vk_grabber_data`
