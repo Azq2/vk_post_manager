@@ -4,6 +4,9 @@ $access_token = array_val($_GET, 'access_token', '');
 $refresh_token = array_val($_GET, 'refresh_token', '');
 $expires = (int) array_val($_GET, 'expires', '');
 
+if (!\Z\User::instance()->can('admin'))
+	die("Доступ только админам!");
+
 if ($type && $access_token) {
 	if (!preg_match("/^[\w\d_]+$/i", $type))
 		die('type: '.htmlspecialchars($type));

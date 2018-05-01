@@ -57,7 +57,10 @@ switch ($sub_action) {
 		$remote_id = isset($_POST['remote_id']) ? $_POST['remote_id'] : '';
 		$restore = isset($_POST['restore']) ? $_POST['restore'] : '';
 		
-		if ($source_id && $source_type && $remote_id) {
+		$output = [];
+		if (!\Z\User::instance()->can('user')) {
+			$output['error'] = 'Гостевой доступ!';
+		} elseif ($source_id && $source_type && $remote_id) {
 			if ($restore) {
 				Mysql::query("
 					DELETE FROM `vk_grabber_blacklist` WHERE
@@ -75,8 +78,12 @@ switch ($sub_action) {
 						remote_id = '".Mysql::escape($remote_id)."'
 				");
 			}
+			$output['success'] = true;
+		} else {
+			$output['error'] = 'wtf';
 		}
-		mk_ajax(['success' => true]);
+		
+		mk_ajax($output);
 		exit;
 	break;
 	
@@ -211,7 +218,9 @@ switch ($sub_action) {
 	case "queue_done":
 		$id = isset($_REQUEST['id']) ? preg_replace("/[^a-f0-9]/", "", $_REQUEST['id']) : '';
 		$out = [];
-		if (file_exists(H.'../tmp/post_queue/'.$id)) {
+		if (!\Z\User::instance()->can('user')) {
+			$out['error'] = 'Гостевой доступ!';
+		} elseif (file_exists(H.'../tmp/post_queue/'.$id)) {
 			$status = json_decode(file_get_contents(H.'../tmp/post_queue/'.$id), true);
 			if (isset($status['out'], $status['out']['error'])) {
 				$out['error'] = $status['out']['error'];
@@ -247,7 +256,9 @@ switch ($sub_action) {
 		$images = isset($_POST['images']) ? $_POST['images'] : [];
 		$documents = isset($_POST['documents']) ? $_POST['documents'] : [];
 		
-		if ($images || $documents) {
+		if (!\Z\User::instance()->can('user')) {
+			$out['error'] = 'Гостевой доступ!';
+		} elseif ($images || $documents) {
 			$msg = json_encode([
 				'images'	=> $images, 
 				'documents'	=> $documents, 
@@ -274,11 +285,13 @@ switch ($sub_action) {
 		$source_id = array_val($_GET, 'id', '');
 		$source_type = array_val($_GET, 'type', '');
 		
-		Mysql::query("UPDATE `vk_grabber_sources` SET `enabled` = ".($sub_action == 'on' ? 1 : 0)."
-			WHERE
-				id = '".Mysql::escape($source_id)."' AND
-				type = '".Mysql::escape($source_type)."' AND 
-				group_id = $gid");
+		if (\Z\User::instance()->can('user')) {
+			Mysql::query("UPDATE `vk_grabber_sources` SET `enabled` = ".($sub_action == 'on' ? 1 : 0)."
+				WHERE
+					id = '".Mysql::escape($source_id)."' AND
+					type = '".Mysql::escape($source_type)."' AND 
+					group_id = $gid");
+		}
 		
 		header("Location: ".Url::mk('?')->set('a', 'grabber')->set('gid', $gid)->url());
 		exit;
@@ -288,11 +301,13 @@ switch ($sub_action) {
 		$source_id = array_val($_GET, 'id', '');
 		$source_type = array_val($_GET, 'type', '');
 		
-		Mysql::query("DELETE FROM `vk_grabber_sources`
-			WHERE
-				id = '".Mysql::escape($source_id)."' AND
-				type = '".Mysql::escape($source_type)."' AND 
-				group_id = $gid");
+		if (\Z\User::instance()->can('user')) {
+			Mysql::query("DELETE FROM `vk_grabber_sources`
+				WHERE
+					id = '".Mysql::escape($source_id)."' AND
+					type = '".Mysql::escape($source_type)."' AND 
+					group_id = $gid");
+		}
 		
 		header("Location: ".Url::mk('?')->set('a', 'grabber')->set('gid', $gid)->url());
 		exit;
@@ -310,7 +325,9 @@ switch ($sub_action) {
 		$source_id = false;
 		$source_type = false;
 		
-		if ($url == '') {
+		if (!\Z\User::instance()->can('user')) {
+			$view['form_error'] = 'Гостевой доступ!';
+		} elseif ($url == '') {
 			$view['form_error'] = 'Сейчас бы тыкать на кнопки ничего не введя.';
 		} elseif (isset($parts['host']) && isset($parts['path'])) {
 			$type = '';

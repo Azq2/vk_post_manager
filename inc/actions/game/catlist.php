@@ -20,10 +20,12 @@ switch ($sub_action) {
 		$flag	= (int) array_val($_GET, 'flag', 0);
 		$type	= array_val($_GET, 'type', 'food');
 		
-		$product = \Z\Catlist\Game\Shop\Product::createModel($id);
-		if ($product) {
-			$product->deleted = $flag;
-			$product->save();
+		if (\Z\User::instance()->can('user')) {
+			$product = \Z\Catlist\Game\Shop\Product::createModel($id);
+			if ($product) {
+				$product->deleted = $flag;
+				$product->save();
+			}
 		}
 		
 		header("Location: ".Url::mk()->remove('id')->set('sa', 'shop')->set('type', $type)->url());
@@ -41,7 +43,9 @@ switch ($sub_action) {
 		$product = $id ? \Z\Catlist\Game\Shop\Product::createModel($id) : \Z\Catlist\Game\Shop\Product::createNew();
 		$allow = [IMAGETYPE_GIF, IMAGETYPE_JPEG, IMAGETYPE_PNG, IMAGETYPE_BMP];
 		
-		if ($id && !$product) {
+		if (!\Z\User::instance()->can('user')) {
+			$out['error'] = 'Гостевой доступ!';
+		} elseif ($id && !$product) {
 			$out['error'] = '#'.$id.' - не найдено!';
 		} elseif (!$title) {
 			$out['error'] = 'Название то где?!';
@@ -130,7 +134,7 @@ switch ($sub_action) {
 	case "settings":
 		$settings = \Z\Catlist\Game\Settings::instance();
 		
-		if ($_POST) {
+		if ($_POST && \Z\User::instance()->can('user')) {
 			foreach ($_POST as $k => $v) {
 				if (isset($settings->{$k}))
 					$settings->{$k} = $v;
@@ -152,15 +156,18 @@ switch ($sub_action) {
 	
 	case "cats_delete":
 		$id = isset($_GET['id']) ? (int) $_GET['id'] : 0;
-		$cats = Mysql::query("SELECT * FROM `vkapp_catlist_cats` WHERE `id` = ?", $id)
-				->fetchObject();
 		
-		if ($cats) {
-			Mysql::query("DELETE FROM `vkapp_catlist_cats` WHERE `id` = ?", $id);
-			$used = Mysql::query("SELECT COUNT(*) FROM `vkapp_catlist_user_cats` WHERE `photo` = ? LIMIT 1", $cats->photo)
-				->result();
-			if (!$used)
-				@unlink(H.'../files/catlist/cats/'.$cats->photo);
+		if (\Z\User::instance()->can('user')) {
+			$cats = Mysql::query("SELECT * FROM `vkapp_catlist_cats` WHERE `id` = ?", $id)
+					->fetchObject();
+			
+			if ($cats) {
+				Mysql::query("DELETE FROM `vkapp_catlist_cats` WHERE `id` = ?", $id);
+				$used = Mysql::query("SELECT COUNT(*) FROM `vkapp_catlist_user_cats` WHERE `photo` = ? LIMIT 1", $cats->photo)
+					->result();
+				if (!$used)
+					@unlink(H.'../files/catlist/cats/'.$cats->photo);
+			}
 		}
 		
 		header("Location: ".Url::mk()->remove('id')->set('sa', 'cats')->url());
@@ -183,7 +190,9 @@ switch ($sub_action) {
 		
 		$allow = [IMAGETYPE_GIF, IMAGETYPE_JPEG, IMAGETYPE_PNG, IMAGETYPE_BMP];
 		
-		if ($id && !$cat) {
+		if (!\Z\User::instance()->can('user')) {
+			$out['error'] = 'Гостевой доступ!';
+		} elseif ($id && !$cat) {
 			$out['error'] = '#'.$id.' - не найдено!';
 		} elseif (!$name) {
 			$out['error'] = 'Имя то где?!';
@@ -262,11 +271,11 @@ switch ($sub_action) {
 	break;
 	
 	case "message_delete":
-		if (isset($_GET['ok'])) {
+		if (isset($_GET['ok']) && \Z\User::instance()->can('user')) {
 			$id = isset($_GET['id']) ? $_GET['id'] : 0;
 			Mysql::query("DELETE FROM `vkapp_catlist_messages` WHERE `id` = ?", $id);
-			mk_ajax(['success' => true]);
 		}
+		mk_ajax(['success' => true]);
 	break;
 	
 	case "message_add":
@@ -274,7 +283,9 @@ switch ($sub_action) {
 		$message = isset($_POST['text']) ? $_POST['text'] : '';
 		
 		$out = ['success' => false];
-		if (preg_match("/^[\w\d_]+$/i", $id) && strlen($message)) {
+		if (!\Z\User::instance()->can('user')) {
+			$out['error'] = "Гостевой доступ!";
+		} elseif (preg_match("/^[\w\d_]+$/i", $id) && strlen($message)) {
 			Mysql::query("
 				INSERT INTO `vkapp_catlist_messages` SET
 					`id` = ?, 

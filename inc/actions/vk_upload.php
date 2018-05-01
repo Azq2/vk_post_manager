@@ -8,7 +8,10 @@ switch ($type) {
 	case "url":
 		$id = isset($_REQUEST['id']) ? preg_replace("/[^a-f0-9]/", "", $_REQUEST['id']) : '';
 		
-		if (!$id) {
+		if (!\Z\User::instance()->can('user')) {
+			$out['error'] = 'Гостевой доступ!';
+			$id = false;
+		} elseif (!$id) {
 			$images		= isset($_REQUEST['images']) ? $_REQUEST['images'] : [];
 			$documents	= isset($_REQUEST['documents']) ? $_REQUEST['documents'] : [];
 			$files		= isset($_REQUEST['files']) ? $_REQUEST['files'] : [];
@@ -70,7 +73,9 @@ switch ($type) {
 	// Загрузка файла
 	case "file":
 	default:
-		if ($_FILES && isset($_FILES['file'])) {
+		if (!\Z\User::instance()->can('user')) {
+			$out['error'] = 'Гостевой доступ!';
+		} elseif ($_FILES && isset($_FILES['file'])) {
 			if ($_FILES['file']['error']) {
 				$out['error'] = 'Произошла странная ошибка под секретным номером #'.$_FILES['file']['error'];
 			} elseif (!getimagesize($_FILES['file']['tmp_name'])) {

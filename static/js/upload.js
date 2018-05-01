@@ -117,12 +117,12 @@ $.urlUploader = function (options) {
 				
 				options.onStateChanged && options.onStateChanged({status: status});
 				
-				setTimeout(check_upload, 300);
+				setTimeout(check_upload, 10);
 			} else if (res.error) {
 				options.onError && options.onError(res.error);
 			}
 		}, function () {
-			setTimeout(check_upload, 300);
+			setTimeout(check_upload, 500);
 		});
 	}
 	
@@ -184,6 +184,7 @@ function initForm(el) {
 					if (file.deleted)
 						return;
 					
+					file.done = true;
 					file.el.trigger('file_upload_end');
 					file.el.html(tpl.file({
 						name: file.url, 
@@ -200,6 +201,7 @@ function initForm(el) {
 					if (file.deleted)
 						return;
 					
+					file.done = true;
 					file.el.trigger('file_upload_end');
 					file.el.trigger('file_uploaded', {
 						file: file, 
@@ -230,8 +232,10 @@ function initForm(el) {
 						cur_file = null;
 				}
 				
-				if (!files[i].deleted)
+				if (!files[i].done) {
+					files[i].done = true;
 					files[i].el.trigger('file_upload_end');
+				}
 				
 				files[i].deleted = true;
 			} else {
@@ -335,6 +339,7 @@ function uploadNextFile() {
 						error = "Ошибка разбора Джейсона Стетхема! <br />" + $('<div>').text(xhr.responseText).html();
 					} else {
 						if (json.success) {
+							file.done = true;
 							file.el.trigger('file_upload_end');
 							file.el.trigger('file_uploaded', {
 								file: file, 
@@ -361,6 +366,7 @@ function uploadNextFile() {
 				name: file.blob.name, 
 				errors: ['Не смогли загрузить файл!<br />' + error]
 			}));
+			cur_file.done = true;
 			cur_file.el.trigger('file_upload_end');
 			cur_file = null;
 			setTimeout(uploadNextFile, 0);

@@ -1,5 +1,8 @@
 <?php
 
+if (!\Z\User::instance()->can('admin'))
+	die("Доступ только админам!");
+
 $history = [];
 $req = Mysql::query("SELECT * FROM `vk_smm_money_out` WHERE `group_id` = ?", $gid);
 

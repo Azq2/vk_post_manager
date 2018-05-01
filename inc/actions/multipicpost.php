@@ -1,7 +1,9 @@
 <?php
 if ($_FILES && isset($_FILES['file'])) {
 	$out = array();
-	if ($_FILES['file']['error']) {
+	if (!\Z\User::instance()->can('user')) {
+		$out['error'] = 'Гостевой доступ!';
+	} elseif ($_FILES['file']['error']) {
 		$out['error'] = 'Произошла странная ошибка под секретным номером #'.$_FILES['file']['error'];
 	} elseif (!getimagesize($_FILES['file']['tmp_name'])) {
 		$out['fatal'] = true;
