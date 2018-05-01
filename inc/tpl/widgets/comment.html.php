@@ -27,7 +27,7 @@
 				<div class="post-text">
 					<?php if ($list == 'suggests'): ?>
 					<a href="#" class="js-post_edit m right">
-						<img src="//s.spac.me/i/edit_info.png" alt="" class="m" />
+						<img src="i/img/edit.png" alt="" class="m" />
 					</a>
 					<?php endif; ?>
 					<div class="emoji">
@@ -50,7 +50,7 @@
 			<div class="post-attach js-attach_geo">
 				<?php if ($list == 'suggests'): ?>
 				<a href="#" style="float: right; padding: 10px" class="js-attach_delete" data-id="geo">
-					<img src="//s.spac.me/i/remove.png" alt="" />
+					<img src="i/img/remove.png" alt="" />
 				</a>
 				<?php endif; ?>
 				GEO: <?= $geo->coordinates ?><br />

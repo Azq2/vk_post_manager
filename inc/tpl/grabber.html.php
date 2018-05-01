@@ -119,7 +119,7 @@
 
 <div class="wrapper">
 	<div class="row center grey" id="garbber_init_spinner">
-		<img src="//s.spac.me/i/spinner2.gif" width="16" height="16" alt="" class="m" />
+		<img src="i/img/spinner2.gif" width="16" height="16" alt="" class="m" />
 		<span class="m">Продаём душу аццкой сотоне...</span>
 	</div>
 </div>
@@ -130,7 +130,7 @@
 
 <div class="wrapper hide" id="garbber_posts_spinner">
 	<div class="row center grey">
-		<img src="//s.spac.me/i/spinner2.gif" width="16" height="16" alt="" class="m" />
+		<img src="i/img/spinner2.gif" width="16" height="16" alt="" class="m" />
 		<span class="m">Ищем ближайшие корованы...</span>
 	</div>
 </div>

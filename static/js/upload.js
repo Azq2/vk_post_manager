@@ -35,7 +35,7 @@ var tpl = {
 				'<table style="width: 100%"><tr>' + 
 					'<td class="left post-preview file-thumb">' + 
 						'<div class="file-thumb-center"></div>' + 
-						'<img src="//s.spac.me/i/transparent.gif" alt="" class="js-file_thumb" />' + 
+						'<img src="i/img/transparent.gif" alt="" class="js-file_thumb" />' + 
 					'</td>' + 
 					'<td style="width:100%">' + 
 						'<b class="darkblue">' + html_wrap(data.name) + '</b>' + (data.size ? ' <span class="grey">(' + data.size + ')</span>' : '') + 
