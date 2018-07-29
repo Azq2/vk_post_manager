@@ -43,6 +43,12 @@ class Http {
 		$this->vk_user = $user;
 	}
 	
+	public function enableCookies() {
+		$jar = "/tmp/".md5(__FILE__)."-cookies.jar";
+		curl_setopt($this->ch, CURLOPT_COOKIEFILE, $jar);
+		curl_setopt($this->ch, CURLOPT_COOKIEJAR, $jar);
+	}
+	
 	public function exec($url, $post = NULL, $xhr = false) {
 		if ($xhr) {
 			curl_setopt($this->ch, CURLOPT_HTTPHEADER, array(

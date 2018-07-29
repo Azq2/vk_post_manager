@@ -3,6 +3,8 @@ $sub_action = array_val($_GET, 'sa', '');
 $sort = array_val($_REQUEST, 'sort', 'DESC');
 $mode = array_val($_REQUEST, 'mode', 'external');
 $content_filter = array_val($_REQUEST, 'content', 'pics');
+$include = isset($_REQUEST['include']) && is_array($_REQUEST['include']) ? $_REQUEST['include'] : array();
+$exclude = isset($_REQUEST['exclude']) && is_array($_REQUEST['exclude']) ? $_REQUEST['exclude'] : array();
 
 $sources = [];
 $req = Mysql::query("SELECT * FROM `vk_grabber_sources` WHERE group_id = $gid ORDER BY id DESC");
@@ -96,14 +98,20 @@ switch ($sub_action) {
 		
 		$sources_hash = [];
 		foreach ($sources as $s) {
-			if ($s['enabled'])
+			if ($s['enabled']) {
+				if ($include && !in_array($s['type'].'_'.$s['id'], $include))
+					continue;
+				if ($exclude && in_array($s['type'].'_'.$s['id'], $exclude))
+					continue;
+				
 				$sources_hash[$s['type']][] = "'".Mysql::escape($s['id'])."'";
+			}
 		}
 		
 		$sources_where = [];
 		foreach ($sources_hash as $type => $ids)
 			$sources_where[] = "(d.`source_type` = '".Mysql::escape($type)."' AND d.`source_id` IN (".implode(",", $ids)."))\n";
-		
+				
 		// Фильтр по типу контента
 		if ($content_filter == 'pics')
 			$where[] = '(d.`images_cnt` > 0 OR d.`gifs_cnt` > 0)';
@@ -117,9 +125,9 @@ switch ($sub_action) {
 		} else if ($sort == 'ASC') {
 			$order = 'ORDER BY d.`time` ASC';
 		} else if ($sort == 'RAND') {
-			if (isset($_REQUEST['exclude'])) {
+			if (isset($_REQUEST['exclude_posts'])) {
 				$exclude = [];
-				foreach (explode(",", $_REQUEST['exclude']) as $t)
+				foreach (explode(",", $_REQUEST['exclude_posts']) as $t)
 					$exclude[] = "'".Mysql::escape($t)."'";
 				if ($exclude)
 					$where[] = 'CONCAT(d.`source_type`, "_", d.`remote_id`) NOT IN ('.implode(", ", $exclude).')';
@@ -315,12 +323,17 @@ switch ($sub_action) {
 	
 	case "add":
 		$url = trim(array_val($_POST, 'url', ''));
+		
+		$view['form_url'] = $url;
+		
+		// Инстаграмм
+		if ($url && $url[0] == '#')
+			$url = "https://www.instagram.com/explore/tags/".urlencode(substr($url, 1))."/";
+		
 		if (substr($url, 0, 4) != "http")
 			$url = "https://$url";
 		
 		$parts = parse_url($url);
-		
-		$view['form_url'] = $url;
 		
 		$source_id = false;
 		$source_type = false;
@@ -332,7 +345,7 @@ switch ($sub_action) {
 		} elseif (isset($parts['host']) && isset($parts['path'])) {
 			$type = '';
 			if (preg_match("/ok.ru|odnoklassniki.ru/i", $parts['host'])) {
-				$data = file_get_contents("https://m.ok.ru".$parts['path']);
+				$data = @file_get_contents("https://m.ok.ru".$parts['path']);
 				if (preg_match("/groupId=(\d+)/i", $data, $m)) {
 					$source_id = $m[1];
 					if (preg_match('/(group_name|itemprop="name")[^>]*>(.*?)</sim', $data, $m)) {
@@ -361,6 +374,21 @@ switch ($sub_action) {
 				} else {
 					$view['form_error'] = 'VK API вернул странную дичь =\\';
 				}
+			} elseif (preg_match("/instagram.com/i", $parts['host'])) {
+				$tag_name = substr($parts['path'], 1);
+				if (preg_match("/tags\/([^\?\/]+)/i", $tag_name, $m))
+					$tag_name = urldecode($m[1]);
+				
+				$data = @file_get_contents("https://www.instagram.com/explore/tags/".urlencode($tag_name)."/?__a=1");
+				if (json_decode($data)) {
+					$source_id = $tag_name;
+					$source_type = 'INSTAGRAM';
+					$source_name = "#$tag_name";
+				} else if (isset($res->error)) {
+					$view['form_error'] = $res->error->error_msg;
+				} else {
+					$view['form_error'] = 'Instagram вернул странную дичь или тег не найден =\\ (тег: '.$tag_name.', ссылка: '.$url.')';
+				}
 			} else {
 				$view['form_error'] = '<b>'.$parts['host'].'</b> - чё за сосайт? Не знаю такой!';
 			}
@@ -383,6 +411,9 @@ switch ($sub_action) {
 	break;
 }
 
+$view['include'] = $include;
+$view['exclude'] = $exclude;
+
 $view['mode'] = $mode;
 $view['sort'] = $sort;
 $view['content_filter'] = $content_filter;
@@ -392,15 +423,22 @@ $view['sources_ids'] = [];
 foreach ($sources as $s) {
 	if ($s['type'] == 'OK') {
 		$url = 'https://ok.ru/group/'.$s['id'];
+		$icon = 'https://ok.ru/favicon.ico';
 	} else if ($s['type'] == 'VK') {
 		$url = 'https://vk.com/public'.(-$s['id']);
+		$icon = 'https://vk.com/favicon.ico';
+	} else if ($s['type'] == 'INSTAGRAM') {
+		$url = 'https://www.instagram.com/explore/tags/'.urlencode($s['id']).'/';
+		$icon = 'https://www.instagram.com/static/images/ico/favicon.ico/36b3ee2d91ed.ico';
 	}
 	
-	$view['sources'][] = [
+	$view['sources'][$s['type'].'_'.$s['id']] = [
+		'id'			=> $s['id'],
 		'enabled'		=> $s['enabled'], 
 		'name'			=> $s['name'], 
 		'type'			=> $s['type'], 
 		'url'			=> $url, 
+		'icon'			=> $icon, 
 		'on_url'		=> Url::mk()
 			->set('sa', 'on')
 			->set('id', $s['id'])

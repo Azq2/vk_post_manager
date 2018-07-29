@@ -86,6 +86,12 @@ if ($type && $access_token) {
 					'scope'			=> 'VALUABLE_ACCESS;LONG_ACCESS_TOKEN', 
 					'response_type'	=> 'code', 
 					'state'			=> 'OK'
+				]), 
+				'instagram_oauth' => 'https://api.instagram.com/oauth/authorize/?'.http_build_query([
+					'client_id'		=> INSTAGRAM_APP_ID, 
+					'response_type'	=> 'code', 
+					'redirect_uri'	=> $redirect_url, 
+					'state'			=> 'OK'
 				])
 			])
 		));

@@ -168,6 +168,9 @@ var tpl = {
 		} else if (data.source_type == 'OK') {
 			url = 'https://ok.ru/group/' + data.source_id + '/topic/' + data.remote_id;
 			owner_url = data.owner_url;
+		} else if (data.source_type == 'INSTAGRAM') {
+			url = 'https://www.instagram.com/p/' + data.remote_id;
+			owner_url = data.owner_url;
 		}
 		
 		var post_class = '';
@@ -204,6 +207,10 @@ var tpl = {
 				'<div class="js-post_attach_editor hide"></div>' + 
 				'<div class="js-post_editor">' + 
 					'<div class="post-show_edit pad_t">' + 
+						'<div class="pad_b">' + 
+							'<label><input type="checkbox" name="text_add" value="1" class="js-post_textarea_enable" ' + 
+								(data.source_type == 'INSTAGRAM' ? '' : ' checked="checked"') + ' /> Использовать текст</label>' + 
+						'</div>' + 
 						'<textarea rows="10" class="js-post_textarea" name="text"></textarea>' + 
 						'<div class="js-upload_form pad_t" data-action="/?a=vk_upload&amp;gid=' + custom.gid + '" data-id="vk_upload">' + 
 							'<div class="js-upload_input"></div>' + 
@@ -407,7 +414,12 @@ var VkFeed = Class({
 					pickerPosition: "bottom", 
 					filtersPosition: "bottom", 
 					autocomplete: false, 
-					tonesStyle: "checkbox"
+					tonesStyle: "checkbox", 
+					events: {
+						change: function () {
+							wrap.find('.js-post_textarea_enable').prop("checked", true);
+						}
+					}
 				});
 			
 			wrap.genericUploader();

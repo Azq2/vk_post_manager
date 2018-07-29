@@ -519,6 +519,26 @@ li {
 	box-shadow: 0 0 7px rgba(93, 109, 157, 0.9)
 }
 
+.soc-item-fb {
+	background-color: #3b5999;
+	color: #fff
+}
+
+.soc-item-vk {
+	background-color: #4c75a3;
+	color: #fff
+}
+
+.soc-item-instagram {
+	background-color: #e4405f;
+	color: #fff
+}
+
+.soc-item-ok {
+	background-color: #ed812b;
+	color: #fff
+}
+
 /* Colorpicker */
 .colorpicker {
 	text-align: left

@@ -9,6 +9,8 @@
 	data-vk-app-id="<?= VK_APP_ID ?>"
 	data-sources="<?= htmlspecialchars(json_encode($sources_ids)) ?>"
 	data-blacklist="<?= htmlspecialchars(json_encode($blacklist)) ?>"
+	data-include="<?= htmlspecialchars(json_encode($include)) ?>"
+	data-exclude="<?= htmlspecialchars(json_encode($exclude)) ?>"
 	id="grabber_data"></div>
 
 <div class="wrapper">
@@ -18,6 +20,49 @@
 	<div class="row">
 		Показать посты: <?= $content_tabs ?>
 	</div>
+	
+	<?php if ($mode == 'external'): ?>
+		<div class="row">
+			<?php if ($include): ?>
+				<div class="pad_b">
+					<span class="m">Выводим только эти:</span>
+					<?php foreach ($include as $sid): ?>
+						<?php if (isset($sources[$sid])): ?>
+							<img src="<?= $sources[$sid]['icon'] ?>" width="16" height="16" alt="<?= $sources[$sid]['type'] ?>" class="m" />
+							<a href="<?= $sources[$sid]['url'] ?>" target="_blank" class="m"><?= $sources[$sid]['name'] ?></a>
+							<b class="red js-grabber_filter_delete cursor" title="Удалить" data-id="<?= $sid ?>">(x)</b><!--
+							--><?= $sid != end($include) ? ',' : '' ?>
+						<?php endif; ?>
+					<?php endforeach; ?>
+				</div>
+			<?php elseif ($exclude): ?>
+				<div class="pad_b">
+					<span class="m">Выводим всё, кроме этих:</span>
+					<?php foreach ($exclude as $sid): ?>
+						<?php if (isset($sources[$sid])): ?>
+							<img src="<?= $sources[$sid]['icon'] ?>" width="16" height="16" alt="<?= $sources[$sid]['type'] ?>" class="m" />
+							<a href="<?= $sources[$sid]['url'] ?>" target="_blank" class="m"><?= $sources[$sid]['name'] ?></a>
+							<b class="red js-grabber_filter_delete cursor" title="Удалить" data-id="<?= $sid ?>">(x)</b><!--
+							--><?= $sid != end($exclude) ? ',' : '' ?>
+						<?php endif; ?>
+					<?php endforeach; ?>
+				</div>
+			<?php endif; ?>
+			
+			<select class="js-grabber_filter_select">
+				<option value="">- Фильтр по корованам -</option>
+				<?php foreach ($sources as $i => $s): ?>
+					<?php if ($s['enabled']): ?>
+						<option class="soc-item-<?= strtolower($s['type']) ?>" value="<?= $s['type'].'_'.$s['id'] ?>">
+							<?= $s['name'] ?>
+						</option>
+					<?php endif; ?>
+				<?php endforeach; ?>
+			</select>
+			<button class="btn btn-green js-grabber_filter_whitelist" title="Никто, кроме">&nbsp;+&nbsp;</button>
+			<button class="btn btn-delete js-grabber_filter_blacklist" title="Все, кроме">&nbsp;-&nbsp;</button>
+		</div>
+	<?php endif; ?>
 </div>
 
 <?php if ($mode == 'external'): ?>
@@ -38,7 +83,7 @@
 		<form action="<?= $form_action ?>" method="POST">
 			<div>
 				<label class="lbl">Адрес корована, который грабить будем:</label><br />
-				<input type="text" name="url" autocomplete="off" value="<?= htmlspecialchars($form_url) ?>" placeholder="https://vk.com/mokrie.kiski" /><br />
+				<input type="text" name="url" autocomplete="off" value="<?= htmlspecialchars($form_url) ?>" placeholder="https://vk.com/catlist" /><br />
 			</div>
 			
 			<div class="pad_t">
@@ -65,22 +110,10 @@
 				Что бы граббить, нужно включить хотя бы один корован!
 			</div>
 		<?php endif; ?>
-
-		<?php if (count($sources) >= 25): ?>
-			<div class="row row-error center">
-				На текущий момент можно использовать ДО 25 корованов одновременно. <br />
-				Все, что не влезли - не используются. <br />
-				¯ \ _ (ツ) _ / ¯
-			</div>
-		<?php endif; ?>
 		
 		<?php foreach ($sources as $i => $s): ?>
-			<div class="row oh<?= $i >= 24 ? ' deleted' : '' ?>">
-				<?php if ($s['type'] == 'OK'): ?>
-					<img src="https://ok.ru/favicon.ico" width="16" height="16" alt="<?= $s['type'] ?>" class="m" />
-				<?php elseif ($s['type'] == 'VK'): ?>
-					<img src="https://vk.com/favicon.ico" width="16" height="16" alt="<?= $s['type'] ?>" class="m" />
-				<?php endif; ?>
+			<div class="row oh<?= !$s['enabled'] ? ' deleted' : '' ?>">
+				<img src="<?= $s['icon'] ?>" width="16" height="16" alt="<?= $s['type'] ?>" class="m" />
 				
 				<a href="<?= $s['url'] ?>" target="_blank" class="m"><?= $s['name'] ?></a>
 				

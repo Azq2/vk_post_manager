@@ -1,0 +1,5 @@
+*/10 * * * * php $XUJXUJ_DIR/posts_sched.php >> $XUJXUJ_DIR/logs/posts_sched.php.log
+*/15 * * * * php $XUJXUJ_DIR/vk_to_telegram.php >> $XUJXUJ_DIR/logs/vk_to_telegram.php.log
+*/15 * * * * php $XUJXUJ_DIR/grabber.php >> $XUJXUJ_DIR/logs/grabber.php.log
+0 * * * * php $XUJXUJ_DIR/calc_money.php >> $XUJXUJ_DIR/logs/calc_money.php.log
+*/10 * * * * php $XUJXUJ_DIR/members.php >> $XUJXUJ_DIR/logs/members.php.log

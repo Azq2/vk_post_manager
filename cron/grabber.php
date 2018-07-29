@@ -10,8 +10,6 @@ if (file_exists(H."../tmp/grabber_lock") && (isset($argv[1]) && $argv[1] != "loc
 }
 file_put_contents(H."../tmp/grabber_lock", 1);
 
-$q = new Http;
-
 $sources_hash = [];
 $req = Mysql::query("SELECT * FROM `vk_grabber_sources`");
 while ($s = $req->fetch()) {
@@ -21,6 +19,8 @@ while ($s = $req->fetch()) {
 
 foreach ($sources_hash as $type => $type_sources) {
 	echo "======================== $type ========================\n";
+	
+	$q = new Http;
 	
 	// Граббер VK
 	if ($type == 'VK') {
@@ -146,7 +146,10 @@ foreach ($sources_hash as $type => $type_sources) {
 			if (!$good)
 				break;
 		}
-	} elseif ($type == 'OK') {
+	}
+	
+	// Граббер OK
+	elseif ($type == 'OK') {
 		$ended = [];
 		$page = 0;
 		while (true) {
@@ -387,6 +390,168 @@ foreach ($sources_hash as $type => $type_sources) {
 			echo "good=$good\n";
 			if (!$good)
 				break;
+		}
+	}
+	
+	// Граббер INSTAGRAM
+	elseif ($type == 'INSTAGRAM') {
+		$ended = [];
+		$page = 0;
+		
+		$q->enableCookies();
+		
+		while (true) {
+			++$page;
+			
+			echo "PAGE: $page\n";
+			
+			$good = 0;
+			foreach ($type_sources as $id => $s) {
+				if (isset($ended[$id]))
+					continue;
+				
+				Mysql::query("
+					INSERT INTO `vk_grabber_data_owners` SET
+						`id` = '".Mysql::escape($type.'_'.$id)."', 
+						`name` = '".Mysql::escape("#$id")."', 
+						`url` = '".Mysql::escape("https://www.instagram.com/explore/tags/".urlencode($id)."/")."', 
+						`avatar` = '".Mysql::escape("https://www.instagram.com/static/images/ico/xxxhdpi_launcher.png/9fc4bab7565b.png")."'
+					ON DUPLICATE KEY UPDATE
+						`url` = VALUES(`url`), 
+						`name` = VALUES(`name`), 
+						`avatar` = VALUES(`avatar`)
+				");
+				
+				echo "COMM_ID: $id\n";
+				
+				$page_url = "https://www.instagram.com/explore/tags/".urlencode($id)."/?__a=1";
+				$q->timeout(10, 30);
+				
+				$ban_errors = 10;
+				while (true) {
+					$res = $q->exec($page_url);
+					if ($res->code == 200)
+						break;
+					echo "http err: ".$res->code."\n";
+					
+					if ($res->code == 429) {
+						echo "wait minute...\n";
+						sleep(60);
+						--$ban_errors;
+					} else {
+						var_dump($res->body);
+					}
+					
+					if (!$ban_errors)
+						break;
+				}
+				
+				if (!$ban_errors) {
+					echo "ERROR: Instagram ban! :(\n";
+					continue;
+				}
+				
+				$json = @json_decode($res->body);
+				if (!$json) {
+					echo "ERROR: Can't parse JSON ($page_url)\n$res\n";
+					continue;
+				}
+				
+				if (!isset($json->graphql, $json->graphql->hashtag)) {
+					echo "ERROR: Can't find graphql->hashtag from JSON ($page_url)\n";
+					var_dump($json);
+					break;
+				}
+				
+				$good2 = 0;
+				
+				$edges_lists = [$json->graphql->hashtag->edge_hashtag_to_top_posts->edges, $json->graphql->hashtag->edge_hashtag_to_media->edges];
+				foreach ($edges_lists as $edges_list) {
+					foreach ($edges_list as $edge) {
+						// Получаем ID фотки
+						$topic_id = $edge->node->shortcode;
+						if (!$topic_id) {
+							echo "ERROR: Can't parse topic id ($page_url)\n";
+							continue;
+						}
+						
+						// Видео не нужны
+						if ($edge->node->is_video)
+							continue;
+						
+						// Ссылка на фотку
+						$topic_url = "https://www.instagram.com/p/$topic_id";
+						
+						// Дата загрузки фотки
+						$date = $edge->node->taken_at_timestamp;
+						
+						// Описание фотки
+						$text = "";
+						if (isset($edge->node->edge_media_to_caption)) {
+							if (isset($edge->node->edge_media_to_caption->edges, $edge->node->edge_media_to_caption->edges[0]))
+								$text = $edge->node->edge_media_to_caption->edges[0]->node->text;
+						}
+						
+						// Лайки
+						$likes = $edge->node->edge_liked_by->count;
+						
+						// Комменты
+						$comments = $edge->node->edge_media_to_comment->count;
+						
+						// Аттачи (всегда один, т.к. тут только фотки)
+						$src = $edge->node->display_url;
+						
+						$photo = [
+							'id'		=> 'photo_'.md5($src), 
+							'type'		=> 'photo', 
+							'w'			=> $edge->node->dimensions->width, 
+							'h'			=> $edge->node->dimensions->height, 
+							'thumbs' => [
+								$edge->node->dimensions->width => $src
+							]
+						];
+						
+						if (!$src) {
+							echo "ERROR: #$topic_id topic without attaches ($topic_url)\n";
+							continue;
+						}
+						
+						$ok = insert_to_db((object) [
+							'source_id'			=> $id, 
+							'source_type'		=> $type, 
+							'remote_id'			=> $topic_id, 
+							
+							'text'				=> $text, 
+							'owner'				=> $id, 
+							'attaches'			=> [$photo], 
+							
+							'time'				=> $date, 
+							'likes'				=> $likes, 
+							'comments'			=> $comments, 
+							'reposts'			=> 0, 
+							'images_cnt'		=> 1, 
+							'gifs_cnt'			=> 0
+						]);
+						
+						echo "OK: $topic_url\n";
+						
+						if ($ok) {
+							++$good;
+							++$good2;
+						}
+					}
+					
+					if (!$good2)
+						$ended[$id] = true;
+				}
+			}
+			
+			echo "good=$good\n";
+			if (!$good)
+				break;
+			
+			// Временно только одна страница!
+			break;
 		}
 	}
 }

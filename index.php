@@ -110,7 +110,7 @@ function mk_page($args) {
 //				'users'				=> 'Юзвери', 
 //				'activity'			=> 'Активность', 
 //				'returns'			=> 'Возвраты', 
-				'join_visual'		=> 'График вступления', 
+				'join_visual'		=> 'Вступления', 
 				'game/catlist'		=> 'Котогочи', 
 				'exit'				=> 'Выход ('.\Z\User::instance()->login.')'
 			], 

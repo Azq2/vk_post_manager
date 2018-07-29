@@ -73,6 +73,18 @@ class Mysql {
 		return "'".self::link()->real_escape_string($str)."'";
 	}
 	
+	public static function begin() {
+		self::query("START TRANSACTION");
+	}
+	
+	public static function commit() {
+		self::query("COMMIT");
+	}
+	
+	public static function rollback() {
+		self::query("ROLLBACK");
+	}
+	
 	public static function query($query, $args = []) {
 		$args = func_get_args();
 		array_shift($args);
