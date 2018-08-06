@@ -202,11 +202,11 @@ function pics_uploader(&$out, $q, $gid, $images, $progress = false) {
 }
 
 function define_oauth() {
-	$types = ['VK' => 1, 'OK' => 1, 'VK_SCHED' => 1];
+	$types = ['VK' => 1, 'OK' => 1, 'VK_SCHED' => 1, 'INSTAGRAM' => 1];
 	
 	$req = Mysql::query("SELECT * FROM `vk_oauth`");
 	while ($res = $req->fetch()) {
-		if (isset($types[$res['type']]))
+		if (isset($types[$res['type']]) && !defined($res['type'].'_USER_ACCESS_TOKEN'))
 			define($res['type'].'_USER_ACCESS_TOKEN', $res['access_token']);
 	}
 	
