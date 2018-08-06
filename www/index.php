@@ -1,6 +1,6 @@
 <?php
-require __DIR__."/inc/init.php";
-require __DIR__."/inc/vk_posts.php";
+require __DIR__."/../inc/init.php";
+require __DIR__."/../inc/vk_posts.php";
 
 error_reporting(E_ALL);
 ini_set('display_errors', 'On');
@@ -22,7 +22,7 @@ if (!isset($comms[$gid])) {
 }
 $comm = $comms[$gid];
 
-if (!preg_match("/^[a-z_\/-]+$/si", $action) || !file_exists(dirname(__FILE__)."/inc/actions/$action.php"))
+if (!preg_match("/^[a-z_\/-]+$/si", $action) || !file_exists(H."../inc/actions/$action.php"))
 	$action = "index";
 
 if ($action == "index")
@@ -32,7 +32,7 @@ if ($action == "index")
 if (!\Z\User::instance()->logged())
 	$action = "login";
 
-require_once dirname(__FILE__)."/inc/actions/$action.php";
+require_once H."../inc/actions/$action.php";
 
 function add_queued_wall_post(&$out, $attachments, $text) {
 	global $q, $gid, $comm;
@@ -82,7 +82,7 @@ function mk_page($args) {
 		->fetchObject();
 	
 	$revision = 0;
-    foreach (new RecursiveIteratorIterator(new RecursiveDirectoryIterator(H."../static/")) as $file) {
+    foreach (new RecursiveIteratorIterator(new RecursiveDirectoryIterator(__DIR__."/static/")) as $file) {
 		if (preg_match("/\.js$/i", $file) && is_file($file))
 			$revision = max($revision, filemtime($file));
     }
@@ -171,7 +171,7 @@ function get_vk_users($need_users) {
 	$cache = array();
 	$users = array();
 	
-	$cache_file = "tmp/vk_users_stat.dat";
+	$cache_file = H."../tmp/vk_users_stat.dat";
 	$need_users = array_unique($need_users);
 	
 	if (file_exists($cache_file)) {

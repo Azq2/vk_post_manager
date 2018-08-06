@@ -94,6 +94,7 @@ class Deployer {
 		};
 		
 		if ($this->options->d) {
+			$lock_fp = NULL;
 			if ($this->options->watch && !($lock_fp = $do_lock()))
 				return;
 			
@@ -103,14 +104,18 @@ class Deployer {
 					$cmd[] = escapeshellarg($v);
 			}
 			
-			flock($lock_fp, LOCK_UN);
-			fclose($lock_fp);
+			if ($lock_fp) {
+				flock($lock_fp, LOCK_UN);
+				fclose($lock_fp);
+			}
 			
 			system("daemon -D ".escapeshellarg(getcwd())."  -- ".implode(" ", $cmd));
 			return;
 		}
 		
 		$do_deploy = function () use ($src, $dst, $override) {
+			clearstatcache();
+			
 			// Копируем или линкуем всё содержимое дистрибутива
 			$this->rsync($src, $dst, $override, !$this->options->test);
 			
@@ -253,19 +258,22 @@ class Deployer {
 		foreach ($src_files as $f) {
 			$real_src = in_array($f, $override_files) ? $override : $src;
 			
-			$src_mtime = filemtime("$src/$f");
+			$src_mtime = filemtime("$real_src/$f");
 			$dst_exists = file_exists("$dst/$f");
 			
 			$is_changed = !$dst_exists || $src_mtime != filemtime("$dst/$f");
 			
 			if (!$is_changed)
-				$is_changed = is_link("$dst/$f") != is_link("$src/$f");
+				$is_changed = is_link("$dst/$f") != is_link("$real_src/$f");
 			
-			if (!$is_changed && is_link("$src/$f") && is_link("$dst/$f"))
-				$is_changed = readlink("$dst/$f") != readlink("$src/$f");
+			if (!$is_changed)
+				$is_changed = filesize("$dst/$f") != filesize("$real_src/$f");
+			
+			if (!$is_changed && is_link("$real_src/$f") && is_link("$dst/$f"))
+				$is_changed = readlink("$dst/$f") != readlink("$real_src/$f");
 			
 			if (!$is_changed && $this->options->force)
-				$is_changed = md5_file("$dst/$f") != md5_file("$src/$f");
+				$is_changed = md5_file("$dst/$f") != md5_file("$real_src/$f");
 			
 			if ($is_changed) {
 				echo $dst_exists ? "M    $f\n" : "A    $f\n";
@@ -273,11 +281,11 @@ class Deployer {
 					if ($dst_exists)
 						$this->rmrf("$dst/$f");
 					
-					if (is_link("$src/$f")) {
-						if (!symlink(readlink("$src/$f"), "$dst/$f"))
+					if (is_link("$real_src/$f")) {
+						if (!symlink(readlink("$real_src/$f"), "$dst/$f"))
 							throw new Exception("Can't copy: $symlink/$f");
 					} else {
-						if (!copy("$src/$f", "$dst/$f"))
+						if (!copy("$real_src/$f", "$dst/$f"))
 							throw new Exception("Can't copy: $dst/$f");
 						
 						if (!touch("$dst/$f", $src_mtime))

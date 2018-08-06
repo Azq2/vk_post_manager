@@ -12,7 +12,7 @@ if ($_POST) {
 		header("Location: ".$_SERVER['REQUEST_URI']);
 		exit;
 	} else if ($login || $password) {
-		file_put_contents(H.'../tmp/.ht_fail_login', implode("\t", [
+		file_put_contents(H.'../logs/fail_login.log', implode("\t", [
 			date("Y-m-d H:i:s"), 
 			$_SERVER['REQUEST_URI'], 
 			$_SERVER['REMOTE_ADDR'], 
