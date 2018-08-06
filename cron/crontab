@@ -1,5 +1,6 @@
-*/10 * * * * php $XUJXUJ_DIR/posts_sched.php >> $XUJXUJ_DIR/logs/posts_sched.php.log
-*/15 * * * * php $XUJXUJ_DIR/vk_to_telegram.php >> $XUJXUJ_DIR/logs/vk_to_telegram.php.log
-*/15 * * * * php $XUJXUJ_DIR/grabber.php >> $XUJXUJ_DIR/logs/grabber.php.log
-0 * * * * php $XUJXUJ_DIR/calc_money.php >> $XUJXUJ_DIR/logs/calc_money.php.log
-*/10 * * * * php $XUJXUJ_DIR/members.php >> $XUJXUJ_DIR/logs/members.php.log
+@reboot daemon -- {project}/cron/grabber_downloader.sh
+*/10 * * * * php {project}/cron/posts_sched.php >> {project}/logs/cron_posts_sched.log
+*/15 * * * * php {project}/cron/vk_to_telegram.php >> {project}/logs/cron_vk_to_telegram.log
+*/15 * * * * php {project}/cron/grabber.php >> {project}/logs/cron_grabber.log
+0 * * * * php {project}/cron/calc_money.php >> {project}/logs/cron_money.log
+*/10 * * * * php {project}/cron/members.php 1 >> {project}/logs/cron_members.log
