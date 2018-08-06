@@ -230,6 +230,8 @@ function MemeEditor(el, options) {
 		addTextBox('Нижний текст', 'bottom');
 		addTextBox('Средний текст', 'middle');
 		addTextBox('Watermark', 'watermark');
+		addTextBox('Текст над картинкой', 'top', "", 'block');
+		addTextBox('Текст под картинкой', 'bottom', "", 'block');
 		repaint(canvas);
 		
 		wrap.on('click', '.js-input_incr', function (e) {
@@ -395,6 +397,11 @@ function MemeEditor(el, options) {
 		for (var j = textboxes.length; j-->0; ) {
 			var tb = textboxes[j];
 			
+			if (!tb.enabled.prop("checked") || tb.subtype != "inline") {
+				tb.render = false;
+				continue;
+			}
+			
 			var buffer = document.createElement('canvas');
 			buffer.width = opts.width;
 			buffer.height = opts.height;
@@ -411,7 +418,7 @@ function MemeEditor(el, options) {
 				
 				var text = tb.uc.prop("checked") ? tb.text.val().toUpperCase() : tb.text.val();
 				
-				var lines = tb.enabled.prop("checked") ? text.split(/\r\n|\n|\r/) : [], 
+				var lines = text.split(/\r\n|\n|\r/), 
 					render_height = 0, 
 					render_width = 0, 
 					render_x = -1, 
@@ -587,7 +594,7 @@ function MemeEditor(el, options) {
 		}
 	}
 	
-	function addTextBox(title, type, text) {
+	function addTextBox(title, type, text, subtype) {
 		var saved = (opts.template && opts.template.textboxes[type]) || {};
 		
 		var tb = {
@@ -596,6 +603,7 @@ function MemeEditor(el, options) {
 			x:				5, 
 			y:				0, 
 			type:			type, 
+			subtype:		subtype || "inline", 
 			strokeColor:	saved.strokeColor || '#000000', 
 			textColor:		saved.textColor || '#FFFFFF', 
 			title:			title, 
@@ -629,7 +637,7 @@ function MemeEditor(el, options) {
 		editor.find('.js-meme_position_edit').toggleClass('hide', type != 'watermark');
 		
 		tb.enabled = editor.find('.js-meme_tb_enable')
-			.prop("checked", type != 'watermark' && type != 'middle')
+			.prop("checked", tb.subtype == 'inline' && (type == 'top' || type == 'bottom'))
 			.on('input change', invalidate);
 		
 		tb.bold = editor.find('.js-meme_tb_bold')

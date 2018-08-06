@@ -498,20 +498,72 @@ foreach ($sources_hash as $type => $type_sources) {
 						// Комменты
 						$comments = $edge->node->edge_media_to_comment->count;
 						
-						// Аттачи (всегда один, т.к. тут только фотки)
-						$src = $edge->node->display_url;
+						$attaches = [];
+						$edges_to_parse = [];
 						
-						$photo = [
-							'id'		=> 'photo_'.md5($src), 
-							'type'		=> 'photo', 
-							'w'			=> $edge->node->dimensions->width, 
-							'h'			=> $edge->node->dimensions->height, 
-							'thumbs' => [
-								$edge->node->dimensions->width => $src
-							]
-						];
+						if  (isset($edge->node->__typename) && $edge->node->__typename == "GraphSidecar") {
+							$ajax_topic_url = "https://www.instagram.com/p/$topic_id/?__a=1";
+							
+							$ban_errors = 10;
+							while (true) {
+								$res = $q->exec($ajax_topic_url);
+								if ($res->code == 200)
+									break;
+								echo "http err: ".$res->code."\n";
+								
+								if ($res->code == 429) {
+									echo "wait minute...\n";
+									sleep(60);
+									--$ban_errors;
+								} else {
+									var_dump($res->body);
+								}
+								
+								if (!$ban_errors)
+									break;
+							}
+							
+							if (!$ban_errors) {
+								echo "ERROR: Instagram ban! :( ($ajax_topic_url)\n";
+								continue;
+							}
+							
+							$json = @json_decode($res->body);
+							if (!$json) {
+								echo "ERROR: Can't parse JSON ($ajax_topic_url)\n$res\n";
+								continue;
+							}
+							
+							if (!isset($json->graphql, $json->graphql->shortcode_media)) {
+								echo "ERROR: Can't find graphql->shortcode_media from JSON ($ajax_topic_url)\n";
+								var_dump($json);
+								break;
+							}
+							
+							foreach ($json->graphql->shortcode_media->edge_sidecar_to_children->edges as $sub_edge)
+								$edges_to_parse[] = $sub_edge;
+						} else {
+							$edges_to_parse[] = $edge;
+						}
 						
-						if (!$src) {
+						foreach ($edges_to_parse as $sub_edge) {
+							$src = $sub_edge->node->display_url;
+							
+							if ($src) {
+								$attaches[] = [
+									'id'		=> 'photo_'.md5($src), 
+									'type'		=> 'photo', 
+									'w'			=> $sub_edge->node->dimensions->width, 
+									'h'			=> $sub_edge->node->dimensions->height, 
+									'thumbs' => [
+										$sub_edge->node->dimensions->width => $src
+									]
+								];
+							}
+							
+						}
+						
+						if (!$attaches) {
 							echo "ERROR: #$topic_id topic without attaches ($topic_url)\n";
 							continue;
 						}
@@ -523,7 +575,7 @@ foreach ($sources_hash as $type => $type_sources) {
 							
 							'text'				=> $text, 
 							'owner'				=> $id, 
-							'attaches'			=> [$photo], 
+							'attaches'			=> $attaches, 
 							
 							'time'				=> $date, 
 							'likes'				=> $likes, 
@@ -558,15 +610,23 @@ foreach ($sources_hash as $type => $type_sources) {
 unlink(H."../tmp/grabber_lock");
 
 function insert_to_db($data) {
-	$req = Mysql::query("SELECT `data_id` FROM `vk_grabber_data_index` WHERE 
-		`source_id` = '".Mysql::escape($data->source_id)."' AND 
-		`source_type` = '".Mysql::escape($data->source_type)."' AND 
-		`remote_id` = '".Mysql::escape($data->remote_id)."'");
-	
-	$data_id = $req->num() ? $req->result() : 0;
+	if ($data->source_type == 'INSTAGRAM') {
+		$req = Mysql::query("SELECT `data_id`, `source_id` FROM `vk_grabber_data_index` WHERE 
+			`source_type` = '".Mysql::escape($data->source_type)."' AND 
+			`remote_id` = '".Mysql::escape($data->remote_id)."'");
+	} else {
+		$req = Mysql::query("SELECT `data_id`, `source_id` FROM `vk_grabber_data_index` WHERE 
+			`source_id` = '".Mysql::escape($data->source_id)."' AND 
+			`source_type` = '".Mysql::escape($data->source_type)."' AND 
+			`remote_id` = '".Mysql::escape($data->remote_id)."'");
+	}
+	$old_record = $req->num() ? $req->fetch() : false;
 	
 	$good = 0;
-	if (!$data_id) {
+	$data_id = 0;
+	$source_id = $data->source_id;
+	
+	if (!$old_record) {
 		++$good;
 		$data_id = Mysql::query("
 			INSERT INTO `vk_grabber_data` SET
@@ -575,6 +635,8 @@ function insert_to_db($data) {
 				`attaches`		= '".Mysql::escape(gzdeflate(serialize($data->attaches)))."'
 		")->id();
 	} else {
+		$source_id = $old_record['source_id'];
+		$data_id = $old_record['data_id'];
 		Mysql::query("
 			UPDATE `vk_grabber_data` SET
 				`text`			= '".Mysql::escape($data->text)."', 
@@ -587,7 +649,7 @@ function insert_to_db($data) {
 	
 	Mysql::query("
 		INSERT INTO `vk_grabber_data_index` SET
-			`source_id`		= '".Mysql::escape($data->source_id)."', 
+			`source_id`		= '".Mysql::escape($source_id)."', 
 			`source_type`	= '".Mysql::escape($data->source_type)."', 
 			`remote_id`		= '".Mysql::escape($data->remote_id)."', 
 			`data_id`		= ".$data_id.", 
