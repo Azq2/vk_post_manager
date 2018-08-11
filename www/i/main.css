@@ -508,6 +508,10 @@ li {
     font-family: 'Goudy Old Style External';
     src: url('/static/fonts/GOUDOS.ttf');
 }
+@font-face {
+    font-family: 'Arial External';
+    src: url('/static/fonts/Arial.ttf');
+}
 .meme-textbox {
 	position: absolute;
 	top: 0;

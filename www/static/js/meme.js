@@ -12,11 +12,12 @@ var FONTS = {
 	IMPACT:		'Impact, ImpactExternal', 
 	GOUDY:		'"Goudy Old Style", "Goudy Old Style External"', 
 	TAHOMA:		'Tahoma', 
-	ARIAL:		'Arial'
+	ARIAL:		'Arial, "Arial External"'
 };
 
 var REQUIRED_FONTS = {
 	"10px Impact":				"10px ImpactExternal", 
+	"10px Arial":				"10px 'Arial External'", 
 	"10px 'Goudy Old Style'":	"10px 'Goudy Old Style External'"
 };
 
@@ -288,7 +289,7 @@ var tpl = {
 			'<div class="wrapper">' + 
 				'<div class="row grey">' + 
 					'<img src="/i/img/spinner2.gif" alt="" width="16" height="16" class="m" /> ' + 
-					'<span class="m">Загружаем шрифт Impact...</span>' + 
+					'<span class="m">Загружаем шрифты...</span>' + 
 				'</div>' + 
 			'</div>';
 		return html;
