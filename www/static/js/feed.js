@@ -259,7 +259,8 @@ var VkFeed = Class({
 			result.data.el.find('.js-file_url').val(findBestThumb(result.data.att.thumbs, 99999).src);
 			result.data.el.find('.js-file_url_btn').trigger('click', {
 				cover:	result.image, 
-				data:	result.data.att
+				data:	result.data.att, 
+				offset:	result.options.offset
 			});
 			
 			var top = result.data.el.offset().top;

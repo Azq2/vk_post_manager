@@ -16,6 +16,7 @@ switch ($type) {
 			$documents	= isset($_REQUEST['documents']) ? $_REQUEST['documents'] : [];
 			$files		= isset($_REQUEST['files']) ? $_REQUEST['files'] : [];
 			$cover		= isset($_FILES['cover']) ? $_FILES['cover'] : [];
+			$offset		= isset($_REQUEST['offset']) ? (int) $_REQUEST['offset'] : 0;
 			
 			$cover_path = false;
 			if ($cover) {
@@ -39,7 +40,8 @@ switch ($type) {
 					'documents'	=> $documents, 
 					'files'		=> $files, 
 					'gid'		=> $gid, 
-					'cover'		=> $cover_path
+					'cover'		=> $cover_path, 
+					'offset'	=> $offset
 				]);
 				
 				$id = md5($msg);

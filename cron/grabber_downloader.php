@@ -68,7 +68,7 @@ while (true) {
 						
 						if (in_array($mime, $image_types)) {
 							if ($cover) {
-								$error = image_watermark($tmp_file, $cover);
+								$error = image_watermark($tmp_file, $cover, $queue['offset']);
 								if ($error) {
 									unlink($tmp_file);
 									$queue['out']['error'] = $error;
@@ -115,7 +115,7 @@ while (true) {
 						break;
 					} else {
 						if ($cover) {
-							$error = image_watermark($tmp_file, $cover);
+							$error = image_watermark($tmp_file, $cover, $queue['offset']);
 							if ($error) {
 								unlink($tmp_file);
 								$queue['out']['error'] = $error;
@@ -219,14 +219,19 @@ while (true) {
 		break;
 }
 
-function image_watermark($tmp_file, $cover) {
+function image_watermark($tmp_file, $cover, $offset) {
 	$image = imagecreatefromfile($tmp_file);
 	if (!$image)
 		return 'GD не смог откыть '.$img;
 	
-//	imagesavealpha($image, true);
-//	imagealphablending($image, true);
-	imagecopyresampled($image, $cover, 0, 0, 0, 0, imagesx($image), imagesy($image), imagesx($cover), imagesy($cover));
+	if (imagesy($image) < imagesy($cover)) {
+		$new_image = imagecreatetruecolor(imagesx($cover), imagesy($cover));
+		imagecopyresampled($new_image, $image, 0, $offset, 0, 0, imagesx($image), imagesy($image), imagesx($image), imagesy($image));
+		imagecopyresampled($new_image, $cover, 0, 0, 0, 0, imagesx($new_image), imagesy($new_image), imagesx($cover), imagesy($cover));
+		$image = $new_image;
+	} else {
+		imagecopyresampled($image, $cover, 0, 0, 0, 0, imagesx($image), imagesy($image), imagesx($cover), imagesy($cover));
+	}
 	
 	if (!imagepng($image, $tmp_file))
 		return 'GD не смог сохранить '.$img;

@@ -2,6 +2,12 @@ body {
 	margin: 0
 }
 
+canvas {
+	margin: 0;
+	padding: 0;
+	border: none;
+}
+
 .post-edit .post-pic {
 	display: block !important;
 	width: auto !important;
@@ -515,7 +521,7 @@ li {
 	font-size: 20px;
 }
 
-.meme canvas {
+.meme-canvas_wrap {
 	box-shadow: 0 0 7px rgba(93, 109, 157, 0.9)
 }
 

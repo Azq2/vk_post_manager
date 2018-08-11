@@ -77,6 +77,7 @@ $.urlUploader = function (options) {
 		images:			[], 
 		documents:		[], 
 		cover:			false, 
+		coverOffset:	false, 
 		onStateChanged:	false, 
 		onDone:			false, 
 		onError:		false, 
@@ -94,7 +95,8 @@ $.urlUploader = function (options) {
 				images:			options.images, 
 				documents:		options.documents, 
 				type:			"url", 
-				cover:			options.cover
+				cover:			options.cover, 
+				offset:			options.coverOffset
 			}
 		}
 		
@@ -176,9 +178,10 @@ function initForm(el) {
 			console.log(extra);
 			file.el.trigger('file_upload_start');
 			$.urlUploader({
-				action:		file.action, 
-				files:		[file.url], 
-				cover:		extra && extra.cover, 
+				action:			file.action, 
+				files:			[file.url], 
+				cover:			extra && extra.cover, 
+				coverOffset:	extra && extra.offset, 
 				
 				onError: function (err) {
 					if (file.deleted)
@@ -204,9 +207,10 @@ function initForm(el) {
 					file.done = true;
 					file.el.trigger('file_upload_end');
 					file.el.trigger('file_uploaded', {
-						file: file, 
-						response: res, 
-						data: extra && extra.data
+						file:		file, 
+						response:	res, 
+						data:		extra && extra.data, 
+						offset:		extra && extra.offset, 
 					});
 					file.el.find('.js-file_delete').click();
 				}
