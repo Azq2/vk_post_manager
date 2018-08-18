@@ -12,12 +12,14 @@ var FONTS = {
 	IMPACT:		'Impact, ImpactExternal', 
 	GOUDY:		'"Goudy Old Style", "Goudy Old Style External"', 
 	TAHOMA:		'Tahoma', 
-	ARIAL:		'Arial, "Arial External"'
+	ARIAL:		'Arial, "Arial External"', 
+	TIMES:		'"Times New Roman", "Times New Roman External"'
 };
 
 var REQUIRED_FONTS = {
 	"10px Impact":				"10px ImpactExternal", 
-	"10px Arial":				"10px 'Arial External'", 
+	// "10px Arial":			"10px 'Arial External'", 
+	"10px 'Times New Roman'":		"10px 'Times New Roman External'", 
 	"10px 'Goudy Old Style'":	"10px 'Goudy Old Style External'"
 };
 
@@ -44,7 +46,7 @@ var TEXTBOXES_CONFIG = {
 		fontSize:	20, 
 		fontStroke:	0, 
 		fontAlpha:	100, 
-		font:		FONTS.ARIAL, 
+		font:		FONTS.TIMES, 
 		
 		edit:		{
 			fontSizeAndColor:	true, 
@@ -70,7 +72,7 @@ var TEXTBOXES_CONFIG = {
 		fontSize:	20, 
 		fontStroke:	0, 
 		fontAlpha:	100, 
-		font:		FONTS.ARIAL, 
+		font:		FONTS.TIMES, 
 		
 		edit:		{
 			fontSizeAndColor:	true, 

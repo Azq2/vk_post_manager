@@ -20,17 +20,17 @@ set_error_handler(function ($errno, $errstr, $errfile, $errline) {
 		E_STRICT				=> "strict", 
 		E_RECOVERABLE_ERROR		=> "error", 
 	];
-	file_put_contents("handler.log", "[".date("d-m-Y H:i:s")."] [".$err[$errno]."] $errstr at $errfile:$errline\n", FILE_APPEND | LOCK_EX);
+	file_put_contents(H."../logs/handler.log", "[".date("d-m-Y H:i:s")."] [".$err[$errno]."] $errstr at $errfile:$errline\n", FILE_APPEND | LOCK_EX);
 }, E_ALL);
 
 // Логгируем ошибки и исключения
 set_exception_handler(function ($e) {
-	file_put_contents("handler.log", "[".date("d-m-Y H:i:s")."] [exception] $e\n", FILE_APPEND | LOCK_EX);
+	file_put_contents(H."../logs/handler.log", "[".date("d-m-Y H:i:s")."] [exception] $e\n", FILE_APPEND | LOCK_EX);
 });
 
 // Логгируем весь вывод скрипта
 ob_start(function ($b) {
-	file_put_contents("handler.log", $b, FILE_APPEND | LOCK_EX);
+	file_put_contents(H."../logs/handler.log", $b, FILE_APPEND | LOCK_EX);
 	return $b;
 }, 1);
 
