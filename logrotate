@@ -1,0 +1,14 @@
+/home/azq2/apps/xujxuj/logs/*.log {
+	daily
+	missingok
+	rotate 3
+	compress
+	delaycompress
+	notifempty
+	create 0666 azq2 www-data
+	sharedscripts
+	endscript
+	postrotate
+	endscript
+}
+
