@@ -1,9 +1,9 @@
 <?php
-namespace Z\Catlist\Game;
+namespace Z\Catagochi\Settings;
 
 use \Mysql;
 
-class Settings {
+class Model {
 	protected static $instance;
 	protected static $defaults = [
 		'max_cats' => [
@@ -117,7 +117,7 @@ class Settings {
 	
 	public static function instance() {
 		if (!self::$instance)
-			self::$instance = new Settings;
+			self::$instance = new Model;
 		return self::$instance;
 	}
 }

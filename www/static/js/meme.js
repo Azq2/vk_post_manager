@@ -724,9 +724,10 @@ function MemeEditor(el, options) {
 			render_height = 0, 
 			render_width = 0, 
 			render_lines = [], 
-			font_size = Math.ceil(tb.fontSize.val() * (opts.width / MEME_WIDTH)), 
+			actual_meme_width = MEME_HEIGHT * (opts.width / opts.height), 
+			font_size = Math.ceil(tb.fontSize.val() * (opts.width / actual_meme_width)), 
 			font_str = (tb.bold.prop("checked") ? "bold " : "") + font_size + "px " + tb.font.val(), 
-			padding = Math.ceil(MEME_TEXT_BLOCK_PAD * (opts.width / MEME_WIDTH)), 
+			padding = Math.ceil(MEME_TEXT_BLOCK_PAD * (opts.width / actual_meme_width)), 
 			max_width = opts.width - padding * 2;
 		
 		ctx.font = font_str;

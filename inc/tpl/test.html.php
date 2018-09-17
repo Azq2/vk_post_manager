@@ -17,9 +17,9 @@ $(function () {
 		};
 		a.readAsDataURL(data.image);
 	}).memeEditor({
-		image: "https://pp.userapi.com/c840334/v840334201/4be66/fLGcqne-oVw.jpg", 
-		width: 700, 
-		height: 435
+		image: "https://pp.userapi.com/c846522/v846522142/e1e09/b2blu-tbUEo.jpg", 
+		width: 720, 
+		height: 960
 	});
 });
 //

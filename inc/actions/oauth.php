@@ -67,18 +67,27 @@ if ($type && $access_token) {
 			exit;
 		}
 	} else {
+		$vk = [];
+		foreach (['VK_SCHED', 'VK'] as $type) {
+			$q = new Http;
+			$q->vkSetUser($type);
+			$res = $q->vkApi("users.get");
+			$vk[$type] = isset($res->response) && $res->response ? $res->response[0]->first_name.' '.$res->response[0]->last_name : '- не установлено -';
+		}
+		
 		mk_page(array(
 			'title' => 'Активность', 
 			'content' => Tpl::render("oauth.html", [
 				'ok' => isset($_GET['ok']), 
-				'vk_oauth' => 'https://oauth.vk.com/authorize?'.http_build_query([
+				'vk_users'				=> $vk, 
+				'vk_oauth'				=> 'https://oauth.vk.com/authorize?'.http_build_query([
 					'client_id'		=> VK_APP_ID, 
 					'redirect_uri'	=> 'https://oauth.vk.com/blank.html', 
 					'display'		=> 'mobile', 
 					'scope'			=> 'offline wall groups photos docs', 
 					'response_type'	=> 'code'
 				]), 
-				'ok_oauth' => 'https://connect.ok.ru/oauth/authorize?'.http_build_query([
+				'ok_oauth'				=> 'https://connect.ok.ru/oauth/authorize?'.http_build_query([
 					'client_id'		=> OK_APP_ID, 
 					'response_type'	=> 'code', 
 					'redirect_uri'	=> $redirect_url, 
@@ -87,7 +96,7 @@ if ($type && $access_token) {
 					'response_type'	=> 'code', 
 					'state'			=> 'OK'
 				]), 
-				'instagram_oauth' => 'https://api.instagram.com/oauth/authorize/?'.http_build_query([
+				'instagram_oauth'		=> 'https://api.instagram.com/oauth/authorize/?'.http_build_query([
 					'client_id'		=> INSTAGRAM_APP_ID, 
 					'response_type'	=> 'code', 
 					'redirect_uri'	=> $redirect_url, 

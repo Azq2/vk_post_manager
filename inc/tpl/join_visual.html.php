@@ -38,45 +38,38 @@
 <script type="text/javascript">
 require(["amcharts.serial"], function (AmCharts) {
 	var chart = AmCharts.makeChart("chartdiv", {
-		"type":				"serial",
-		"theme":			"light",
-		"dataProvider":		<?= json_encode($stat) ?>,
+		"type": "serial",
+		"theme": "light",
+		"marginRight": 80,
+		"autoMarginOffset": 20,
+		"marginTop": 7,
+		"dataProvider": <?= json_encode($stat) ?>,
+		"valueAxes": [{
+			"axisAlpha": 0.2,
+			"dashLength": 1,
+			"position": "left"
+		}],
+		"mouseWheelZoomEnabled": true,
+		"graphs": <?= json_encode($graphs) ?>,
 		"chartScrollbar": {
-			"autoGridCount":	true,
-			"scrollbarHeight":	40
+			"autoGridCount": true,
+			"graph": "g1",
+			"scrollbarHeight": 40
 		},
-		"categoryField":		"date",
+		"chartCursor": {
+		   "limitToGraph":"g1"
+		},
+		"categoryField": "date",
 		"categoryAxis": {
-			"parseDates":		true,
-			"axisColor":		"#DADADA",
-			"dashLength":		1,
-			"minorGridEnabled":	true
+			"parseDates": true,
+			"axisColor": "#DADADA",
+			"dashLength": 1,
+			"minorGridEnabled": true
 		},
-		"graphs": <?= json_encode($graphs) ?>
+		"export": {
+			"enabled": true
+		}
 	});
-
-	var chartCursor = new AmCharts.ChartCursor();
-	chart.addChartCursor(chartCursor);
-
-	var legend = new AmCharts.AmLegend();
-	legend.align = "center";
-	legend.markerType = "circle";
-	chart.addLegend(legend, "chart_legend");
-
-	var valueAxis = new AmCharts.ValueAxis();
-	valueAxis.axisAlpha = 0;
-	valueAxis.inside = true;
-	valueAxis.gridAlpha = 0.1;
-	valueAxis.gridCount = 15;
-	chart.addValueAxis(valueAxis);
-
-	var categoryAxis = chart.categoryAxis;
-	categoryAxis.parseDates = false;
-	categoryAxis.dashLength = 1;
-	categoryAxis.gridAlpha = 0.15;
-	categoryAxis.axisColor = "#DADADA";
-	categoryAxis.gridCount = 15;
-	categoryAxis.autoGridCount = false;
 });
 </script>
 	

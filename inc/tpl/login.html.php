@@ -1,9 +1,9 @@
 
 <div class="pad_t"></div>
-	
+
 <div class="wrapper bord">
 	<div class="row header cursor">
-		XujXuj SMM Manager 9000
+		🐾 Котопубликовалка
 	</div>
 	
 	<div class="row" id="form">

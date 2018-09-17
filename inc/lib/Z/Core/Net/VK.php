@@ -71,7 +71,7 @@ class VK {
 	
 	public function exec($method, $args = []) {
 		$sig = '';
-		$args['v'] = '5.63';
+		$args['v'] = '5.85';
 		$args['lang'] = 'ru';
 		
 		if (isset($_REQUEST['vk_captcha_key']))

@@ -4,7 +4,7 @@ if (!\Z\User::instance()->can('user')) {
 	exit;
 }
 
-$ALLOWED_APPS = array('catlist');
+$ALLOWED_APPS = array('catagochi');
 
 $sub_action = array_val($_GET, 'sa', 'index');
 

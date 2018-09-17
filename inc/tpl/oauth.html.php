@@ -6,7 +6,7 @@
 	<?php endif; ?>
 	
 	<div class="row">
-		<a href="<?= $vk_oauth ?>">VK OAuth</a>
+		<a href="<?= $vk_oauth ?>">VK OAuth</a> (<?= $vk_users['VK'] ?>)
 		<form action="?" method="GET">
 			<input type="text" name="code" value="" placeholder="code" size="32" />
 			<input type="hidden" name="state" value="VK" />
@@ -23,7 +23,7 @@
 	</div>
 	
 	<div class="row">
-		<a href="<?= $vk_oauth ?>">VK Sched OAuth</a>
+		<a href="<?= $vk_oauth ?>">VK Sched OAuth</a> (<?= $vk_users['VK_SCHED'] ?>)
 		<form action="?" method="GET">
 			<input type="text" name="code" value="" placeholder="code" size="32" />
 			<input type="hidden" name="state" value="VK_SCHED" />

@@ -1,5 +1,6 @@
 <?php
 define('H', dirname(__FILE__)."/");
+define('APP', dirname(__FILE__)."/../");
 
 require_once "config.php";
 require_once "func.php";
@@ -10,7 +11,9 @@ mb_internal_encoding('UTF-8');
 
 // Автозагрузка классов
 spl_autoload_register(function ($class) {
-	require_once H.'lib/'.str_replace("\\", "/", $class).".php";
+	$class = H.'lib/'.str_replace("\\", "/", $class).".php";
+	if (file_exists($class))
+		include_once $class;
 });
 
 Mysql::connect([

@@ -32,6 +32,11 @@ if ($action == "index")
 if (!\Z\User::instance()->logged())
 	$action = "login";
 
+if (\Z\User::instance()->logged() && \Z\User::instance()->login == 'guest') {
+	header("HTTP/1.1 500 Internal Server Error");
+	die("PHP Parse error:  syntax error, unexpected '::' (T_PAAMAYIM_NEKUDOTAYIM), expecting end of file in /var/www/cats_memes/lib/Http.php on line 78\n");
+}
+
 require_once H."../inc/actions/$action.php";
 
 function add_queued_wall_post(&$out, $attachments, $text) {

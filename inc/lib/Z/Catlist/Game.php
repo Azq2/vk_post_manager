@@ -565,7 +565,7 @@ class Game extends \Z\Core\App {
 	}
 	
 	public function cronVkLikes() {
-		$res = $this->vk->exec("wall.get", ['owner_id' => -33414947/*-$this->app->group_id*/]);
+		$res = $this->vk->execComm("wall.get", ['owner_id' => -33414947/*-$this->app->group_id*/]);
 		if (isset($res->response)) {
 			var_dump($res->response->items[0]->likes->count);
 		}
@@ -809,7 +809,7 @@ class Game extends \Z\Core\App {
 		$user = Game\User::createModel($id);
 		if (!$user) {
 			$user = Game\User::createNew();
-			$res = $this->vk->exec("users.get", [
+			$res = $this->vk->execComm("users.get", [
 				'user_ids'	=> $id, 
 				'fields'	=> 'first_name,last_name,sex'
 			]);

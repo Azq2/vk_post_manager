@@ -428,6 +428,8 @@ foreach ($sources_hash as $type => $type_sources) {
 				$q->timeout(10, 30);
 				
 				$ban_errors = 10;
+				$max_tries = 20;
+				
 				while (true) {
 					$res = $q->exec($page_url);
 					if ($res->code == 200)
@@ -438,12 +440,16 @@ foreach ($sources_hash as $type => $type_sources) {
 						echo "wait minute...\n";
 						sleep(60);
 						--$ban_errors;
+					} else if ($res->code == 404) {
+						echo "$page_url - 404\n";
+						break;
 					} else {
 						var_dump($res->body);
 					}
 					
-					if (!$ban_errors)
+					if (!$ban_errors || !$max_tries)
 						break;
+					--$max_tries;
 				}
 				
 				if (!$ban_errors) {
@@ -505,6 +511,8 @@ foreach ($sources_hash as $type => $type_sources) {
 							$ajax_topic_url = "https://www.instagram.com/p/$topic_id/?__a=1";
 							
 							$ban_errors = 10;
+							$max_tries = 20;
+							
 							while (true) {
 								$res = $q->exec($ajax_topic_url);
 								if ($res->code == 200)
@@ -515,12 +523,16 @@ foreach ($sources_hash as $type => $type_sources) {
 									echo "wait minute...\n";
 									sleep(60);
 									--$ban_errors;
+								} else if ($res->code == 404) {
+									echo "$ajax_topic_url - 404\n";
+									break;
 								} else {
 									var_dump($res->body);
 								}
 								
-								if (!$ban_errors)
+								if (!$ban_errors || !$max_tries)
 									break;
+								--$max_tries;
 							}
 							
 							if (!$ban_errors) {
