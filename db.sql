@@ -7,7 +7,7 @@ CREATE TABLE `vkapp` (
   `handshake` varchar(256) NOT NULL,
   `secret` varchar(64) NOT NULL,
   `name` varchar(64) NOT NULL,
-  `app` varchar(1024) NOT NULL
+  `app` varchar(64) NOT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 
 CREATE TABLE `vkapp_catlist_cats` (
@@ -109,15 +109,10 @@ CREATE TABLE `vk_comm_users` (
 
 CREATE TABLE `vk_grabber_blacklist` (
   `group_id` int(10) UNSIGNED NOT NULL,
-  `source_id` varchar(64) NOT NULL,
-  `source_type` varchar(32) NOT NULL,
-  `remote_id` varchar(64) NOT NULL
-) ENGINE=InnoDB DEFAULT CHARSET=utf8;
-
-CREATE TABLE `vk_grabber_blacklist2` (
-  `group_id` int(10) UNSIGNED NOT NULL,
-  `object` varchar(255) NOT NULL
-) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+  `source_type` int(10) UNSIGNED NOT NULL,
+  `remote_id` varchar(64) NOT NULL,
+  `time` int(10) UNSIGNED NOT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 ROW_FORMAT=COMPACT;
 
 CREATE TABLE `vk_grabber_data` (
   `id` bigint(20) UNSIGNED NOT NULL,
@@ -127,8 +122,9 @@ CREATE TABLE `vk_grabber_data` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 
 CREATE TABLE `vk_grabber_data_index` (
-  `source_id` varchar(64) NOT NULL,
-  `source_type` varchar(32) NOT NULL,
+  `id` int(10) UNSIGNED NOT NULL,
+  `source_id` int(10) UNSIGNED NOT NULL,
+  `source_type` int(10) UNSIGNED NOT NULL,
   `remote_id` varchar(64) NOT NULL,
   `time` int(10) UNSIGNED NOT NULL,
   `likes` int(10) UNSIGNED NOT NULL DEFAULT '0',
@@ -136,7 +132,8 @@ CREATE TABLE `vk_grabber_data_index` (
   `comments` int(10) UNSIGNED NOT NULL DEFAULT '0',
   `images_cnt` int(10) UNSIGNED NOT NULL DEFAULT '0',
   `gifs_cnt` int(10) UNSIGNED NOT NULL DEFAULT '0',
-  `data_id` int(10) UNSIGNED NOT NULL DEFAULT '0'
+  `data_id` int(10) UNSIGNED NOT NULL DEFAULT '0',
+  `post_type` tinyint(1) UNSIGNED NOT NULL DEFAULT '0'
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 
 CREATE TABLE `vk_grabber_data_owners` (
@@ -146,12 +143,18 @@ CREATE TABLE `vk_grabber_data_owners` (
   `avatar` varchar(1024) NOT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 
-CREATE TABLE `vk_grabber_sources` (
-  `id` varchar(255) NOT NULL,
-  `type` varchar(16) NOT NULL,
-  `group_id` int(11) NOT NULL DEFAULT '0',
+CREATE TABLE `vk_grabber_selected_sources` (
+  `id` int(10) UNSIGNED NOT NULL,
+  `source_id` int(10) UNSIGNED NOT NULL,
+  `group_id` bigint(11) NOT NULL DEFAULT '0',
   `name` varchar(255) NOT NULL,
   `enabled` tinyint(3) UNSIGNED NOT NULL DEFAULT '1'
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+
+CREATE TABLE `vk_grabber_sources` (
+  `id` int(10) UNSIGNED NOT NULL,
+  `source_type` int(10) UNSIGNED NOT NULL,
+  `source_id` varchar(255) NOT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 
 CREATE TABLE `vk_groups` (
@@ -248,7 +251,8 @@ CREATE TABLE `vk_special_posts` (
 
 
 ALTER TABLE `vkapp`
-  ADD PRIMARY KEY (`group_id`);
+  ADD PRIMARY KEY (`group_id`),
+  ADD UNIQUE KEY `app` (`app`);
 
 ALTER TABLE `vkapp_catlist_cats`
   ADD PRIMARY KEY (`id`);
@@ -284,23 +288,30 @@ ALTER TABLE `vk_comm_users`
   ADD PRIMARY KEY (`cid`,`uid`);
 
 ALTER TABLE `vk_grabber_blacklist`
-  ADD PRIMARY KEY (`group_id`,`source_id`,`source_type`,`remote_id`);
-
-ALTER TABLE `vk_grabber_blacklist2`
-  ADD PRIMARY KEY (`group_id`,`object`);
+  ADD PRIMARY KEY (`group_id`,`source_type`,`remote_id`);
 
 ALTER TABLE `vk_grabber_data`
   ADD PRIMARY KEY (`id`);
 
 ALTER TABLE `vk_grabber_data_index`
-  ADD PRIMARY KEY (`source_id`,`source_type`,`remote_id`) USING BTREE,
-  ADD KEY `source_id` (`source_type`,`source_id`,`time`) USING BTREE;
+  ADD PRIMARY KEY (`id`),
+  ADD UNIQUE KEY `source_type-remote_id` (`source_type`,`remote_id`) USING BTREE,
+  ADD KEY `source_id-only_text` (`source_id`,`post_type`) USING BTREE,
+  ADD KEY `time` (`time`),
+  ADD KEY `reposts` (`reposts`),
+  ADD KEY `likes` (`likes`),
+  ADD KEY `comments` (`comments`);
 
 ALTER TABLE `vk_grabber_data_owners`
   ADD PRIMARY KEY (`id`);
 
+ALTER TABLE `vk_grabber_selected_sources`
+  ADD PRIMARY KEY (`id`),
+  ADD UNIQUE KEY `source_id` (`source_id`,`group_id`);
+
 ALTER TABLE `vk_grabber_sources`
-  ADD PRIMARY KEY (`group_id`,`id`,`type`) USING BTREE;
+  ADD PRIMARY KEY (`id`),
+  ADD UNIQUE KEY `source_type` (`source_type`,`source_id`);
 
 ALTER TABLE `vk_groups`
   ADD PRIMARY KEY (`id`),
@@ -352,6 +363,12 @@ ALTER TABLE `vkapp_catlist_user_cats`
   MODIFY `id` int(10) UNSIGNED NOT NULL AUTO_INCREMENT;
 ALTER TABLE `vk_grabber_data`
   MODIFY `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT;
+ALTER TABLE `vk_grabber_data_index`
+  MODIFY `id` int(10) UNSIGNED NOT NULL AUTO_INCREMENT;
+ALTER TABLE `vk_grabber_selected_sources`
+  MODIFY `id` int(10) UNSIGNED NOT NULL AUTO_INCREMENT;
+ALTER TABLE `vk_grabber_sources`
+  MODIFY `id` int(10) UNSIGNED NOT NULL AUTO_INCREMENT;
 ALTER TABLE `vk_join_stat`
   MODIFY `id` int(10) UNSIGNED NOT NULL AUTO_INCREMENT;
 ALTER TABLE `vk_posts_queue`

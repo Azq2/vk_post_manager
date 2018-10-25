@@ -10,20 +10,75 @@ if (file_exists(H."../tmp/grabber_lock") && (isset($argv[1]) && $argv[1] != "loc
 }
 file_put_contents(H."../tmp/grabber_lock", 1);
 
-$sources_hash = [];
-$req = Mysql::query("SELECT * FROM `vk_grabber_sources`");
-while ($s = $req->fetch()) {
-	$sources_hash[$s['type']][$s['id']] = 1;
-	$sources_hash['VK'][-$s['group_id']] = 1; // Ещё и граббим свою группу
+// Граббим так же и свои группы
+$req = Mysql::query("SELECT * FROM `vk_groups`");
+$sources_selfgrab = [];
+while ($group = $req->fetch()) {
+	Mysql::query("
+		INSERT IGNORE INTO vk_grabber_sources SET
+		source_type = ?, 
+		source_id = ?
+	", \Z\Smm\Grabber::SOURCE_VK, -$group['id']);
+	$sources_selfgrab[-$group['id']] = true;
 }
 
+// Получаем все активные источники
+$sources_hash = [];
+$sources_disabled = [];
+
+$req = Mysql::query("SELECT * FROM `vk_grabber_sources`");
+while ($s = $req->fetch()) {
+	$is_active = isset($sources_selfgrab[$s['source_id']]) && $s['source_type'] == \Z\Smm\Grabber::SOURCE_VK;
+	if (!$is_active) {
+		$is_active = Mysql::query("SELECT MAX(enabled) FROM vk_grabber_selected_sources WHERE source_id = ?", $s['id'])
+			->result();
+	}
+	
+	if ($is_active)
+		$sources_hash[$s['source_type']][$s['source_id']] = $s;
+	else
+		$sources_disabled[] = $s;
+}
+
+echo "clean unclaimed posts...\n";
+foreach ($sources_disabled as $source) {
+	do {
+		$rows = Mysql::query("SELECT id, data_id FROM vk_grabber_data_index WHERE source_id = ? LIMIT 1000", $source['id'])
+			->fetchAll();
+		
+		$post_ids = array_map(function ($v) { return $v['id']; }, $rows);
+		$data_ids = array_map(function ($v) { return $v['data_id']; }, $rows);
+		
+		if ($rows) {
+			echo \Z\Smm\Grabber::$type2name[$source['source_type']]." ".$source['source_id'].": delete ".count($rows)." unclaimed posts...\n";
+			Mysql::query("DELETE FROM vk_grabber_data WHERE id IN (?)", $data_ids);
+			Mysql::query("DELETE FROM vk_grabber_data_index WHERE id IN (?)", $post_ids);
+		}
+	} while ($rows);
+}
+
+echo "clean old posts...\n";
+do {
+	$rows = Mysql::query("SELECT id, data_id FROM vk_grabber_data_index WHERE source_type = ? AND grab_time <= ? LIMIT 1000", \Z\Smm\Grabber::SOURCE_INSTAGRAM, time() - 3600 * 24 * 7)
+		->fetchAll();
+	
+	$post_ids = array_map(function ($v) { return $v['id']; }, $rows);
+	$data_ids = array_map(function ($v) { return $v['data_id']; }, $rows);
+	
+	if ($rows) {
+		echo "delete ".count($rows)." old instagram posts...\n";
+		Mysql::query("DELETE FROM vk_grabber_data WHERE id IN (?)", $data_ids);
+		Mysql::query("DELETE FROM vk_grabber_data_index WHERE id IN (?)", $post_ids);
+	}
+} while ($rows);
+
 foreach ($sources_hash as $type => $type_sources) {
-	echo "======================== $type ========================\n";
+	echo "======================== ".\Z\Smm\Grabber::$type2name[$type]." ========================\n";
 	
 	$q = new Http;
 	
 	// Граббер VK
-	if ($type == 'VK') {
+	if ($type == \Z\Smm\Grabber::SOURCE_VK && 0) {
 		$api_limit = 25;
 		$chunk = 100;
 		$offset = 0;
@@ -35,7 +90,7 @@ foreach ($sources_hash as $type => $type_sources) {
 			$good = 0;
 			$i = 0;
 			$code_chunk = [];
-			foreach ($type_sources as $id => $s) {
+			foreach ($type_sources as $id => $source) {
 				echo "COMM ID: $id\n";
 				if (!isset($ended[$id])) {
 					$code_chunk[] = '
@@ -54,9 +109,11 @@ foreach ($sources_hash as $type => $type_sources) {
 						$res = $q->vkApi("execute", [
 							"code" => 'return {'.implode(",", $code_chunk).'};'
 						]);
-						if (!$res || !isset($res->response))
+						if (!$res || !isset($res->response) || $res->execute_errors) {
 							echo "err!\n";
-						else
+							echo json_encode($res, JSON_PRETTY_PRINT);
+							sleep(60 * 30);
+						} else
 							break;
 					}
 					$code_chunk = [];
@@ -82,7 +139,7 @@ foreach ($sources_hash as $type => $type_sources) {
 							$used_owners[$item->owner_id] = 1;
 							
 							$ok = insert_to_db((object) [
-								'source_id'			=> $item->owner_id, 
+								'source_id'			=> $type_sources[$item->owner_id]['id'], 
 								'source_type'		=> $type, 
 								'remote_id'			=> $item->owner_id."_".$item->id, 
 								
@@ -139,6 +196,7 @@ foreach ($sources_hash as $type => $type_sources) {
 						
 						echo "OK: #".$item->id."\n";
 					}
+					sleep(5);
 				}
 			}
 			$offset += $chunk;
@@ -149,7 +207,7 @@ foreach ($sources_hash as $type => $type_sources) {
 	}
 	
 	// Граббер OK
-	elseif ($type == 'OK') {
+	elseif ($type == \Z\Smm\Grabber::SOURCE_OK) {
 		$ended = [];
 		$page = 0;
 		while (true) {
@@ -158,7 +216,7 @@ foreach ($sources_hash as $type => $type_sources) {
 			echo "PAGE: $page\n";
 			
 			$good = 0;
-			foreach ($type_sources as $id => $s) {
+			foreach ($type_sources as $id => $source) {
 				if (isset($ended[$id]))
 					continue;
 				
@@ -361,7 +419,7 @@ foreach ($sources_hash as $type => $type_sources) {
 					}
 					
 					$ok = insert_to_db((object) [
-						'source_id'			=> $id, 
+						'source_id'			=> $source['id'], 
 						'source_type'		=> $type, 
 						'remote_id'			=> $topic_id, 
 						
@@ -394,7 +452,7 @@ foreach ($sources_hash as $type => $type_sources) {
 	}
 	
 	// Граббер INSTAGRAM
-	elseif ($type == 'INSTAGRAM') {
+	elseif ($type == \Z\Smm\Grabber::SOURCE_INSTAGRAM) {
 		$ended = [];
 		$page = 0;
 		
@@ -406,7 +464,7 @@ foreach ($sources_hash as $type => $type_sources) {
 			echo "PAGE: $page\n";
 			
 			$good = 0;
-			foreach ($type_sources as $id => $s) {
+			foreach ($type_sources as $id => $source) {
 				if (isset($ended[$id]))
 					continue;
 				
@@ -581,7 +639,7 @@ foreach ($sources_hash as $type => $type_sources) {
 						}
 						
 						$ok = insert_to_db((object) [
-							'source_id'			=> $id, 
+							'source_id'			=> $source['id'], 
 							'source_type'		=> $type, 
 							'remote_id'			=> $topic_id, 
 							
@@ -622,16 +680,9 @@ foreach ($sources_hash as $type => $type_sources) {
 unlink(H."../tmp/grabber_lock");
 
 function insert_to_db($data) {
-	if ($data->source_type == 'INSTAGRAM') {
-		$req = Mysql::query("SELECT `data_id`, `source_id` FROM `vk_grabber_data_index` WHERE 
-			`source_type` = '".Mysql::escape($data->source_type)."' AND 
-			`remote_id` = '".Mysql::escape($data->remote_id)."'");
-	} else {
-		$req = Mysql::query("SELECT `data_id`, `source_id` FROM `vk_grabber_data_index` WHERE 
-			`source_id` = '".Mysql::escape($data->source_id)."' AND 
-			`source_type` = '".Mysql::escape($data->source_type)."' AND 
-			`remote_id` = '".Mysql::escape($data->remote_id)."'");
-	}
+	$req = Mysql::query("SELECT `data_id`, `source_id` FROM `vk_grabber_data_index` WHERE 
+		`source_type` = '".Mysql::escape($data->source_type)."' AND 
+		`remote_id` = '".Mysql::escape($data->remote_id)."'");
 	$old_record = $req->num() ? $req->fetch() : false;
 	
 	$good = 0;
@@ -659,6 +710,14 @@ function insert_to_db($data) {
 		");
 	}
 	
+	$post_type = 0;
+	if ($data->images_cnt > 0 && $data->gifs_cnt > 0)
+		$post_type = 3;
+	elseif ($data->images_cnt > 0)
+		$post_type = 2;
+	elseif ($data->gifs_cnt > 0)
+		$post_type = 1;
+	
 	Mysql::query("
 		INSERT INTO `vk_grabber_data_index` SET
 			`source_id`		= '".Mysql::escape($source_id)."', 
@@ -666,14 +725,17 @@ function insert_to_db($data) {
 			`remote_id`		= '".Mysql::escape($data->remote_id)."', 
 			`data_id`		= ".$data_id.", 
 			`time`			= ".$data->time.", 
+			`grab_time`		= ".time().", 
 			`likes`			= ".$data->likes.", 
 			`comments`		= ".$data->comments.", 
 			`reposts`		= ".$data->reposts.", 
 			`images_cnt`	= ".$data->images_cnt.", 
-			`gifs_cnt`		= ".$data->gifs_cnt."
+			`gifs_cnt`		= ".$data->gifs_cnt.", 
+			`post_type`		= ".$post_type."
 		ON DUPLICATE KEY UPDATE
 			`data_id`		= VALUES(`data_id`), 
 			`time`			= VALUES(`time`), 
+			`grab_time`		= VALUES(`grab_time`), 
 			`likes`			= VALUES(`likes`), 
 			`comments`		= VALUES(`comments`), 
 			`reposts`		= VALUES(`reposts`), 

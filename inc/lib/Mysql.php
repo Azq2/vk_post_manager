@@ -103,11 +103,10 @@ class Mysql {
 			throw new Exception("MYSQL ERROR: ".$link->error.", QUERY: \n".$query."\n");
 		
 		if (self::$debug && !preg_match("/^\s*(FLUSH|EXPLAIN|SHOW|FLUSH)/i", $query)) {
-			$cost = self::query("SHOW SESSION STATUS LIKE 'Last_query_cost'")->result(1);
 			self::$queries[] = array(
 				'query' => $query, 
 				'time' => $end - $start, 
-				'cost' => $cost
+				'cost' => 0
 			);
 		}
 		

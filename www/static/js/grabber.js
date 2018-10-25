@@ -110,9 +110,7 @@ function init() {
 		
 		$.api("/?a=grabber&sa=blacklist", {
 			gid:			options.gid, 
-			source_id:		e.post.source_id, 
-			source_type:	e.post.source_type, 
-			remote_id:		e.post.id, 
+			id:				e.post.id, 
 			restore:		restore ? 1 : 0
 		}, function (res) {
 			el.removeAttr('disabled');
@@ -199,9 +197,7 @@ function init() {
 					// Блэклистим
 					$.api("?a=grabber&sa=blacklist", {
 						gid:			options.gid, 
-						source_id:		e.post.source_id, 
-						source_type:	e.post.source_type,
-						remote_id:		e.post.id
+						id:				e.post.id
 					});
 					
 					wrap.find('.js-post_toolbar').addClass('hide');
@@ -369,10 +365,12 @@ function loadPosts() {
 					var item = res.items[i];
 					item.n = remote_topics_offset + i - LOAD_CHUNK;
 					if (options.sort == "RAND")
-						exclude.push(item.time + '_' + item.remote_id);
+						exclude.push(item.id);
 					posts.push(item);
 				}
 				
+				onScroll();
+			} else if (res.blacklist_filtered && options.sort != "RAND") {
 				onScroll();
 			} else {
 				remote_topics_end = true;
@@ -388,7 +386,7 @@ function loadPosts() {
 		}
 	}).error(function () {
 		toggleSpinner(false);
-		setTimeout(loadPosts, 500);
+		setTimeout(loadPosts, 1000);
 	});
 }
 
