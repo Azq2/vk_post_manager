@@ -223,11 +223,15 @@ var tpl = {
 						'<img src="/i/img/comment.svg" class="m" width="16" height="16" /> <span class="darkblue">' + data.comments + '</span>&nbsp;&nbsp;&nbsp;' + 
 						'<img src="/i/img/repost.svg" class="m" width="16" height="16" /> <span class="darkblue">' + data.reposts + '</span>' + 
 					'</div>' + 
+					'<div class="js-post_next_date grey pad_t post-show_edit"></div>' + 
 					custom.toolbar + 
 				'</div>' + 
 			'</div>';
 		return html;
 	},
+	spinner: function (msg) {
+		return '<img src="/i/img/spinner2.gif" alt="" class="m" /> <span class="m">' + msg + '</span>';
+	}, 
 	period: function (period) {
 		return '<div class="grey center row">' + period + '</div>';
 	}
@@ -425,9 +429,35 @@ var VkFeed = Class({
 			
 			wrap.genericUploader();
 			
+			self.updateNextDate();
+			
 			var top = wrap.offset().top;
 			if (top < $(window).scrollTop() || top > $(window).scrollTop() + $(window).innerHeight())
 				$('html, body').scrollTop(top);
+		});
+	}, 
+	updateNextDate: function () {
+		var self = this;
+		
+		var post_next_date = self.wrap.find('.js-post_next_date');
+		post_next_date.html(tpl.spinner('Расчёт времени публикации...'));
+		
+		if (self.post_next_date_query)
+			self.post_next_date_query.abort();
+		
+		if (self.post_next_date_timeout) {
+			clearTimeout(self.post_next_date_timeout);
+			self.post_next_date_timeout = false;
+		}
+		
+		self.post_next_date_query = $.api("/?a=post/next_date", {
+			gid:			self.opts.gid
+		}, function (res) {
+			post_next_date.html('Дата публикации: ' + utils.getHumanDate(res.date));
+		}, function () {
+			self.post_next_date_timeout = setTimeout(function () {
+				self.updateNextDate();
+			}, 2000);
 		});
 	}, 
 	addAction: function (name, callback) {

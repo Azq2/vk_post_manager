@@ -41,7 +41,7 @@ if ($type && $access_token) {
 				'code'			=> $_GET['code'], 
 				'grant_type'	=> 'authorization_code'
 			]));
-		} else if ($_GET['state'] == 'VK' || $_GET['state'] == 'VK_SCHED') {
+		} else if ($_GET['state'] == 'VK' || $_GET['state'] == 'VK_SCHED' || $_GET['state'] == 'VK_GRABBER') {
 			curl_setopt($ch, CURLOPT_URL, "https://oauth.vk.com/access_token");
 			curl_setopt($ch, CURLOPT_POSTFIELDS, http_build_query([
 				'client_id'		=> VK_APP_ID, 
@@ -68,7 +68,7 @@ if ($type && $access_token) {
 		}
 	} else {
 		$vk = [];
-		foreach (['VK_SCHED', 'VK'] as $type) {
+		foreach (['VK_SCHED', 'VK', 'VK_GRABBER'] as $type) {
 			$q = new Http;
 			$q->vkSetUser($type);
 			$res = $q->vkApi("users.get");

@@ -76,9 +76,10 @@ foreach ($sources_hash as $type => $type_sources) {
 	echo "======================== ".\Z\Smm\Grabber::$type2name[$type]." ========================\n";
 	
 	$q = new Http;
+	$q->vkSetUser('VK_GRABBER');
 	
 	// Граббер VK
-	if ($type == \Z\Smm\Grabber::SOURCE_VK && 0) {
+	if ($type == \Z\Smm\Grabber::SOURCE_VK) {
 		$api_limit = 25;
 		$chunk = 100;
 		$offset = 0;
@@ -109,7 +110,7 @@ foreach ($sources_hash as $type => $type_sources) {
 						$res = $q->vkApi("execute", [
 							"code" => 'return {'.implode(",", $code_chunk).'};'
 						]);
-						if (!$res || !isset($res->response) || $res->execute_errors) {
+						if (!$res || !isset($res->response) || (isset($res->execute_errors) && $res->execute_errors)) {
 							echo "err!\n";
 							echo json_encode($res, JSON_PRETTY_PRINT);
 							sleep(60 * 30);
@@ -196,7 +197,7 @@ foreach ($sources_hash as $type => $type_sources) {
 						
 						echo "OK: #".$item->id."\n";
 					}
-					sleep(5);
+					sleep(10);
 				}
 			}
 			$offset += $chunk;

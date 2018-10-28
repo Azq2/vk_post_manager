@@ -197,10 +197,8 @@ switch ($sub_action) {
 		
 		if ($posts_ids) {
 			$req = Mysql::query("SELECT * FROM `vk_grabber_data_index` WHERE id IN (?)", $posts_ids);
-			while ($res = $req->fetch()) {
-				$items[$res['data_id']] = 1;
+			while ($res = $req->fetch())
 				$meta[$res['data_id']] = $res;
-			}
 			$req->free();
 		}
 		
@@ -208,14 +206,14 @@ switch ($sub_action) {
 		$blacklist_ids = [];
 		$time_data = microtime(true);
 		
-		if ($items) {
+		if ($meta) {
 			// Получаем овнеров
 			$req = Mysql::query("SELECT * FROM `vk_grabber_data_owners`");
 			while ($res = $req->fetch())
 				$owners[$res['id']] = $res;
 			$req->free();
 			
-			$req = Mysql::query("SELECT * FROM `vk_grabber_data` WHERE `id` IN (".implode(",", array_keys($items)).")");
+			$req = Mysql::query("SELECT * FROM `vk_grabber_data` WHERE `id` IN (".implode(",", array_keys($meta)).")");
 			while ($post_data = $req->fetch()) {
 				$post = $meta[$post_data['id']];
 				$source_type = \Z\Smm\Grabber::$type2name[$post['source_type']];
@@ -225,7 +223,7 @@ switch ($sub_action) {
 					$blacklist_ids[$post['source_type']] = [];
 				$blacklist_ids[$post['source_type']][] = $post['remote_id'];
 				
-				$items[$post_data['id']] = [
+				$items[$post['id']] = [
 					'id'				=> $post['id'], 
 					'remote_id'			=> $post['remote_id'], 
 					'source_id'			=> $post['source_id'], 
@@ -268,7 +266,8 @@ switch ($sub_action) {
 		}
 		
 		$items_array = array();
-		foreach ($items as $item) {
+		foreach ($posts_ids as $post_id) {
+			$item = $items[$post_id];
 			if (!isset($blacklist_filtered[$item['source_type_id'].":".$item['remote_id']]))
 				$items_array[] = $item;
 		}

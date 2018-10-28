@@ -178,6 +178,8 @@ function get_comments($q, $comm) {
 	$suggests = [];
 	$specials = [];
 	
+	$max_date = 0;
+	
 	$queue = get_posts_queue($gid);
 	foreach ($items as $post) {
 		$post->special = false;
@@ -185,6 +187,8 @@ function get_comments($q, $comm) {
 			$post->special = true;
 			$specials[] = $post;
 		}
+		
+		$max_date = max($max_date, $post->date);
 		
 		if (isset($queue[$post->id]) || $post->special || $post->post_type == 'post') {
 			// Отложенный
@@ -202,7 +206,18 @@ function get_comments($q, $comm) {
 	$postponed = array_values($postponed);
 	$suggests = array_values($suggests);
 	
+	$postponed['__NEXT__'] = (object) array(
+		'date'			=> $max_date + 3600 * 24 * 365, 
+		'special'		=> false, 
+		'post_type'		=> 'postpone', 
+		'id'			=> '__NEXT__'
+	);
+	
 	$postponed = process_queue($comm, $postponed);
+	
+	$next_post_dummy = array_pop($postponed);
+	
+	\Z\Smm\Globals::set($gid, "next_post_date", $next_post_dummy->date);
 	
 	usort($suggests, function ($a, $b) {
 		if ($a->date == $b->date)

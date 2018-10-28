@@ -168,6 +168,7 @@ function init() {
 				
 				if (e.type == 'queue') {
 					wrap.find('.js-post_toolbar').addClass('hide');
+					feed.updateNextDate();
 					
 					if (emojiarea)
 						emojiarea.disable();

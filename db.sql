@@ -1,5 +1,4 @@
 SET SQL_MODE = "NO_AUTO_VALUE_ON_ZERO";
-SET time_zone = "+00:00";
 
 CREATE TABLE `vkapp` (
   `group_id` int(10) UNSIGNED NOT NULL,
@@ -107,6 +106,12 @@ CREATE TABLE `vk_comm_users` (
   `uid` int(10) UNSIGNED NOT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 
+CREATE TABLE `vk_globals` (
+  `group_id` int(11) NOT NULL,
+  `key` varchar(64) NOT NULL,
+  `value` varchar(256) NOT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+
 CREATE TABLE `vk_grabber_blacklist` (
   `group_id` int(10) UNSIGNED NOT NULL,
   `source_type` int(10) UNSIGNED NOT NULL,
@@ -127,6 +132,7 @@ CREATE TABLE `vk_grabber_data_index` (
   `source_type` int(10) UNSIGNED NOT NULL,
   `remote_id` varchar(64) NOT NULL,
   `time` int(10) UNSIGNED NOT NULL,
+  `grab_time` int(10) UNSIGNED NOT NULL,
   `likes` int(10) UNSIGNED NOT NULL DEFAULT '0',
   `reposts` int(10) UNSIGNED NOT NULL DEFAULT '0',
   `comments` int(10) UNSIGNED NOT NULL DEFAULT '0',
@@ -287,6 +293,9 @@ ALTER TABLE `vkapp_catlist_user_cats`
 ALTER TABLE `vk_comm_users`
   ADD PRIMARY KEY (`cid`,`uid`);
 
+ALTER TABLE `vk_globals`
+  ADD PRIMARY KEY (`group_id`,`key`);
+
 ALTER TABLE `vk_grabber_blacklist`
   ADD PRIMARY KEY (`group_id`,`source_type`,`remote_id`);
 
@@ -300,7 +309,8 @@ ALTER TABLE `vk_grabber_data_index`
   ADD KEY `time` (`time`),
   ADD KEY `reposts` (`reposts`),
   ADD KEY `likes` (`likes`),
-  ADD KEY `comments` (`comments`);
+  ADD KEY `comments` (`comments`),
+  ADD KEY `grab_time` (`grab_time`);
 
 ALTER TABLE `vk_grabber_data_owners`
   ADD PRIMARY KEY (`id`);

@@ -32,7 +32,7 @@ if (!\Z\User::instance()->can('user')) {
 		$api_data['post_id'] = $id;
 
 	$res = $q->vkApi(($post_type == 'suggest' || $post_type == 'new') ? "wall.post" : "wall.edit", $api_data);
-
+	
 	$output['post_type'] = $post_type;
 	if (parse_vk_error($res, $output)) {
 		$output['success'] = true;
@@ -46,6 +46,8 @@ if (!\Z\User::instance()->can('user')) {
 				`id`		= ".(isset($res->response->post_id) ? (int) $res->response->post_id : $id)."
 		");
 	}
+	
+	\Z\Smm\Globals::delete($gid, "next_post_date");
 }
 
 mk_ajax($output);

@@ -200,6 +200,8 @@ function init() {
 						id:				e.post.id
 					});
 					
+					feed.updateNextDate();
+					
 					wrap.find('.js-post_toolbar').addClass('hide');
 					
 					if (emojiarea)
