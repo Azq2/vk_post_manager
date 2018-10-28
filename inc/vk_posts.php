@@ -188,8 +188,6 @@ function get_comments($q, $comm) {
 			$specials[] = $post;
 		}
 		
-		$max_date = max($max_date, $post->date);
-		
 		if (isset($queue[$post->id]) || $post->special || $post->post_type == 'post') {
 			// Отложенный
 			if ($post->post_type != 'post' && !$post->special) {
@@ -201,17 +199,19 @@ function get_comments($q, $comm) {
 			// Предложка
 			$suggests[$post->id] = $post;
 		}
+		
+		$max_date = max($max_date, $post->date);
 	}
 	
-	$postponed = array_values($postponed);
-	$suggests = array_values($suggests);
-	
 	$postponed['__NEXT__'] = (object) array(
-		'date'			=> $max_date + 3600 * 24 * 365, 
+		'date'			=> $max_date + 10, 
 		'special'		=> false, 
 		'post_type'		=> 'postpone', 
 		'id'			=> '__NEXT__'
 	);
+	
+	$postponed = array_values($postponed);
+	$suggests = array_values($suggests);
 	
 	$postponed = process_queue($comm, $postponed);
 	
