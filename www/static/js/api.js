@@ -25,7 +25,11 @@ $.api = function (url, data, fn_ok, fn_err, fn_hook) {
 		method:			"POST", 
 		dataType:		"json"
 	}).done(function (res) {
+		if (res.__stdout)
+			console.log("STDOUT: " + res.__stdout);
+		
 		fn_hook && fn_hook(res);
+		
 		if (res.captcha) {
 			var win = modal_window(tpl.captcha({url: res.captcha.url}))
 			win.find('.js-enter_captcha').on('click', function (e) {

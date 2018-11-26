@@ -79,7 +79,7 @@ foreach ($sources_hash as $type => $type_sources) {
 	$q->vkSetUser('VK_GRABBER');
 	
 	// Граббер VK
-	if ($type == \Z\Smm\Grabber::SOURCE_VK) {
+	if ($type == \Z\Smm\Grabber::SOURCE_VK&&0) {
 		$api_limit = 25;
 		$chunk = 100;
 		$offset = 0;

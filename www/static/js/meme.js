@@ -354,7 +354,7 @@ function MemeEditor(el, options) {
 			width:		640, 
 			height:		480, 
 			data:		null, 
-			template:	comm.meme
+			template:	comm.meme ? JSON.parse(comm.meme) : false
 		}, options);
 		
 		opts.template = new_template || opts.template;
@@ -473,7 +473,7 @@ function MemeEditor(el, options) {
 			new_template = serialize();
 			
 			el.attr("disabled", "disabled");
-			$.api("/?a=settings", {type: "meme", settings: JSON.stringify(new_template)}, function () {
+			$.api("/?a=index/settings", {gid: comm.id, type: "meme", settings: JSON.stringify(new_template)}, function () {
 				el.removeAttr("disabled");
 			}, function (err) {
 				el.removeAttr("disabled");

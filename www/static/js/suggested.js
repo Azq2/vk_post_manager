@@ -145,13 +145,13 @@ function init() {
 		
 		var lang = ({
 			queue: {
-				action:		"/?a=queue", 
+				action:		"/?a=vk_posts/queue", 
 				spinner:	"Добавляем в очередь...", 
 				success:	"Пост успешно добавлен в очередь.", 
 				fail:		"Ошибка добавления в очередь! Попробуйте снова."
 			}, 
 			save: {
-				action:		"/?a=post/edit", 
+				action:		"/?a=vk_posts/edit", 
 				spinner:	"Сохраняем пост...", 
 				success:	"Пост успешно отредактирован.", 
 				fail:		"Ошибка сохранения! Попробуйте снова."
@@ -197,7 +197,7 @@ function init() {
 		status.removeClass('hide').html(tpl.spinner(restore ? 'Восстанавливаем пост...' : 'Удаляем пост...'));
 		el.attr('disabled', 'disabled');
 		
-		$.api("/?a=delete", {
+		$.api("/?a=vk_posts/delete", {
 			gid: options.gid, id: e.post.id, 
 			restore: restore ? 1 : 0
 		}, function (res) {

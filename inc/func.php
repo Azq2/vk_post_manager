@@ -102,7 +102,7 @@ function parse_vk_error($res, &$output) {
 				'sid' => $res->error->captcha_sid
 			);
 		} else {
-			$output['error'] = $res->error->error_msg;
+			$output['error'] = "#".$res->error->error_code.": ".$res->error->error_msg;
 		}
 	} elseif (!$res || !isset($res->response)) {
 		$output['error'] = "VK API недоступен. ".json_encode($res);
@@ -176,7 +176,7 @@ function pics_uploader(&$out, $q, $gid, $images, $progress = false) {
 							sleep(3);
 							continue;
 						}
-						$out['error'] = "Ошибка сохранения ".($is_doc ? 'документа' : 'фото')." #$i в стене!! (".$error.")";
+						$out['error'] = "Ошибка сохранения ".($is_doc ? 'документа' : 'фото')." #$i в стене!! (".$error.") ".json_encode($upload);
 						break;
 					} elseif (!isset($file->response) || !$file->response) {
 						$out['error'] = "Ошибка сохранения ".($is_doc ? 'документа' : 'фото')." #$i в стене!!! $upload_raw";

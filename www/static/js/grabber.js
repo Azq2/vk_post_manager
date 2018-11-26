@@ -1,4 +1,4 @@
-define(['jquery', 'feed', 'url', 'upload', 'emojionearea', 'functions'], function ($, VkFeed, Url) {
+define(['jquery', 'feed', 'url', 'utils', 'upload', 'emojionearea', 'functions'], function ($, VkFeed, Url, utils) {
 //
 var TOPICS_CHUNK = 10, 
 	LOAD_CHUNK = 100;
@@ -188,11 +188,11 @@ function init() {
 			status.html(tpl.spinner("Добавляем в очередь..."));
 			post_data.attachments = post_data.attachments.join(',');
 			
-			$.api("/?a=queue", post_data, function (res) {
+			$.api("/?a=vk_posts/queue", post_data, function (res) {
 				delete busy_posts[e.post.id];
 				el.removeAttr('disabled');
 				if (res.success) {
-					status.html(tpl.success("Пост успешно добавлен в очередь."));
+					status.html(tpl.success("Пост успешно добавлен в очередь: " + utils.getHumanDate(res.date || 0)));
 					
 					// Блэклистим
 					$.api("?a=grabber&sa=blacklist", {
@@ -200,7 +200,7 @@ function init() {
 						id:				e.post.id
 					});
 					
-					feed.updateNextDate();
+					wrap.find('.js-post_next_date').remove();
 					
 					wrap.find('.js-post_toolbar').addClass('hide');
 					
@@ -222,7 +222,7 @@ function init() {
 		} else {
 			status.html(tpl.spinner("Становимся в очередь кражи аттачей..."));
 			$.urlUploader({
-				action:		"/?a=vk_upload&gid=" + options.gid, 
+				action:		"/?a=vk_posts/upload&gid=" + options.gid, 
 				images:		images, 
 				documents:	documents, 
 				

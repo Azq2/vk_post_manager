@@ -212,7 +212,7 @@ var tpl = {
 								(data.source_type == 'INSTAGRAM' ? '' : ' checked="checked"') + ' /> Использовать текст</label>' + 
 						'</div>' + 
 						'<textarea rows="10" class="js-post_textarea" name="text"></textarea>' + 
-						'<div class="js-upload_form pad_t" data-action="/?a=vk_upload&amp;gid=' + custom.gid + '" data-id="vk_upload">' + 
+						'<div class="js-upload_form pad_t" data-action="/?a=vk_posts/upload&amp;gid=' + custom.gid + '" data-id="vk_upload">' + 
 							'<div class="js-upload_input"></div>' + 
 							'<div class="js-upload_files pad_t hide"></div>' + 
 						'</div>' + 
@@ -450,7 +450,7 @@ var VkFeed = Class({
 			self.post_next_date_timeout = false;
 		}
 		
-		self.post_next_date_query = $.api("/?a=post/next_date", {
+		self.post_next_date_query = $.api("/?a=vk_posts/next_date", {
 			gid:			self.opts.gid
 		}, function (res) {
 			post_next_date.html('Дата публикации: ' + utils.getHumanDate(res.date));

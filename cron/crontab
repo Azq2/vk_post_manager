@@ -1,6 +1,6 @@
 @reboot daemon -- bash {project}/cron/grabber_downloader.sh >> {project}/logs/cron_grabber_downloader.log 2>&1
-*/10 * * * * php {project}/cron/posts_sched.php >> {project}/logs/cron_posts_sched.log 2>&1
-*/15 * * * * php {project}/cron/vk_to_telegram.php >> {project}/logs/cron_vk_to_telegram.log 2>&1
+*/10 * * * * php {project}/www/index.php Z/Smm/Task/Scheduler --anticaptcha=1 >> {project}/logs/cron_posts_sched.log 2>&1
+*/15 * * * * php {project}/www/index.php Z/Smm/Task/VkToTelegram >> {project}/logs/cron_vk_to_telegram.log 2>&1
 */15 * * * * php {project}/cron/grabber.php lock >> {project}/logs/cron_grabber.log 2>&1
-0 * * * * php {project}/cron/calc_money.php >> {project}/logs/cron_money.log 2>&1
-*/10 * * * * php {project}/cron/members.php 1 >> {project}/logs/cron_members.log 2>&1
+# 0 * * * * php {project}/www/index.php Z/Smm/Task/CalcSmmMoney >> {project}/logs/cron_money.log 2>&1
+*/10 * * * * php {project}/www/index.php Z/Smm/Task/LogMembers >> {project}/logs/cron_members.log 2>&1
