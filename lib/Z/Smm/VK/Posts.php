@@ -119,7 +119,7 @@ class Posts {
 			return $result;
 		}
 		
-		$data = ['group_id' => $gid];
+		$data = ['group_id' => $gid, '_' => microtime(true)];
 		
 		if (($captcha_code = Captcha::getCode())) {
 			$data['captcha_key'] = $captcha_code['key'];
@@ -128,15 +128,18 @@ class Posts {
 		
 		$upload_photos = $api->exec("photos.getWallUploadServer", $data);
 		
+		usleep(100000);
+		
 		if (!$upload_photos->success()) {
-			$result->error = $upload_photos->success();
+			$result->error = $upload_photos->error();
 			$result->captcha = $upload_photos->captcha();
 			Captcha::set($upload_photos->captcha());
 			return $result;
 		}
 		
 		$data = [
-			// 'group_id' => $gid
+			// 'group_id' => $gid, 
+			'_' => microtime(true)
 		];
 		
 		if (($captcha_code = Captcha::getCode())) {
@@ -146,8 +149,10 @@ class Posts {
 		
 		$upload_docs = $api->exec("docs.getWallUploadServer", $data);
 		
+		usleep(100000);
+		
 		if (!$upload_docs->success()) {
-			$result->error = $upload_docs->success();
+			$result->error = $upload_docs->error();
 			$result->captcha = $upload_docs->captcha();
 			Captcha::set($upload_docs->captcha());
 			return $result;
@@ -161,7 +166,7 @@ class Posts {
 		$attachments = [];
 		foreach ($images as $i => $img) {
 			if ($i)
-				usleep(1);
+				usleep(100000);
 			
 			$is_doc = isset($img['document']) && $img['document'];
 			$upload = false;

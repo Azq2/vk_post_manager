@@ -106,22 +106,31 @@ $.urlUploader = function (options) {
 			} else if (res.queue) {
 				upload_id = res.id;
 				
-				var status;
+				var status, pct = 0;
 				if (!('downloaded' in res.queue)) {
-					status = '[1 / 3] Ожидаем очереди...';
-				} else if (res.queue.downloaded < res.queue.total) {
-					status = '[2 / 3] Скачано: ' + res.queue.downloaded + ' из ' + res.queue.total;
-				} else if (res.queue.uploaded < res.queue.total) {
-					status = '[3 / 3] Выгружено: ' + res.queue.uploaded + ' из ' + res.queue.total;
-				} else {
+					status = 'Ожидаем очереди...';
+				} else if (res.done) {
 					status = 'Ожидаем чуда...';
+				} else {
+					var compelted_pct = (res.queue.downloaded + res.queue.uploaded) / (res.queue.total * 2) * 100, 
+						download_pct = 0;
+					
+					if (res.queue.download_size)
+						download_pct = res.queue.download_offset / res.queue.download_size * 100;
+					
+					pct = Math.round(compelted_pct + (50 / res.queue.total * download_pct / 100), 1);
+					
+					status = pct + '%, скачано: ' + res.queue.downloaded + ' из ' +
+						res.queue.total + ', загружено: ' + res.queue.uploaded + ' из ' + res.queue.total;
 				}
 				
-				options.onStateChanged && options.onStateChanged({status: status});
+				options.onStateChanged && options.onStateChanged({status: status, percent: pct});
 				
 				setTimeout(check_upload, 10);
 			} else if (res.error) {
 				options.onError && options.onError(res.error);
+			} else if (!res.queue) {
+				options.onError && options.onError('Внутренняя ошибка.');
 			}
 		}, function () {
 			setTimeout(check_upload, 500);

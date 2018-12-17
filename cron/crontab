@@ -1,4 +1,4 @@
-@reboot daemon -- bash {project}/cron/grabber_downloader.sh >> {project}/logs/cron_grabber_downloader.log 2>&1
+@reboot daemon -- php {project}/www/index.php Z/Smm/Task/Downloader --anticaptcha=1 >> {project}/logs/cron_grabber_downloader.log 2>&1
 */10 * * * * php {project}/www/index.php Z/Smm/Task/Scheduler --anticaptcha=1 >> {project}/logs/cron_posts_sched.log 2>&1
 */15 * * * * php {project}/www/index.php Z/Smm/Task/VkToTelegram >> {project}/logs/cron_vk_to_telegram.log 2>&1
 */15 * * * * php {project}/cron/grabber.php lock >> {project}/logs/cron_grabber.log 2>&1

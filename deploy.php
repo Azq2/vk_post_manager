@@ -3,11 +3,11 @@
 
 class Deployer {
 	private static $custom_chmod = [
-		"files"				=> 0777, 
-		"tmp"				=> 0777, 
-		"tmp/download"		=> 0777, 
-		"tmp/post_queue"	=> 0777, 
-		"files/catlist"		=> 0777, 
+		"files"					=> 0777, 
+		"tmp"					=> 0777, 
+		"tmp/download"			=> 0777, 
+		"tmp/download_queue"	=> 0777, 
+		"files/catlist"			=> 0777, 
 	];
 	
 	private static $skip = [
@@ -34,6 +34,9 @@ class Deployer {
 			"help", 
 			"watch"
 		]);
+		
+		if (!trim(shell_exec("which inotifywait")))
+			throw new Exception("Please, install inotify-tools");
 		
 		// Что за долбоёб писал враппер для getopt?
 		foreach ($options as $k => $v) {

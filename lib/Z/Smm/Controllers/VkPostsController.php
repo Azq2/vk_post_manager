@@ -209,6 +209,8 @@ class VkPostsController extends \Z\Smm\GroupController {
 			return;
 		}
 		
+		$api = new \Z\Core\Net\VkApi(\Z\Smm\Oauth::getAccessToken('VK'));
+		
 		switch ($_POST['type'] ?? '') {
 			// Загрузка по URL
 			case "url":
@@ -259,12 +261,10 @@ class VkPostsController extends \Z\Smm\GroupController {
 						]);
 						
 						$id = md5($msg);
-						$queue_path = APP."/tmp/post_queue/$id";
+						$queue_path = APP."/tmp/download_queue/$id";
 						
-						if (!file_exists($queue_path)) {
-							@file_put_contents($queue_path, $msg, LOCK_EX);
-							@chmod($queue_path, 0666);
-						}
+						@file_put_contents($queue_path, $msg, LOCK_EX);
+						@chmod($queue_path, 0666);
 						
 						if (!file_exists($queue_path)) {
 							if ($cover_path)
@@ -276,13 +276,24 @@ class VkPostsController extends \Z\Smm\GroupController {
 				}
 				
 				if ($id) {
-					$queue_path = APP."/tmp/post_queue/$id";
+					$queue_path = APP."/tmp/download_queue/$id";
+					
 					$this->content['id'] = $id;
 					
 					if (file_exists($queue_path)) {
-						$status = json_decode(file_get_contents($queue_path), true);
-						if (isset($status['out'], $status['out']['error'])) {
-							$this->content['error'] = $status['out']['error'];
+						$fp = fopen($queue_path, "r");
+						flock($fp, LOCK_EX);
+						$raw = "";
+						while (!feof($fp))
+							$raw .= fread($fp, 4096);
+						$queue = json_decode($raw);
+						flock($fp, LOCK_UN);
+						fclose($fp);
+						
+						$status = json_decode($raw, true);
+						
+						if (isset($status['error'])) {
+							$this->content['error'] = $status['error'];
 						} elseif (isset($status['attaches'])) {
 							$this->content['success'] = true;
 							$this->content['attaches'] = $status['attaches'];
