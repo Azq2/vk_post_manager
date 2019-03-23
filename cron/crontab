@@ -1,6 +1,6 @@
-@reboot daemon -- php {project}/www/index.php Z/Smm/Task/Downloader --anticaptcha=1 >> {project}/logs/cron_grabber_downloader.log 2>&1
-*/10 * * * * php {project}/www/index.php Z/Smm/Task/Scheduler --anticaptcha=1 >> {project}/logs/cron_posts_sched.log 2>&1
-*/15 * * * * php {project}/www/index.php Z/Smm/Task/VkToTelegram >> {project}/logs/cron_vk_to_telegram.log 2>&1
+@reboot daemon -- php {project}/www/index.php Smm/Task/Downloader --anticaptcha=1 >> {project}/logs/cron_grabber_downloader.log 2>&1
+*/10 * * * * php {project}/www/index.php Smm/Task/Scheduler --anticaptcha=1 >> {project}/logs/cron_posts_sched.log 2>&1
+*/15 * * * * php {project}/www/index.php Smm/Task/VkToTelegram >> {project}/logs/cron_vk_to_telegram.log 2>&1
 */15 * * * * php {project}/cron/grabber.php lock >> {project}/logs/cron_grabber.log 2>&1
-# 0 * * * * php {project}/www/index.php Z/Smm/Task/CalcSmmMoney >> {project}/logs/cron_money.log 2>&1
-*/10 * * * * php {project}/www/index.php Z/Smm/Task/LogMembers >> {project}/logs/cron_members.log 2>&1
+# 0 * * * * php {project}/www/index.php Smm/Task/CalcSmmMoney >> {project}/logs/cron_money.log 2>&1
+*/10 * * * * php {project}/www/index.php Smm/Task/LogMembers >> {project}/logs/cron_members.log 2>&1

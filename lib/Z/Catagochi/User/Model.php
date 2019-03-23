@@ -3,7 +3,7 @@ namespace Z\Catagochi\User;
 
 use \Mysql;
 
-class Model extends \Z\Core\Model\ActiveRecord {
+class Model extends \Z\Model\ActiveRecord {
 	protected static $pk		= 'user_id';
 	protected static $ai		= false;
 	protected static $table		= 'vkapp_catlist_users';

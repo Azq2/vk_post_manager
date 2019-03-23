@@ -24,7 +24,7 @@ class Game {
 		foreach (Mysql::query("SELECT * FROM `vkapp_catlist_messages`")->fetchAll() as $m)
 			$this->messages[$m['id']] = $m['message'];
 		
-		$this->vk = new \Z\Core\Net\VK();
+		$this->vk = new \Z\Net\VK();
 		$this->vk->setCommToken($this->app->token);
 	}
 	

@@ -1,5 +1,5 @@
 <?php
-namespace Z\Core;
+namespace Z;
 
 class App {
 	

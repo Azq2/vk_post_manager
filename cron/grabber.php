@@ -18,7 +18,7 @@ while ($group = $req->fetch()) {
 		INSERT IGNORE INTO vk_grabber_sources SET
 		source_type = ?, 
 		source_id = ?
-	", \Z\Smm\Grabber::SOURCE_VK, -$group['id']);
+	", \Smm\Grabber::SOURCE_VK, -$group['id']);
 	$sources_selfgrab[-$group['id']] = true;
 }
 
@@ -28,7 +28,7 @@ $sources_disabled = [];
 
 $req = Mysql::query("SELECT * FROM `vk_grabber_sources`");
 while ($s = $req->fetch()) {
-	$is_active = isset($sources_selfgrab[$s['source_id']]) && $s['source_type'] == \Z\Smm\Grabber::SOURCE_VK;
+	$is_active = isset($sources_selfgrab[$s['source_id']]) && $s['source_type'] == \Smm\Grabber::SOURCE_VK;
 	if (!$is_active) {
 		$is_active = Mysql::query("SELECT MAX(enabled) FROM vk_grabber_selected_sources WHERE source_id = ?", $s['id'])
 			->result();
@@ -50,7 +50,7 @@ foreach ($sources_disabled as $source) {
 		$data_ids = array_map(function ($v) { return $v['data_id']; }, $rows);
 		
 		if ($rows) {
-			echo \Z\Smm\Grabber::$type2name[$source['source_type']]." ".$source['source_id'].": delete ".count($rows)." unclaimed posts...\n";
+			echo \Smm\Grabber::$type2name[$source['source_type']]." ".$source['source_id'].": delete ".count($rows)." unclaimed posts...\n";
 			Mysql::query("DELETE FROM vk_grabber_data WHERE id IN (?)", $data_ids);
 			Mysql::query("DELETE FROM vk_grabber_data_index WHERE id IN (?)", $post_ids);
 		}
@@ -59,7 +59,7 @@ foreach ($sources_disabled as $source) {
 
 echo "clean old posts...\n";
 do {
-	$rows = Mysql::query("SELECT id, data_id FROM vk_grabber_data_index WHERE source_type = ? AND grab_time <= ? LIMIT 1000", \Z\Smm\Grabber::SOURCE_INSTAGRAM, time() - 3600 * 24 * 7)
+	$rows = Mysql::query("SELECT id, data_id FROM vk_grabber_data_index WHERE source_type = ? AND grab_time <= ? LIMIT 1000", \Smm\Grabber::SOURCE_INSTAGRAM, time() - 3600 * 24 * 7)
 		->fetchAll();
 	
 	$post_ids = array_map(function ($v) { return $v['id']; }, $rows);
@@ -73,13 +73,13 @@ do {
 } while ($rows);
 
 foreach ($sources_hash as $type => $type_sources) {
-	echo "======================== ".\Z\Smm\Grabber::$type2name[$type]." ========================\n";
+	echo "======================== ".\Smm\Grabber::$type2name[$type]." ========================\n";
 	
 	$q = new Http;
 	$q->vkSetUser('VK_GRABBER');
 	
 	// Граббер VK
-	if ($type == \Z\Smm\Grabber::SOURCE_VK&&0) {
+	if ($type == \Smm\Grabber::SOURCE_VK&&0) {
 		$api_limit = 25;
 		$chunk = 100;
 		$offset = 0;
@@ -208,7 +208,7 @@ foreach ($sources_hash as $type => $type_sources) {
 	}
 	
 	// Граббер OK
-	elseif ($type == \Z\Smm\Grabber::SOURCE_OK) {
+	elseif ($type == \Smm\Grabber::SOURCE_OK) {
 		$ended = [];
 		$page = 0;
 		while (true) {
@@ -453,7 +453,7 @@ foreach ($sources_hash as $type => $type_sources) {
 	}
 	
 	// Граббер INSTAGRAM
-	elseif ($type == \Z\Smm\Grabber::SOURCE_INSTAGRAM) {
+	elseif ($type == \Smm\Grabber::SOURCE_INSTAGRAM) {
 		$ended = [];
 		$page = 0;
 		
