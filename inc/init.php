@@ -12,7 +12,6 @@ mb_internal_encoding('UTF-8');
 // Автозагрузка классов
 spl_autoload_register(function ($class) {
 	$class = H.'lib/'.str_replace("\\", "/", $class).".php";
-	echo $class;
 	if (file_exists($class))
 		include_once $class;
 });
