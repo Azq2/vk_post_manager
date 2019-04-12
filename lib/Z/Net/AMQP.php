@@ -1,18 +1,15 @@
 <?php
 namespace Z\Net;
 
-use \AMQPConnection;
-use \AMQPQueue;
-use \AMQPMessage;
-use \AMQPChannel;
-use \AMQPExchange;
+use PhpAmqpLib\Connection\AMQPStreamConnection;
+use PhpAmqpLib\Message\AMQPMessage;
 
 class AMQP {
     const DELIVERY_MODE_NON_PERSISTENT	= 1;
     const DELIVERY_MODE_PERSISTENT		= 2;
 	
 	protected static $instances = [];
-	protected $amqp, $channel, $config;
+	protected $channel, $config;
 	protected $queue, $exchange;
 	
 	protected function __construct($instance) {
@@ -25,36 +22,12 @@ class AMQP {
 		], \Z\Config::get("amqp", $instance));
 	}
 	
-	protected function connect() {
-		$this->amqp = new AMQPConnection();
-		$this->amqp->setHost($this->config['host']);
-		$this->amqp->setLogin($this->config['login']);
-		$this->amqp->setPassword($this->config['password']);
-		$this->amqp->setPort($this->config['port']);
-		$this->amqp->setVhost($this->config['vhost']);
-		$this->amqp->connect();
-		
-		$this->channel = new AMQPChannel($this->amqp);
-		$this->queue = new AMQPQueue($this->channel);
-		$this->exchange = new AMQPExchange($this->channel);
-	}
-	
 	protected function channel() {
-		if (!$this->channel)
-			$this->connect();
+		if (!$this->channel) {
+			$connection = new AMQPStreamConnection($this->config['host'], $this->config['port'], $this->config['login'], $this->config['password'], $this->config['vhost']);
+			$this->channel = $connection->channel();
+		}
 		return $this->channel;
-	}
-	
-	protected function queue() {
-		if (!$this->channel)
-			$this->connect();
-		return $this->queue;
-	}
-	
-	protected function exchange() {
-		if (!$this->channel)
-			$this->connect();
-		return $this->exchange;
 	}
 	
 	/* Basic */
@@ -63,65 +36,44 @@ class AMQP {
 			'multiple'		=> false, 
 		], $params);
 		
-		$flags = 0;
-		if ($params['multiple'])
-			$flags |= AMQP_MULTIPLE;
-		
-		return $this->queue()->ack($delivery_tag, $flags);
+		return $this->channel()->basic_ack($delivery_tag, $params['multiple']);
 	}
 	
-	public function nack($delivery_tag, $multiple = false) {
+	public function nack($delivery_tag, $params = []) {
 		$params = array_merge([
 			'multiple'		=> false, 
 			'requeue'		=> false
 		], $params);
 		
-		$flags = 0;
-		if ($params['multiple'])
-			$flags |= AMQP_MULTIPLE;
-		if ($params['requeue'])
-			$flags |= AMQP_REQUEUE;
+		return $this->channel()->basic_nack($delivery_tag, $params['multiple'], $params['requeue']);
+	}
+	
+	public function cancel($consumer_tag, $params = []) {
+		$params = array_merge([
+			'nowait'		=> false, 
+			'noreturn'		=> false
+		], $params);
 		
-		return $this->queue()->nack($delivery_tag, $flags);
+		return $this->channel()->cancel($consumer_tag, $params['nowait'], $params['noreturn']);
 	}
 	
-	public function cancel($consumer_tag) {
-		return $this->queue()->cancel($consumer_tag);
-	}
-	
-	public function consume($queue, $callback, $consumer_tag = '', $params = []) {
+	public function consume($queue, $callback, $consumer_tag = '', $params = [], $arguments = []) {
 		$params = array_merge([
 			'no_ack'		=> false, 
 			'no_local'		=> false, 
 			'exclusive'		=> false, 
+			'nowait'		=> false
 		], $params);
 		
-		$flags = 0;
-		if (!$params['no_ack'])
-			$flags |= AMQP_AUTOACK;
-		if ($params['no_local'])
-			$flags |= AMQP_NOLOCAL;
-		if ($params['exclusive'])
-			$flags |= AMQP_EXCLUSIVE;
-		
-		$this->queue()->setName($queue);
-		return $this->queue()->consume(function ($envelope) use ($callback, $consumer_tag) {
-			return $callback($envelope ? $this->buildMessage($envelope, $consumer_tag) : false);
-		}, $flags, $consumer_tag);
+		return $this->channel()->basic_consume($queue, $consumer_tag, $params['no_local'], $params['no_ack'], $params['exclusive'], $params['nowait'], $callback, NULL, $arguments);
 	}
 	
 	public function get($queue, $params = []) {
 		$params = array_merge([
-			'no_ack'		=> false, 
+			'no_ack'		=> false
 		], $params);
 		
-		$flags = 0;
-		if (!$params['no_ack'])
-			$flags |= AMQP_AUTOACK;
-		
-		$this->queue()->setName($queue);
-		$envelope = $this->queue()->get($flags);
-		return $envelope ? $this->buildMessage($envelope, false) : false;
+		return $this->channel()->get($queue, $params['no_ack']);
 	}
 	
 	protected function buildMessage($envelope, $consumer_tag) {
@@ -150,29 +102,18 @@ class AMQP {
 	}
 	
 	public function publish($msg, $exchange = '', $routing_key = '', $params = []) {
-		if (!($msg instanceof AMQP\Message))
-			$msg = new AMQP\Message($msg);
+		if (($msg instanceof AMQP\Message)) {
+			$payload = new AMQPMessage($msg->body, $msg->getHeaders());
+		} else {
+			$payload = new AMQPMessage($msg, []);
+		}
 		
 		$params = array_merge([
 			'mandatory'		=> false, 
 			'immediate'		=> false, 
 		], $params);
 		
-		$flags = 0;
-		if ($params['mandatory'])
-			$flags |= AMQP_MANDATORY;
-		if ($params['immediate'])
-			$flags |= AMQP_IMMEDIATE;
-		
-		$this->exchange()->setName($exchange);
-		
-		$headers = $msg->getHeaders();
-		if (isset($headers['application_headers'])) {
-			$headers['headers'] = $headers['application_headers'];
-			unset($headers['application_headers']);
-		}
-		
-		return $this->exchange()->publish($msg->body, $routing_key, $flags, $headers);
+		return $this->channel()->publish($payload, $exchange, $routing_key, $params['mandatory'], $params['immediate']);
 	}
 	
 	/* Queue */
@@ -182,53 +123,40 @@ class AMQP {
 			'durable'		=> false, 
 			'exclusive'		=> false, 
 			'auto_delete'	=> false, 
+			'nowait'		=> false
 		], $params);
 		
-		$flags = 0;
-		if ($params['passive'])
-			$flags |= AMQP_PASSIVE;
-		if ($params['durable'])
-			$flags |= AMQP_DURABLE;
-		if ($params['exclusive'])
-			$flags |= AMQP_EXCLUSIVE;
-		if ($params['auto_delete'])
-			$flags |= AMQP_AUTODELETE;
-		
-		$this->queue()->setName($name);
-		$this->queue()->setFlags($flags);
-		$this->queue()->setArguments($argumets);
-		return $this->queue()->declareQueue();
+		return $this->channel()->queue_declare($name, $params['passive'], $params['durable'], $params['exclusive'], $params['auto_delete'], $params['nowait'], $arguments);
 	}
 	
 	public function deleteQueue($name, $params = []) {
 		$params = array_merge([
 			'if_unused'		=> false, 
 			'if_empty'		=> false, 
+			'nowait'		=> false
 		], $params);
 		
-		$flags = 0;
-		if ($params['if_unused'])
-			$flags |= AMQP_IFUNUSED;
-		if ($params['if_empty'])
-			$flags |= AMQP_IFEMPTY;
-		
-		$this->queue()->setName($name);
-		return $this->queue()->delete($flags);
+		return $this->channel()->queue_delete($name, $params['if_unused'], $params['if_empty'], $params['nowait']);
 	}
 	
 	public function purgeQueue($name) {
-		$this->queue()->setName($name);
-		return $this->queue()->purge();
+		$params = array_merge([
+			'nowait'		=> false
+		], $params);
+		
+		return $this->channel()->queue_purge($name, $params['nowait']);
 	}
 	
-	public function bindQueue($name, $exchange, $routing_key = '', $arguments = []) {
-		$this->queue()->setName($name);
-		return $this->queue()->bind($exchange, $routing_key, $arguments);
+	public function bindQueue($name, $exchange, $routing_key = '', $params = [], $arguments = []) {
+		$params = array_merge([
+			'nowait'		=> false
+		], $params);
+		
+		return $this->channel()->queue_purge($name, $exchange, $routing_key, $params['nowait'], $arguments);
 	}
 	
-	public function unbindQueue($name, $exchange, $routing_key = '', $arguments = []) {
-		$this->queue()->setName($name);
-		return $this->queue()->unbind($exchange, $routing_key, $arguments);
+	public function unbindQueue($name, $exchange, $arguments = []) {
+		return $this->channel()->queue_purge($name, $exchange, $routing_key, $arguments);
 	}
 	
 	/* Exchange */
@@ -238,23 +166,10 @@ class AMQP {
 			'durable'		=> false, 
 			'auto_delete'	=> false, 
 			'internal'		=> false, 
+			'nowait'		=> false
 		], $params);
 		
-		$flags = 0;
-		if ($params['passive'])
-			$flags |= AMQP_PASSIVE;
-		if ($params['durable'])
-			$flags |= AMQP_DURABLE;
-		if ($params['internal'])
-			$flags |= AMQP_INTERNAL;
-		if ($params['auto_delete'])
-			$flags |= AMQP_AUTODELETE;
-		
-		$this->exchange()->setName($name);
-		$this->exchange()->setFlags($flags);
-		$this->exchange()->setType($type);
-		$this->exchange()->setArguments($argumets);
-		return $this->exchange()->declareExchange();
+		return $this->channel()->exchange_declare($name, $type, $params['passive'], $params['durable'], $params['auto_delete'], $params['internal'], $params['nowait'], $arguments);
 	}
 	
 	public function deleteExchange($name, $params = []) {
@@ -263,23 +178,25 @@ class AMQP {
 			'nowait'		=> false, 
 		], $params);
 		
-		$flags = 0;
-		if ($params['if_unused'])
-			$flags |= AMQP_IFUNUSED;
-		if ($params['nowait'])
-			$flags |= AMQP_NOWAIT;
+		return $this->channel()->exchange_delete($name, $params['if_unused'], $params['nowait']);
+	}
+	
+	public function bindExchange($dst, $src, $routing_key = '', $params = [], $arguments = []) {
+		$params = array_merge([
+			'if_unused'		=> false, 
+			'nowait'		=> false, 
+		], $params);
 		
-		return $this->exchange()->delete($name, $flags);
+		return $this->channel()->exchange_bind($dst, $src, $routing_key, $params['nowait'], $arguments);
 	}
 	
-	public function bindExchange($dst, $src, $routing_key = '', $arguments = []) {
-		$this->exchange()->setName($dst);
-		return $this->exchange()->bind($src, $routing_key, $arguments);
-	}
-	
-	public function unbindExchange($dst, $src, $routing_key = '', $arguments = []) {
-		$this->exchange()->setName($dst);
-		return $this->exchange()->unbind($src, $routing_key, $arguments);
+	public function unbindExchange($dst, $src, $routing_key = '', $params = [], $arguments = []) {
+		$params = array_merge([
+			'if_unused'		=> false, 
+			'nowait'		=> false, 
+		], $params);
+		
+		return $this->channel()->exchange_unbind($dst, $src, $routing_key, $params['nowait'], $arguments);
 	}
 	
 	public static function instance($instance = 'default') {
