@@ -34,6 +34,10 @@ class Cache {
 		return $this->mc->set($key, $value, $ttl);
 	}
 	
+	public function add($key, $value, $ttl = 0) {
+		return $this->mc->add($key, $value, $ttl);
+	}
+	
 	public function delete($key) {
 		return $this->mc->delete($key);
 	}

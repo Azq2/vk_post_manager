@@ -30,72 +30,55 @@ class Downloader extends \Z\Task {
 	public function run($args) {
 		umask(0);
 		
-		if (!\Smm\Utils\Lock::lock(__CLASS__)) {
-			echo "Already running.\n";
+		if (!\Smm\Utils\Lock::lock(__CLASS__))
 			return;
-		}
 		
 		Captcha::setMode($args['anticaptcha'] ? 'anticaptcha' : 'cli');
 		
 		$this->api = new \Z\Net\VkApi(\Smm\Oauth::getAccessToken('VK'));
-		
-		\Z\Util\Inotify::watch(self::QUEUE_DIR, [$this, 'processQueue']);
-		/*$this->download("https://pp.userapi.com/.ht", "/tmp/mixer0.jpg", function ($filename) {
-			echo "done - $filename\n";
-		}, function ($error) {
-			echo "error - $error\n";
-		}, function ($a, $b, $c) {
-			echo "progress - $a, $b, $c\n";
-		});
-		
-		$vk = new VkApi(\Smm\Oauth::getAccessToken('VK'));
-		
-		while ($this->processDownload());*/
+		$this->processQueue();
 	}
 	
 	public function processQueue() {
 		echo date("Y-m-d H:i:s")."\n";
 		
+		$amqp = \Z\Net\AMQP::instance();
+		$amqp->queue_declare('download_queue', false, true);
+		
 		$n = 0;
-		$dir = opendir(self::QUEUE_DIR);
-		do {
-			clearstatcache();
-			
-			while (($id = readdir($dir))) {
-				$file = self::QUEUE_DIR."/$id";
-				
-				if (!is_file($file))
-					continue;
-				
-				if (!filesize($file))
-					usleep(100000);
-				
-				$fp = fopen($file, "r");
-				flock($fp, LOCK_EX);
-				$raw = "";
-				while (!feof($fp))
-					$raw .= fread($fp, 4096);
-				$queue = json_decode($raw);
-				flock($fp, LOCK_UN);
-				fclose($fp);
-				
-				if (!$queue) {
-					echo "$id: delete invalid task: $raw\n";
-					unlink($file);
-				} else if (time() - filectime($file) > 600) {
-					echo "$id: delete expired task (".date("Y-m-d H:i:s", filectime($file)).")\n";
-					unlink($file);
-					unset($this->queue[$id]);
-				} elseif ($queue->done ?? false) {
-					echo "$id: already done.\n";
-				} else if (!isset($this->queue[$id])) {
-					$queue->id = $id;
-					$this->queue[$id] = $queue;
-					$this->queueDownloadFiles($id);
-					$this->processDownload();
+		while (1) {
+			do {
+				while (($amqp_msg = $amqp->basic_get('download_queue', false))) {
+					$id = $amqp_msg->body;
+					
+					$queue = \Z\Cache::instance()->get("download_queue:$id");
+					if (!$queue || !is_object($queue)) {
+						echo "$id: delete invalid task.\n";
+						$amqp->basic_ack($amqp_msg->delivery_info['delivery_tag']);
+						continue;
+					}
+					
+					$queue->delivery_tag = $amqp_msg->delivery_info['delivery_tag'];
+					
+					if (time() - $queue->ctime > 600) {
+						echo "$id: delete expired task (".date("Y-m-d H:i:s", $queue->ctime).")\n";
+						unset($this->queue[$id]);
+					} elseif ($queue->done ?? false) {
+						echo "$id: already done.\n";
+						$amqp->basic_ack($queue->delivery_tag);
+					} else if (!isset($this->queue[$id])) {
+						$queue->id = $id;
+						$this->queue[$id] = $queue;
+						$this->queueDownloadFiles($id);
+						$this->processDownload();
+					}
+					
+					usleep(5000);
 				}
-			}
-		} while ($this->processDownload());
+			} while ($this->processDownload());
+			
+			usleep(300000);
+		}
 	}
 	
 	public function queueDownloadFiles($id) {
@@ -109,11 +92,11 @@ class Downloader extends \Z\Task {
 		
 		$files = [];
 		foreach ($queue->images as $file)
-			$files[] = ['url' => $file, 'type' => 'photo', 'out' => APP."/tmp/download/".md5($id.$file).".bin"];
+			$files[] = ['url' => $file, 'type' => 'photo', 'out' => APP."/tmp/download/".md5($id.$file).".bin", 'index' => count($files)];
 		foreach ($queue->documents as $file)
-			$files[] = ['url' => $file, 'type' => 'doc', 'out' => APP."/tmp/download/".md5($id.$file).".bin"];
+			$files[] = ['url' => $file, 'type' => 'doc', 'out' => APP."/tmp/download/".md5($id.$file).".bin", 'index' => count($files)];
 		foreach ($queue->files as $file)
-			$files[] = ['url' => $file, 'type' => 'file', 'out' => APP."/tmp/download/".md5($id.$file).".bin"];
+			$files[] = ['url' => $file, 'type' => 'file', 'out' => APP."/tmp/download/".md5($id.$file).".bin", 'index' => count($files)];
 		
 		$progress_offsets = [];
 		$progress_sizes = [];
@@ -187,14 +170,14 @@ class Downloader extends \Z\Task {
 					if ($result->success) {
 						foreach ($result->attachments as $key => $attachment) {
 							if (strpos($key, "doc") === 0) {
-								$this->attachments_ids[$queue->id][] = $key;
-								$this->attachments[$queue->id][] = (object) [
+								$this->attachments_ids[$queue->id][$file['index']] = $key;
+								$this->attachments[$queue->id][$file['index']] = (object) [
 									'type'	=> 'doc', 
 									'doc'	=> $attachment
 								];
 							} else {
-								$this->attachments_ids[$queue->id][] = $key;
-								$this->attachments[$queue->id][] = (object) [
+								$this->attachments_ids[$queue->id][$file['index']] = $key;
+								$this->attachments[$queue->id][$file['index']] = (object) [
 									'type'	=> 'photo', 
 									'photo'	=> $attachment
 								];
@@ -236,14 +219,22 @@ class Downloader extends \Z\Task {
 		
 		echo $queue->id.": done\n";
 		
+		$amqp = \Z\Net\AMQP::instance();
+		$amqp->basic_ack($queue->delivery_tag);
+		
+		ksort($this->attachments[$id]);
+		ksort($this->attachments_ids[$id]);
+		
 		$queue->done = true;
 		$queue->attaches_data = \Smm\VK\Posts::normalizeAttaches((object) [
-			'attachments' => $this->attachments[$id]
+			'attachments' => array_values($this->attachments[$id])
 		]);
-		$queue->attaches = $this->attachments_ids[$id];
+		$queue->attaches = array_values($this->attachments_ids[$id]);
 		
 		$this->queueCleanup($queue->id);
 		$this->syncQueueState($queue->id);
+		
+		unset($this->queue[$id]);
 	}
 	
 	public function queueCleanup($id) {
@@ -261,6 +252,9 @@ class Downloader extends \Z\Task {
 	
 	public function queueError($id, $error) {
 		$queue = $this->queue[$id];
+		
+		$amqp = \Z\Net\AMQP::instance();
+		$amqp->basic_ack($queue->delivery_tag);
 		
 		$this->queueCleanup($queue->id);
 		
@@ -283,7 +277,7 @@ class Downloader extends \Z\Task {
 	}
 	
 	public function syncQueueState($id) {
-		file_put_contents(self::QUEUE_DIR."/$id", json_encode($this->queue[$id]), LOCK_EX);
+		\Z\Cache::instance()->set("download_queue:$id", $this->queue[$id], 3600);
 	}
 	
 	public function cancelDownload($id) {

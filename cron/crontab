@@ -1,6 +1,20 @@
+# Запускаем демон загрузки сразу после старта сервера
 @reboot daemon -- php {project}/www/index.php Smm/Task/Downloader --anticaptcha=1 >> {project}/logs/cron_grabber_downloader.log 2>&1
+
+# На случай, если демон упал, пробуем его запустить раз в 10 минут (если уже запущен, то ничего не произойдёт)
+*/10 * * * * daemon -- php {project}/www/index.php Smm/Task/Downloader --anticaptcha=1 >> {project}/logs/cron_grabber_downloader.log 2>&1
+
+# Щедулер постов - ставит несколько постов в очередь из пула
 */10 * * * * php {project}/www/index.php Smm/Task/Scheduler --anticaptcha=1 >> {project}/logs/cron_posts_sched.log 2>&1
+
+# Синхронизация Telegram канала и основного паблика в ВК
 */15 * * * * php {project}/www/index.php Smm/Task/VkToTelegram >> {project}/logs/cron_vk_to_telegram.log 2>&1
+
+# Агрегатор контента (из инсты/вк и др.)
 */15 * * * * php {project}/cron/grabber.php lock >> {project}/logs/cron_grabber.log 2>&1
+
+# Подсчёт оплаты за услуги SMM (рудимент)
 # 0 * * * * php {project}/www/index.php Smm/Task/CalcSmmMoney >> {project}/logs/cron_money.log 2>&1
+
+# Лог участников (кто ушёл, пришёл)
 */10 * * * * php {project}/www/index.php Smm/Task/LogMembers >> {project}/logs/cron_members.log 2>&1

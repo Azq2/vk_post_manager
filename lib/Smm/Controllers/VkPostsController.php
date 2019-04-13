@@ -9,6 +9,8 @@ use \Z\Net\VkApi;
 
 use \Smm\View\Widgets;
 
+use PhpAmqpLib\Message\AMQPMessage;
+
 class VkPostsController extends \Smm\GroupController {
 	public function editAction() {
 		$api = new \Z\Net\VkApi(\Smm\Oauth::getAccessToken('VK'));
@@ -251,53 +253,38 @@ class VkPostsController extends \Smm\GroupController {
 						return;
 					
 					if ($images || $documents || $files) {
-						$msg = json_encode([
+						$msg = (object) [
 							'images'	=> $images, 
 							'documents'	=> $documents, 
 							'files'		=> $files, 
 							'gid'		=> $this->group['id'], 
 							'cover'		=> $cover_path, 
-							'offset'	=> $offset
-						]);
+							'offset'	=> $offset, 
+							'ctime'		=> time()
+						];
 						
-						$id = md5($msg);
-						$queue_path = APP."/tmp/download_queue/$id";
+						$id = md5(json_encode($msg));
 						
-						@file_put_contents($queue_path, $msg, LOCK_EX);
-						@chmod($queue_path, 0666);
+						\Z\Cache::instance()->set("download_queue:$id", $msg, 3600);
 						
-						if (!file_exists($queue_path)) {
-							if ($cover_path)
-								@unlink($cover_path);
-							$this->content['error'] = 'Ошибка записи очереди: '.$queue_path;
-							return;
-						}
+						$amqp = \Z\Net\AMQP::instance();
+						$amqp->queue_declare('download_queue', false, true);
+						$amqp->basic_publish(new AMQPMessage($id), '', 'download_queue');
 					}
 				}
 				
 				if ($id) {
-					$queue_path = APP."/tmp/download_queue/$id";
+					$status = \Z\Cache::instance()->get("download_queue:$id");
 					
 					$this->content['id'] = $id;
 					
-					if (file_exists($queue_path)) {
-						$fp = fopen($queue_path, "r");
-						flock($fp, LOCK_EX);
-						$raw = "";
-						while (!feof($fp))
-							$raw .= fread($fp, 4096);
-						$queue = json_decode($raw);
-						flock($fp, LOCK_UN);
-						fclose($fp);
-						
-						$status = json_decode($raw, true);
-						
-						if (isset($status['error'])) {
-							$this->content['error'] = $status['error'];
-						} elseif (isset($status['attaches'])) {
+					if ($status) {
+						if (isset($status->error)) {
+							$this->content['error'] = $status->error;
+						} elseif (isset($status->attaches)) {
 							$this->content['success'] = true;
-							$this->content['attaches'] = $status['attaches'];
-							$this->content['data'] = $status['attaches_data'];
+							$this->content['attaches'] = $status->attaches;
+							$this->content['data'] = $status->attaches_data;
 						} else {
 							$this->content['success'] = true;
 							$this->content['queue'] = $status;
