@@ -282,7 +282,7 @@ class Downloader extends \Z\Task {
 	
 	public function cancelDownload($id) {
 		if (isset($this->download_queue[$id])) {
-			curl_multi_remove_handle($this->curl_multi, $this->download_queue[$id]['handle']);
+			curl_multi_remove_handle($this->curl_multi, $this->download_queue[$id]->handle);
 			unset($this->download_queue[$id]);
 		}
 	}
