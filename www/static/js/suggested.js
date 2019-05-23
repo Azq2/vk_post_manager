@@ -244,25 +244,41 @@ function init() {
 	}
 	
 	
-	$('#group_settings').on('change click keyup keydown', 'input', function () {
-		recalcFreqSettings();
-		$('#group_settings').find('.js-btn_save').show();
-	}).on('click', '.js-interval_incr', function (e) {
-		e.preventDefault();
-		var el = $(this), 
-			form = $('#group_settings')[0];
-		
-		var interval = +form.elements.hh.value * 3600 + +form.elements.mm.value * 60;
-		interval += 300 * el.data('dir');
-		var h = Math.floor(interval / 3600), 
-			m = Math.round((interval - h * 3600) / 60);
-		
-		form.elements.hh.value = pad(h);
-		form.elements.mm.value = pad(m);
-		
-		$(form.elements.hh).trigger('change');
-		recalcFreqSettings();
-	});
+	$('#group_settings')
+		.on('click', '#show_freq_settings', function (e) {
+			e.preventDefault();
+			$('#freq_settings').removeClass('hide');
+			$(this).remove();
+		})
+		.on('change click keyup keydown', 'input', function () {
+			recalcFreqSettings();
+		})
+		.on('click', '.js-interval_incr', function (e) {
+			e.preventDefault();
+			var el = $(this), 
+				form = $('#group_settings')[0], 
+				key = el.data('key'), 
+				k_hh = key ? key + "_hh" : "hh", 
+				k_mm = key ? key + "_mm" : "mm";
+			
+			var interval = +form.elements[k_hh].value * 3600 + +form.elements[k_mm].value * 60;
+			interval += 60 * el.data('dir');
+			
+			if (key == "deviation") {
+				var max_value = Math.round((+form.elements.hh.value * 3600 + +form.elements.mm.value * 60) / 2);
+				if (interval > max_value)
+					interval = max_value;
+			}
+			
+			var h = Math.floor(interval / 3600), 
+				m = Math.round((interval - h * 3600) / 60);
+			
+			form.elements[k_hh].value = pad(h);
+			form.elements[k_mm].value = pad(m);
+			
+			$(form.elements[k_hh]).trigger('change');
+			recalcFreqSettings();
+		});
 	
 	recalcFreqSettings();
 }

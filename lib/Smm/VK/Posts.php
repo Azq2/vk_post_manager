@@ -254,7 +254,7 @@ class Posts {
 	}
 	
 	public static function getAll(VkApi $api, $group_id) {
-		$settings = DB::select('interval', 'period_from', 'period_to')
+		$settings = DB::select()
 			->from('vk_groups')
 			->where('id', '=', $group_id)
 			->execute()
@@ -746,120 +746,132 @@ class Posts {
 		return $queue;
 	}
 	
-	protected static function fixPostDate($post_time, $settings) {
-		$day_start = Date::getDayStart($post_time);
+	public static function deviatePostDate($id, $post_time, $dir, $settings) {
+		if (!$settings['deviation'] || $id == "__NEXT__")
+			return $post_time;
 		
-		// Указан дополнительный интервал
-		$fix_after = 0;
-		if ($settings['period_to'] < $settings['period_from']) {
-			$fix_after = $settings['period_to'];
-			$settings['period_to'] = 3600 * 24;
+		$deviation_minutes = round($settings['deviation'] / 60);
+		
+		switch ($dir) {
+			case 0:
+				$deviation = $deviation_minutes - self::pseudoRand($id, 0, $deviation_minutes * 2);
+			break;
+			
+			case 1:
+				$deviation = self::pseudoRand($id, 0, $deviation_minutes);
+			break;
+			
+			case -1:
+				$deviation = -self::pseudoRand($id, 0, $deviation_minutes);
+			break;
 		}
 		
-		if (24 * 3600 - ($settings['period_to'] - $settings['period_from']) > 60) { // Есть фиксированный период постинга
-			if ($post_time - ($day_start + $settings['period_to']) >= 10) {
-				// Если время превышает границу времени, то переносим на следующий день
-				$post_time = $day_start + 24 * 3600 + $settings['period_from'];
-			} elseif ($post_time - ($day_start + $settings['period_from']) <= -10) {
-				if (!$fix_after || $post_time - ($day_start + $fix_after) > 10) { // Дополнительный интервал
-					// Если время не попадает под минимальный период, то переносим его на начало периода текущего дня
-					$post_time = $day_start + $settings['period_from'];
-				}
+		return $post_time + ($deviation * 60);
+	}
+	
+	public static function roundPostDate($post_time, $settings) {
+		$day_start = Date::getDayStart($post_time);
+		$period_start = $day_start + $settings['period_from'];
+		$period_end = $day_start + $settings['period_to'];
+		
+		$post_time = round($post_time / 60) * 60;
+		
+		if ($period_end < $period_start) {
+			$period_end += 24 * 3600;
+			
+			if (($day_start + $settings['period_to']) - $post_time >= 60) {
+				// Ещё активен предыдущий период
+				$period_start -= 24 * 3600;
+				$period_end -= 24 * 3600;
 			}
 		}
 		
-		// Выравниваем по 10 минут
-		if ($post_time && ($post_time % 60 != 0))
-			$post_time = round($post_time / 60) * 60;
+		// Если раньше начала периода - сдвигаем вперёд на начало
+		if ($post_time < $period_start)
+			$post_time = $period_start;
+		
+		// Если не влезло в текущий период - сдвигаем на начало следующего
+		if ($post_time - $period_end > 60)
+			$post_time = $period_start + 3600 * 24;
 		
 		return $post_time;
 	}
 	
-	protected static function processQueue($posts, $settings) {
-		$SPECIAL_POST_AFTER_PAD = min(3600, $settings['interval']);
-		$SPECIAL_POST_BEFORE_PAD = 3600;
-		$SPECIAL_POST_FIX = 60;
+	public static function processQueue($posts, $settings) {
+		// Разделяем посты на:
+		// 1. special	- с фиксированным временем, которое нельзя менять
+		// 2. normal	- обычные посты, которые можно двигать во времени
+		$normal_posts = [];
+		$special_posts = [];
 		
-		$pass = 0;
+		foreach ($posts as $post) {
+			if ($post->special) {
+				$special_posts[] = $post;
+			} else {
+				$normal_posts[] = $post;
+			}
+		}
 		
-		do {
-			$fixes = 0;
+		// Сортируем по ASC
+		usort($special_posts, function ($a, $b) {
+			return $a->date <=> $b->date;
+		});
+		usort($normal_posts, function ($a, $b) {
+			return $a->date <=> $b->date;
+		});
+		
+		$new_posts = [];
+		$prev_post_date = time() - $settings['interval'];
+		
+		foreach ($normal_posts as $post) {
+			// Ранее опубликованный пост
+			if ($post->post_type == 'post') {
+				$prev_post_date = $post->date;
+				$new_posts[] = $post;
+				continue;
+			}
 			
-	//		echo "\nprocess_queue [$pass]:\n";
+			// Рассчитываем дату следующего поста
+			$post->date = self::roundPostDate($prev_post_date + $settings['interval'], $settings);
+			$post->date = self::deviatePostDate($post->id, $post->date, 0, $settings);
 			
-			// Сначала сортируем по ASC
-			usort($posts, function ($a, $b) {
-				if ($a->date == $b->date)
-					return 0;
-				return $a->date > $b->date ? 1 : -1;
-			});
-			
-			$prev_date = 0;
-			$ids = array_keys($posts);
-			for ($i = 0, $l = count($ids); $i < $l; ++$i) {
-				$cur = $posts[$ids[$i]];
-				$prev = $i > 0 ? $posts[$ids[$i - 1]] : NULL;
-				$next = $i < $l - 1 ? $posts[$ids[$i + 1]] : NULL;
-				
-				// Специальный пост с точной датой
-				if ($cur->special || $cur->post_type == 'post') {
-	//				echo "#".$cur->id." - SKIP SPECIAL (".date("d/m/Y H:i", $cur->date).")\n";
+			foreach ($special_posts as $special_post) {
+				$delta = $special_post->date - $post->date;
+				// Если задеваем специальный пост, то переносит после него + special_post_after
+				if (($delta >= 0 && $delta < $settings['special_post_before']) || ($delta < 0 && abs($delta) < $settings['special_post_after'])) {
+					$post->date = self::roundPostDate($special_post->date + $settings['special_post_after'], $settings);
 					
-					if ($pass > 0 || !$cur->special)
-						$prev_date = $cur->date;
-					
-					continue;
-				}
-				
-				$old_date = $cur->date;
-				
-				// Дата прошлого поста
-				$cur->date = self::fixPostDate(max($prev_date + $settings['interval'], time()), $settings);
-	//			echo "#".$cur->id." set date ".date("d/m/Y H:i", $cur->date)."\n";
-				
-				$need_recalc = 0;
-				if ($pass > 0) {
-					// Предыдущий пост - специальный и до него меньше часа
-					if ($prev && $prev->special && $cur->date - $prev->date < ($SPECIAL_POST_BEFORE_PAD - $SPECIAL_POST_FIX)) {
-						// Увеличиваем промежуток до часа
-						$cur->date = self::fixPostDate($cur->date + ($SPECIAL_POST_BEFORE_PAD - ($cur->date - $prev->date)), $settings);
-						
-	//					echo "\t#".$cur->id." fix date ".date("d/m/Y H:i", $cur->date)." (diff=".($cur->date - $prev->date).") by prev SPECIAL\n";
+					// Если между постом и рекламных постом достаточно времени для девиации, то разрешаем отклонять время поста в меньшую сторону
+					if (($post->date - ($special_post->date + $settings['special_post_after'])) > $settings['deviation']) {
+						$post->date = self::deviatePostDate($post->id, $post->date, 0, $settings);
 					}
-					
-					// Следующий пост - специальный и до него меньше часа
-					if ($next && $next->special && $next->date - $cur->date < ($SPECIAL_POST_AFTER_PAD - $SPECIAL_POST_FIX)) {
-						for ($i = $i + 1; $i < $l; ++$i) {
-							$next_topic = $posts[$ids[$i]];
-							if ($next_topic->date - $cur->date < ($SPECIAL_POST_AFTER_PAD - $SPECIAL_POST_FIX)) {
-								// Передвигаем этот пост ЗА топик + 1h
-								$cur->date = self::fixPostDate($next_topic->date + $SPECIAL_POST_AFTER_PAD, $settings);
-								
-	//							echo "\t#".$cur->id." fix date ".date("d/m/Y H:i", $cur->date)." by next SPECIAL\n";
-								
-								++$need_recalc;
-								continue;
-							}
-							break;
-						}
+					// Иначе разрешаем отклонять время поста только в большую сторону
+					else {
+						$post->date = self::deviatePostDate($post->id, $post->date, 1, $settings);
 					}
-				}
-				
-				$prev_date = $cur->date;
-				
-				if ($old_date != $cur->date)
-					++$fixes;
-				
-				if ($need_recalc) {
-					// Изменился порядок, нужно пересчитать время
-					++$fixes;
-					break;
 				}
 			}
 			
-			++$pass;
-		} while ($fixes > 0 || $pass < 2);
+			$prev_post_date = $post->date;
+			$new_posts[] = $post;
+		}
 		
-		return $posts;
+		// Подмешиваем обратно special-посты
+		foreach ($special_posts as $special_post)
+			$new_posts[] = $special_post;
+		
+		// И заново сортриум по ASC
+		usort($new_posts, function ($a, $b) {
+			return $a->date <=> $b->date;
+		});
+		
+		return $new_posts;
+	}
+	
+	public static function pseudoRand($val, $min, $max) {
+		$md5 = md5("prng:$min-$max-$val");
+		$n = hexdec(substr($md5, 10, 4)) % 25;
+		$int31 = (hexdec(substr($md5, $n, 8))) & 0x7fffffff;
+		return floor($min + (($max - $min + 1) * ($int31 / 0x80000000)));
 	}
 }

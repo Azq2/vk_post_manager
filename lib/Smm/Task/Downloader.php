@@ -310,7 +310,7 @@ class Downloader extends \Z\Task {
 			CURLOPT_FILE				=> $fp, 
 			CURLOPT_FOLLOWLOCATION		=> true, 
 			CURLOPT_URL					=> $url, 
-			CURLOPT_VERBOSE				=> false, 
+			CURLOPT_VERBOSE				=> true, 
 			CURLOPT_USERAGENT			=> "Mozilla/5.0 (Linux; Android 6.0.1; SM-G532G Build/MMB29T) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/63.0.3239.83 Mobile Safari/537.36", 
 			CURLOPT_IPRESOLVE			=> CURL_IPRESOLVE_V4
 		]);

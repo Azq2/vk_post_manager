@@ -15,25 +15,62 @@ require(['suggested']);
 
 <form action="?a=index/settings&return=<?= urlencode($back) ?>&gid=<?= $gid ?>" method="POST" id="group_settings" class="row">
 	<div class="info">
-		Частота ~<span id="post_cnt">0</span> постов в день. 
+		Частота ~<span id="post_cnt">?</span> постов в день. 
+		<button class="btn" id="show_freq_settings">Настроить</button>
 	</div>
 	
-	<div class="pad_t">
-		Публиковать
-			с <input type="text" value="<?= $from['hh'] ?>" name="from_hh" size="2" />:<input type="text" value="<?= $from['mm'] ?>" name="from_mm" size="2" />
-			до
-			<input type="text" value="<?= $to['hh'] ?>" name="to_hh" size="2" />:<input type="text" value="<?= $to['mm'] ?>" name="to_mm" size="2" />
-	</div>
-	
-	<div class="pad_t">
-		С интервалом
-		<button class="btn js-interval_incr" data-dir="-1">&nbsp;-&nbsp;</button>
-		<input type="text" value="<?= $interval['hh'] ?>" name="hh" size="2" />:<input type="text" value="<?= $interval['mm'] ?>" name="mm" size="2" />
-		<button class="btn js-interval_incr" data-dir="1">&nbsp;+&nbsp;</button>
-	</div>
-	
-	<div class="pad_t">
-		<button class="btn js-btn_save hide">Сохранить</button>
+	<div id="freq_settings" class="hide">
+		<div class="pad_t">
+			Публиковать
+				с <input type="text" value="<?= $from['hh'] ?>" name="from_hh" size="2" />
+				:
+				<input type="text" value="<?= $from['mm'] ?>" name="from_mm" size="2" />
+				до
+				<input type="text" value="<?= $to['hh'] ?>" name="to_hh" size="2" />
+				:
+				<input type="text" value="<?= $to['mm'] ?>" name="to_mm" size="2" />
+		</div>
+		
+		<div class="pad_t">
+			С интервалом
+			<button class="btn js-interval_incr" data-key="" data-dir="-5">&nbsp;-&nbsp;</button>
+			<input type="text" value="<?= $interval['hh'] ?>" name="hh" size="2" />
+			:
+			<input type="text" value="<?= $interval['mm'] ?>" name="mm" size="2" />
+			<button class="btn js-interval_incr" data-key="" data-dir="5">&nbsp;+&nbsp;</button>
+		</div>
+		
+		<div class="pad_t">
+			С девиацией
+			<button class="btn js-interval_incr" data-key="deviation" data-dir="-1">&nbsp;-&nbsp;</button>
+			<input type="text" value="<?= $deviation['hh'] ?>" name="deviation_hh" size="2" />
+			:
+			<input type="text" value="<?= $deviation['mm'] ?>" name="deviation_mm" size="2" />
+			<button class="btn js-interval_incr" data-key="deviation" data-dir="1">&nbsp;+&nbsp;</button>
+			минут
+		</div>
+		
+		<div class="pad_t">
+			Отступ до рекламы
+			<button class="btn js-interval_incr" data-key="special_post_before" data-dir="-5">&nbsp;-&nbsp;</button>
+			<input type="text" value="<?= $special_post_before['hh'] ?>" name="special_post_before_hh" size="2" />
+			:
+			<input type="text" value="<?= $special_post_before['mm'] ?>" name="special_post_before_mm" size="2" />
+			<button class="btn js-interval_incr" data-key="special_post_before" data-dir="5">&nbsp;+&nbsp;</button>
+		</div>
+		
+		<div class="pad_t">
+			Отступ после рекламы
+			<button class="btn js-interval_incr" data-key="special_post_after" data-dir="-5">&nbsp;-&nbsp;</button>
+			<input type="text" value="<?= $special_post_after['hh'] ?>" name="special_post_after_hh" size="2" />
+			:
+			<input type="text" value="<?= $special_post_after['mm'] ?>" name="special_post_after_mm" size="2" />
+			<button class="btn js-interval_incr" data-key="special_post_after" data-dir="5">&nbsp;+&nbsp;</button>
+		</div>
+		
+		<div class="pad_t">
+			<button class="btn">Сохранить</button>
+		</div>
 	</div>
 </form>
 

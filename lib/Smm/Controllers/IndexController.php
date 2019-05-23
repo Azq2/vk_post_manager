@@ -13,6 +13,68 @@ class IndexController extends \Smm\GroupController {
 		return $this->suggestedAction();
 	}
 	
+	public function testAction() {
+		$settings = DB::select()
+			->from('vk_groups')
+			->where('id', '=', $this->group['id'])
+			->execute()
+			->current();
+		
+		$time = strtotime(date("Y-m-d", time() + 3600*24)." 06:00");
+		$min_time = $time + 1;
+		$max_time = 0;
+		
+		mt_srand(0);
+		
+		$posts = [];
+		for ($i = 0; $i < 100; ++$i) {
+			$posts[] = (object) [
+				'date'			=> $time, 
+				'special'		=> false, 
+				'post_type'		=> !$i ? 'post' : 'postpone', 
+				'id'			=> $i
+			];
+			$time += $settings['interval'];
+			$max_time = $time;
+		}
+		
+		for ($i = 0; $i < 10; ++$i) {
+			$posts[] = (object) [
+				'date'			=> mt_rand($min_time, $max_time), 
+				'special'		=> true, 
+				'post_type'		=> 'postpone', 
+				'id'			=> $i
+			];
+		}
+		
+		$mode = $_GET['M'] ?? 0;
+		$new_posts = \Smm\VK\Posts::processQueue($posts, $settings);
+		
+		$values = [];
+		for ($i = 0; $i < 100000; ++$i) {
+			@++$values[\Smm\VK\Posts::pseudoRand(9823764+$i, 0, 10)];
+		}
+		
+		asort($values);
+		
+		print_r($values);
+		
+		$last = 0;
+		foreach ($new_posts as $post) {
+			if (date("H:i", $post->date) == "07:30")
+				echo "\n";
+			
+			if ($last) {
+				echo date("+H:i", strtotime("00:00:00") + ($post->date - $last));
+			} else {
+				echo "      ";
+			}
+			
+			echo "     #".$post->id." - ".date("Y-m-d H:i:s", $post->date).($post->special ? " [SPECIAL]" : "")."\n";
+			$last = $post->date;
+		}
+	}
+	
 	public function suggestedAction() {
 		$api = new \Z\Net\VkApi(\Smm\Oauth::getAccessToken('VK'));
 		
@@ -131,6 +193,9 @@ class IndexController extends \Smm\GroupController {
 			'from'					=> $this->_parseTime($this->group['period_from']), 
 			'to'					=> $this->_parseTime($this->group['period_to']), 
 			'interval'				=> $this->_parseTime($this->group['interval']), 
+			'special_post_before'	=> $this->_parseTime($this->group['special_post_before']), 
+			'special_post_after'	=> $this->_parseTime($this->group['special_post_after']), 
+			'deviation'				=> $this->_parseTime($this->group['deviation']), 
 			'success'				=> isset($_REQUEST['ok']), 
 			'postponed_cnt'			=> $res->postponed_cnt, 
 			'suggests_cnt'			=> $res->suggests_cnt
@@ -208,17 +273,35 @@ class IndexController extends \Smm\GroupController {
 					$interval_hh = min(max(0, $_POST['hh'] ?? 0), 23);
 					$interval_mm = min(max(0, $_POST['mm'] ?? 0), 59);
 					
-					$to = $to_hh * 3600 + $to_mm * 60;
-					$from = $from_hh * 3600 + $from_mm * 60;
-					$interval = $interval_hh * 3600 + $interval_mm * 60;
+					$deviation_hh = min(max(0, $_POST['deviation_hh'] ?? 0), 23);
+					$deviation_mm = min(max(0, $_POST['deviation_mm'] ?? 0), 59);
+					
+					$special_post_before_hh = min(max(0, $_POST['special_post_before_hh'] ?? 0), 23);
+					$special_post_before_mm = min(max(0, $_POST['special_post_before_mm'] ?? 0), 59);
+					
+					$special_post_after_hh = min(max(0, $_POST['special_post_after_hh'] ?? 0), 23);
+					$special_post_after_mm = min(max(0, $_POST['special_post_after_mm'] ?? 0), 59);
+					
+					$to						= $to_hh * 3600 + $to_mm * 60;
+					$from					= $from_hh * 3600 + $from_mm * 60;
+					$interval				= $interval_hh * 3600 + $interval_mm * 60;
+					$deviation				= $deviation_hh * 3600 + $deviation_mm * 60;
+					$special_post_before	= $special_post_before_hh * 3600 + $special_post_before_mm * 60;
+					$special_post_after		= $special_post_after_hh * 3600 + $special_post_after_mm * 60;
 					
 					$interval = round($interval / 60) * 60;
+					$deviation = round($deviation / 60) * 60;
+					
+					$deviation = max(0, min(round($interval / 2), $deviation));
 					
 					DB::update('vk_groups')
 						->set([
-							'period_from'	=> $from, 
-							'period_to'		=> $to, 
-							'interval'		=> $interval
+							'period_from'			=> $from, 
+							'period_to'				=> $to, 
+							'interval'				=> $interval, 
+							'deviation'				=> $deviation, 
+							'special_post_before'	=> $special_post_before, 
+							'special_post_after'	=> $special_post_after, 
 						])
 						->where('id', '=', $this->group['id'])
 						->execute();
