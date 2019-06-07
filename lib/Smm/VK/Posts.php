@@ -269,110 +269,98 @@ class Posts {
 			'suggests'		=> [], 
 			'suggests_cnt'	=> 0, 
 			'specials'		=> [], 
-			'last'			=> false, 
 			'users'			=> [], 
 		];
 		
 		$code = '
-			var api_cnt = 0, 
-				gid = -'.$group_id.';
+			var MAX_API_CNT		= 25;
+			var GROUP_ID		= -'.$group_id.';
 			
-			var last_comment = API.wall.get({
-				owner_id: gid, 
-				filter: "all", 
-				count: 2
+			var postponed_offset = 0;
+			var suggests_offset = 0;
+			var postponed_total = -1;
+			var suggests_total = -1;
+			
+			var api_cnt = 0;
+			
+			var results = [];
+			
+			var while_cond = true;
+			while (while_cond) {
+				var loaded = false;
+				
+				if (postponed_total == -1 || postponed_offset < postponed_total) {
+					var postponed = API.wall.get({
+						owner_id:	GROUP_ID, 
+						filter:		"postponed", 
+						extended:	1, 
+						count:		100, 
+						offset:		postponed_offset
+					});
+					results.push(postponed);
+					postponed_total = postponed.count;
+					postponed_offset = postponed_offset + postponed.items.length;
+					api_cnt = api_cnt + 1;
+					loaded = true;
+				}
+				
+				if (suggests_total == -1 || suggests_offset < suggests_total) {
+					var suggests = API.wall.get({
+						owner_id:	GROUP_ID, 
+						filter:		"suggests", 
+						extended:	1, 
+						count:		100, 
+						offset:		suggests_offset
+					});
+					results.push(suggests);
+					suggests_total = suggests.count;
+					suggests_offset = suggests_offset + suggests.items.length;
+					api_cnt = api_cnt + 1;
+					loaded = true;
+				}
+				
+				if (MAX_API_CNT - api_cnt < 4 || !loaded)
+					while_cond = false;
+			}
+			
+			var last_comments = API.wall.get({
+				owner_id:	GROUP_ID, 
+				filter:		"all", 
+				extended:	1, 
+				count:		3, 
+				offset:		0
 			});
 			
-			api_cnt = api_cnt + 1;
+			results.push(last_comments);
 			
-			var empty_postponed = 0;
-			var empty_suggests = 0;
-			var total_postponed = 0;
-			var total_suggests = 0;
-			var postponed_arr = [];
-			var suggests_arr = [];
-			var while_cond = true;
+			var user_ids = [];
 			
-			while (while_cond) {
-				var cond = 0;
+			var items = results@.items;
+			var i = items.length;
+			var load_user_ids = [];
+			
+			while (i >= 1) {
+				var from_ids = items[i - 1]@.created_by;
 				
-				if (!empty_postponed && (!total_postponed || postponed_arr.length * 100 < total_postponed)) {
-					var postponed = API.wall.get({
-						owner_id: gid, 
-						filter: "postponed", 
-						extended: true, 
-						count: 100
-					});
-					total_postponed = postponed.count;
-					postponed_arr.push(postponed);
-					
-					api_cnt = api_cnt + 1;
-					cond = cond + 1;
-					
-					if (!total_postponed)
-						empty_postponed = true;
+				var j = from_ids.length;
+				while (j >= 1) {
+					if (from_ids[j] != null && from_ids[j] > 0 && load_user_ids.indexOf(from_ids[j]) < 0)
+						load_user_ids.push(from_ids[j]);
+					j = j - 1;
 				}
 				
-				if (!empty_suggests && (!total_suggests || suggests_arr.length * 100 < total_suggests)) {
-					var suggests = API.wall.get({
-						owner_id: gid, 
-						filter: "suggests", 
-						extended: true, 
-						count: 100
-					});
-					total_suggests = suggests.count;
-					suggests_arr.push(suggests);
-					
-					api_cnt = api_cnt + 1;
-					cond = cond + 1;
-					
-					if (!total_suggests)
-						empty_suggests = true;
-				}
-				
-				if (api_cnt < 2 || !cond) {
-					// Упёрлись в лимит или закончили
-					while_cond = false;
-				}
-			}
-			
-			var arr = [postponed_arr, suggests_arr];
-			
-			var ids = [], i = 0, j = 0, k = 0;
-			while (i < arr.length) {
-				while (j < arr[i].length) {
-					while (k < arr[i][j].items.length) {
-						if (arr[i][j].items[k].created_by)
-							ids.push(arr[i][j].items[k].created_by);
-						if (arr[i][j].items[k].from_id)
-							ids.push(arr[i][j].items[k].from_id);
-						k = k + 1;
-					}
-					j = j + 1;
-				}
-				i = i + 1;
-			}
-			
-			i = 0;
-			while (i < last_comment.items.length) {
-				if (last_comment.items[i].created_by)
-					ids.push(last_comment.items[i].created_by);
-				if (last_comment.items[i].from_id)
-					ids.push(last_comment.items[i].from_id);
-				i = i + 1;
+				i = i - 1;
 			}
 			
 			return {
-				postponed:	postponed_arr, 
-				suggests:	suggests_arr, 
-				profiles:	ids.length ? API.users.get({user_ids: ids, fields: "photo_50"}) : [], 
-				last:		last_comment
+				results:	results, 
+				profiles:	API.users.get({"user_ids": load_user_ids, fields: "photo_50"})
 			};
 		';
 		
 		$out = false;
 		
-		for ($i = 0; $i < 2; ++$i) {
+		for ($i = 0; $i < 3; ++$i) {
 			$out = $api->exec("execute", array('code' => $code));
 			
 			if ($out->success())
@@ -396,37 +384,40 @@ class Posts {
 		
 		$users = [];
 		$items = [];
-		foreach ([$out->response->postponed, $out->response->suggests] as $list) {
-			foreach ($list as $chunk) {
-				if (isset($chunk->items)) {
-					foreach ($chunk->items as $item)
-						$items[] = $item;
+		$published_items = [];
+		foreach ($out->response->results as $chunk) {
+			if (isset($chunk->items)) {
+				foreach ($chunk->items as $item) {
+					if ($item->post_type == 'post') {
+						$published_items[$item->owner_id.":".$item->id] = $item;
+					} else {
+						$items[$item->owner_id.":".$item->id] = $item;
+					}
 				}
-				
-				if (isset($chunk->profiles)) {
-					foreach ($chunk->profiles as $u)
-						$users[$u->id] = $u;
-				}
-				
-				if (isset($chunk->groups)) {
-					foreach ($chunk->groups as $u)
-						$users[-$u->id] = $u;
-				}
+			}
+			
+			if (isset($chunk->profiles)) {
+				foreach ($chunk->profiles as $u)
+					$users[$u->id] = $u;
+			}
+			
+			if (isset($chunk->groups)) {
+				foreach ($chunk->groups as $u)
+					$users[-$u->id] = $u;
 			}
 		}
 		
 		foreach ($out->response->profiles as $u)
 			$users[$u->id] = $u;
 		
-		$last_post = NULL;
-		if ($out->response->last && count($out->response->last->items)) {
-			$last_post = $out->response->last->items[0];
-			if (count($out->response->last->items) > 1 && $out->response->last->items[1]->date > $out->response->last->items[0]->date)
-				$last_post = $out->response->last->items[1];
-		}
+		usort($published_items, function ($a, $b) {
+			return $b <=> $a;
+		});
 		
-		if ($last_post)
-			$items[] = $last_post;
+		if ($published_items)
+			$items[$published_items[0]->owner_id.":".$published_items[0]->id] = $published_items[0];
+		
+		$items = array_values($items);
 		
 		$postponed = [];
 		$suggests = [];
@@ -480,23 +471,18 @@ class Posts {
 		$postponed = $new_postponed;
 		
 		usort($suggests, function ($a, $b) {
-			if ($a->date == $b->date)
-				return 0;
-			return $a->date > $b->date ? 1 : -1;
+			return $b->date <=> $a->date;
 		});
 		
 		usort($specials, function ($a, $b) {
-			if ($a->date == $b->date)
-				return 0;
-			return $a->date > $b->date ? 1 : -1;
+			return $b->date <=> $a->date;
 		});
 		
 		$result->postponed		= $postponed;
-		$result->postponed_cnt	= $last_post ? count($postponed) - 1 : count($postponed);
+		$result->postponed_cnt	= $published_items ? count($postponed) - 1 : count($postponed);
 		$result->suggests		= $suggests;
 		$result->suggests_cnt	= count($suggests);
 		$result->specials		= $specials;
-		$result->last			= $last_post;
 		$result->users			= $users;
 		
 		return $result;

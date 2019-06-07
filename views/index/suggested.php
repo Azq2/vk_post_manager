@@ -91,7 +91,8 @@ require(['suggested']);
 
 <div class="row">
 	<b>Время последнего поста:</b> <?= $last_post_time ?><br />
-	<b>Конец очереди:</b> <?= $last_delayed_post_time ?>
+	<b>Конец очереди:</b> <?= $last_delayed_post_time ?><br />
+	<b>Нужен пост:</b> <?= $next_post_time ?>
 	
 	<div class="progress">
 		<div class="progress-item" style="width:<?= 

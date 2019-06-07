@@ -170,6 +170,8 @@ class IndexController extends \Smm\GroupController {
 			'active'	=> $filter
 		]);
 		
+		$next_post_time = \Smm\Globals::get($this->group['id'], "next_post_date");
+		
 		$this->title = 'Предложки';
 		$this->content = View::factory('index/suggested', [
 			'by_week'	=> [
@@ -183,6 +185,7 @@ class IndexController extends \Smm\GroupController {
 			
 			'last_post_time'				=> $last_posted ? Date::display($last_posted) : 'n/a', 
 			'last_delayed_post_time'		=> $last_postponed ? Date::display($last_postponed) : 'n/a', 
+			'next_post_time'				=> $next_post_time ? Date::display($next_post_time) : 'n/a', 
 			
 			'last_post_time_unix'			=> $last_posted, 
 			'last_delayed_post_time_unix'	=> $last_postponed, 
