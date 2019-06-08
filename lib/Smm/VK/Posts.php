@@ -412,7 +412,7 @@ class Posts {
 			$users[$u->id] = $u;
 		
 		usort($published_items, function ($a, $b) {
-			return $b <=> $a;
+			return $b->date <=> $a->date;
 		});
 		
 		if ($published_items)

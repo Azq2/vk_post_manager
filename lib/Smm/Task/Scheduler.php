@@ -20,8 +20,8 @@ class Scheduler extends \Z\Task {
 		];
 	}
 	
-	public function run($args) {
-		if (!\Smm\Utils\Lock::lock(__CLASS__)) {
+	public function run($args, $bug = false) {
+		if (!\Smm\Utils\Lock::lock(__CLASS__) && !$bug) {
 			echo "Already running.\n";
 			return;
 		}
@@ -160,6 +160,11 @@ class Scheduler extends \Z\Task {
 							'publish_date'	=> $item->date <= time() + 60 ? time() + 60 : $item->date
 						];
 						
+						if ($item->date <= time() + 60) {
+							echo "\t=> #".$p->id." - FORCE PUBLISH POST\n";
+							$limit = 9999; // выходим из очереди
+						}
+						
 						if (($captcha_code = Captcha::getCode())) {
 							$api_data['captcha_key'] = $captcha_code['key'];
 							$api_data['captcha_sid'] = $captcha_code['sid'];
@@ -172,7 +177,7 @@ class Scheduler extends \Z\Task {
 						}
 						
 						Captcha::set($res->captcha());
-						echo "\t\t=> #".$p->id." - ERROR: ".$res->error()."\n";
+						echo "\t=> #".$p->id." - ERROR: ".$res->error()."\n";
 						
 						sleep($i + 1);
 					}

@@ -36,7 +36,7 @@ class IndexController extends \Smm\GroupController {
 		$posts[] = (object) [
 			'date'			=> strtotime(date("Y-m-d")." 07:05"), 
 			'special'		=> true, 
-			'post_type'		=> 'post', 
+			'post_type'		=> 'postpone', 
 			'id'			=> 2
 		];
 		
