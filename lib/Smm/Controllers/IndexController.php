@@ -20,44 +20,41 @@ class IndexController extends \Smm\GroupController {
 			->execute()
 			->current();
 		
-		$time = strtotime(date("Y-m-d", time() + 3600*24)." 06:00");
+		$time = strtotime(date("Y-m-d", time() + 3600*24)." 08:11");
 		$min_time = $time + 1;
 		$max_time = 0;
 		
 		mt_srand(0);
 		
-		$posts = [];
-		for ($i = 0; $i < 100; ++$i) {
-			$posts[] = (object) [
-				'date'			=> $time, 
-				'special'		=> false, 
-				'post_type'		=> !$i ? 'post' : 'postpone', 
-				'id'			=> $i
-			];
-			$time += $settings['interval'];
-			$max_time = $time;
-		}
+		$posts[] = (object) [
+			'date'			=> strtotime(date("Y-m-d")." 2:22"), 
+			'special'		=> false, 
+			'post_type'		=> 'post', 
+			'id'			=> 1
+		];
 		
-		for ($i = 0; $i < 10; ++$i) {
-			$posts[] = (object) [
-				'date'			=> mt_rand($min_time, $max_time), 
-				'special'		=> true, 
-				'post_type'		=> 'postpone', 
-				'id'			=> $i
-			];
-		}
+		$posts[] = (object) [
+			'date'			=> strtotime(date("Y-m-d")." 07:05"), 
+			'special'		=> true, 
+			'post_type'		=> 'post', 
+			'id'			=> 2
+		];
 		
-		$mode = $_GET['M'] ?? 0;
+		$posts[] = (object) [
+			'date'			=> strtotime(date("Y-m-d")." 08:11"), 
+			'special'		=> false, 
+			'post_type'		=> 'postpone', 
+			'id'			=> 3
+		];
+		
+		$posts[] = (object) [
+			'date'			=> strtotime(date("Y-m-d")." 10:05"), 
+			'special'		=> false, 
+			'post_type'		=> 'postpone', 
+			'id'			=> 4
+		];
+		
 		$new_posts = \Smm\VK\Posts::processQueue($posts, $settings);
-		
-		$values = [];
-		for ($i = 0; $i < 100000; ++$i) {
-			@++$values[\Smm\VK\Posts::pseudoRand(9823764+$i, 0, 10)];
-		}
-		
-		asort($values);
-		
-		print_r($values);
 		
 		$last = 0;
 		foreach ($new_posts as $post) {

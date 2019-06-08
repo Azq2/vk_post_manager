@@ -340,21 +340,22 @@ class Posts {
 			var load_user_ids = [];
 			
 			while (i >= 1) {
-				var from_ids = items[i - 1]@.created_by;
+				i = i - 1;
+				
+				var from_ids = items[i]@.created_by;
 				
 				var j = from_ids.length;
 				while (j >= 1) {
+					j = j - 1;
+					
 					if (from_ids[j] != null && from_ids[j] > 0 && load_user_ids.indexOf(from_ids[j]) < 0)
 						load_user_ids.push(from_ids[j]);
-					j = j - 1;
 				}
-				
-				i = i - 1;
 			}
 			
 			return {
 				results:	results, 
-				profiles:	API.users.get({"user_ids": load_user_ids, fields: "photo_50"})
+				profiles:	load_user_ids.length ? API.users.get({"user_ids": load_user_ids, fields: "photo_50"}) : []
 			};
 		';
 		
@@ -388,10 +389,10 @@ class Posts {
 		foreach ($out->response->results as $chunk) {
 			if (isset($chunk->items)) {
 				foreach ($chunk->items as $item) {
-					if ($item->post_type == 'post') {
+					if (!in_array($item->post_type, ['postpone', 'suggest'])) {
 						$published_items[$item->owner_id.":".$item->id] = $item;
 					} else {
-						$items[$item->owner_id.":".$item->id] = $item;
+						$items[$item->id] = $item;
 					}
 				}
 			}
@@ -415,7 +416,7 @@ class Posts {
 		});
 		
 		if ($published_items)
-			$items[$published_items[0]->owner_id.":".$published_items[0]->id] = $published_items[0];
+			$items[$published_items[0]->id] = $published_items[0];
 		
 		$items = array_values($items);
 		
@@ -433,10 +434,11 @@ class Posts {
 				$specials[] = $post;
 			}
 			
-			if (isset($queue[$post->id]) || $post->special || $post->post_type == 'post') {
+			$post->orig_date = $post->date;
+			
+			if (isset($queue[$post->id]) || $post->special || !in_array($post->post_type, ['postpone', 'suggest'])) {
 				// Отложенный
-				if ($post->post_type != 'post' && !$post->special) {
-					$post->orig_date = $post->date;
+				if (in_array($post->post_type, ['postpone', 'suggest']) && !$post->special) {
 					$post->date = time() + (100 * 24 * 3600) + (24 * 3600 * $queue[$post->id]['n']); // Костыли для сортировки
 				}
 				$postponed[$post->id] = $post;
@@ -471,11 +473,11 @@ class Posts {
 		$postponed = $new_postponed;
 		
 		usort($suggests, function ($a, $b) {
-			return $b->date <=> $a->date;
+			return $a->date <=> $b->date;
 		});
 		
 		usort($specials, function ($a, $b) {
-			return $b->date <=> $a->date;
+			return $a->date <=> $b->date;
 		});
 		
 		$result->postponed		= $postponed;
@@ -504,15 +506,18 @@ class Posts {
 				}
 			}
 		} else {
+			$last = false;
 			foreach ($att as $k => $v) {
-				if (preg_match('/^photo_(\d+)$/', $k, $m))
+				if (preg_match('/^photo_(\d+)$/', $k, $m)) {
 					$ret->thumbs[$m[1]] = $v;
+					// $last = $v;
+				}
 			}
 			
 			if (isset($att->width)) {
 				$ret->width = $att->width;
 				$ret->height = $att->height;
-			} else {
+			} else if ($last) {
 				list ($ret->width, $ret->height) = getimagesize($last);
 			}
 		}
@@ -811,7 +816,7 @@ class Posts {
 		
 		foreach ($normal_posts as $post) {
 			// Ранее опубликованный пост
-			if ($post->post_type == 'post') {
+			if (!in_array($post->post_type, ['postpone', 'suggest'])) {
 				$prev_post_date = $post->date;
 				$new_posts[] = $post;
 				continue;

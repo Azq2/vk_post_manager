@@ -26,6 +26,8 @@ class Scheduler extends \Z\Task {
 			return;
 		}
 		
+		echo "=========== ".date("Y-m-d H:i:s")." ===========\n";
+		
 		Captcha::setMode($args['anticaptcha'] ? 'anticaptcha' : 'cli');
 		
 		$api = new VkApi(\Smm\Oauth::getAccessToken('VK_SCHED'));
@@ -47,7 +49,7 @@ class Scheduler extends \Z\Task {
 			->execute();
 		
 		foreach ($groups as $group) {
-			echo "=========== ".$group['id']." ===========\n";
+			echo "[VK:".$group['id']."]\n";
 			
 			for ($i = 0; $i < 10; ++$i) {
 				$comments = \Smm\VK\Posts::getAll($api, $group['id']);
@@ -62,9 +64,19 @@ class Scheduler extends \Z\Task {
 				continue;
 			}
 			
+			echo "postponed:\n";
+			foreach ($comments->postponed as $p) {
+				echo "[".$p->post_type."] https://vk.com/wall".$p->owner_id."_".$p->id." | ".date("d/m/Y H:i", $p->date)." | ".date("d/m/Y H:i", $p->orig_date)." ".($p->special ? "[SPECIAL]" : "")."\n";
+			}
+			
+			echo "suggests:\n";
+			foreach ($comments->suggests as $p) {
+				echo "[".$p->post_type."] https://vk.com/wall".$p->owner_id."_".$p->id." | ".date("d/m/Y H:i", $p->date)." | ".date("d/m/Y H:i", $p->orig_date)." ".($p->special ? "[SPECIAL]" : "")."\n";
+			}
+			
 			$limit = 0;
 			foreach ($comments->postponed as $item) {
-				if ($item->post_type == 'post' || $item->special)
+				if (!in_array($item->post_type, ['postpone', 'suggest']) || $item->special)
 					continue;
 				
 				if (abs($item->date - $item->orig_date) > 60) { // Нужно пофиксить время
@@ -173,5 +185,10 @@ class Scheduler extends \Z\Task {
 					break;
 			}
 		}
+	}
+	
+	public function log() {
+		$message = date("Y-m-d H:i:s | ").call_user_func_array("sprintf", func_get_args());
+		echo "$message\n";
 	}
 }
