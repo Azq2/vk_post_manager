@@ -22,7 +22,7 @@ class Scheduler extends \Z\Task {
 		$sched_config = \Z\Config::get('scheduler');
 		
 		if ($args['from_cron'] && (date("i") % $sched_config['interval']) != 0)
-			exit;
+			return;
 		
 		if (!\Smm\Utils\Lock::lock(__CLASS__) && !$bug) {
 			echo "Already running.\n";
