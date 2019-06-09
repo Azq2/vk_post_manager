@@ -319,20 +319,7 @@ class GrabberController extends \Smm\GroupController {
 				$error = 'Сейчас бы тыкать на кнопки ничего не введя.';
 			} elseif (isset($parts['host']) && isset($parts['path'])) {
 				$type = '';
-				if (preg_match("/ok.ru|odnoklassniki.ru/i", $parts['host'])) {
-					$data = @file_get_contents("https://m.ok.ru".$parts['path']);
-					if (preg_match("/groupId=(\d+)/i", $data, $m)) {
-						$source_id = $m[1];
-						if (preg_match('/(group_name|itemprop="name")[^>]*>(.*?)</sim', $data, $m)) {
-							$source_type = \Smm\Grabber::SOURCE_OK;
-							$source_name = htmlspecialchars_decode($m[2]);
-						} else {
-							$error = 'Невозможно спарсить имя группы ОК. Нужно срочно пнуть ЖумарИна! (при этом groupId спарислся)';
-						}
-					} else {
-						$error = 'Невозможно спарсить OK groupId. Может, этой группы вообще нет?';
-					}
-				} elseif (preg_match("/vk.com|vkontakte.ru|vk.me/i", $parts['host'])) {
+				if (preg_match("/vk.com|vkontakte.ru|vk.me/i", $parts['host'])) {
 					$api = new VkApi(\Smm\Oauth::getAccessToken('VK'));
 					
 					$group_id = substr($parts['path'], 1);
@@ -404,11 +391,6 @@ class GrabberController extends \Smm\GroupController {
 			$key = \Smm\Grabber::$type2name[$s['source_type']]."_".$s['source_our_id'];
 			
 			switch ($s['source_type']) {
-				case \Smm\Grabber::SOURCE_OK:
-					$url = 'https://ok.ru/group/'.$s['source_our_id'];
-					$icon = 'https://ok.ru/favicon.ico';
-				break;
-				
 				case \Smm\Grabber::SOURCE_VK:
 					$url = 'https://vk.com/public'.(-$s['source_our_id']);
 					$icon = 'https://vk.com/favicon.ico';
@@ -511,11 +493,6 @@ class GrabberController extends \Smm\GroupController {
 			$key = \Smm\Grabber::$type2name[$s['source_type']]."_".$s['source_our_id'];
 			
 			switch ($s['source_type']) {
-				case \Smm\Grabber::SOURCE_OK:
-					$url = 'https://ok.ru/group/'.$s['source_our_id'];
-					$icon = 'https://ok.ru/favicon.ico';
-				break;
-				
 				case \Smm\Grabber::SOURCE_VK:
 					$url = 'https://vk.com/public'.(-$s['source_our_id']);
 					$icon = 'https://vk.com/favicon.ico';

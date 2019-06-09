@@ -18,13 +18,13 @@ class Scheduler extends \Z\Task {
 		];
 	}
 	
-	public function run($args, $bug = false) {
+	public function run($args) {
 		$sched_config = \Z\Config::get('scheduler');
 		
 		if ($args['from_cron'] && (date("i") % $sched_config['interval']) != 0)
 			return;
 		
-		if (!\Smm\Utils\Lock::lock(__CLASS__) && !$bug) {
+		if (!\Smm\Utils\Lock::lock(__CLASS__)) {
 			echo "Already running.\n";
 			return;
 		}
@@ -193,10 +193,5 @@ class Scheduler extends \Z\Task {
 					break;
 			}
 		}
-	}
-	
-	public function log() {
-		$message = date("Y-m-d H:i:s | ").call_user_func_array("sprintf", func_get_args());
-		echo "$message\n";
 	}
 }
