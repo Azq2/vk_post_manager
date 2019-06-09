@@ -1,34 +1,3 @@
--- MySQL dump 10.13  Distrib 5.7.25-28, for debian-linux-gnu (x86_64)
---
--- Host: localhost    Database: xujxuj
--- ------------------------------------------------------
--- Server version	5.7.25-28
-
-/*!40101 SET @OLD_CHARACTER_SET_CLIENT=@@CHARACTER_SET_CLIENT */;
-/*!40101 SET @OLD_CHARACTER_SET_RESULTS=@@CHARACTER_SET_RESULTS */;
-/*!40101 SET @OLD_COLLATION_CONNECTION=@@COLLATION_CONNECTION */;
-/*!40101 SET NAMES utf8 */;
-/*!40103 SET @OLD_TIME_ZONE=@@TIME_ZONE */;
-/*!40103 SET TIME_ZONE='+00:00' */;
-/*!40014 SET @OLD_UNIQUE_CHECKS=@@UNIQUE_CHECKS, UNIQUE_CHECKS=0 */;
-/*!40014 SET @OLD_FOREIGN_KEY_CHECKS=@@FOREIGN_KEY_CHECKS, FOREIGN_KEY_CHECKS=0 */;
-/*!40101 SET @OLD_SQL_MODE=@@SQL_MODE, SQL_MODE='NO_AUTO_VALUE_ON_ZERO' */;
-/*!40111 SET @OLD_SQL_NOTES=@@SQL_NOTES, SQL_NOTES=0 */;
-/*!50717 SELECT COUNT(*) INTO @rocksdb_has_p_s_session_variables FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_SCHEMA = 'performance_schema' AND TABLE_NAME = 'session_variables' */;
-/*!50717 SET @rocksdb_get_is_supported = IF (@rocksdb_has_p_s_session_variables, 'SELECT COUNT(*) INTO @rocksdb_is_supported FROM performance_schema.session_variables WHERE VARIABLE_NAME=\'rocksdb_bulk_load\'', 'SELECT 0') */;
-/*!50717 PREPARE s FROM @rocksdb_get_is_supported */;
-/*!50717 EXECUTE s */;
-/*!50717 DEALLOCATE PREPARE s */;
-/*!50717 SET @rocksdb_enable_bulk_load = IF (@rocksdb_is_supported, 'SET SESSION rocksdb_bulk_load = 1', 'SET @rocksdb_dummy_bulk_load = 0') */;
-/*!50717 PREPARE s FROM @rocksdb_enable_bulk_load */;
-/*!50717 EXECUTE s */;
-/*!50717 DEALLOCATE PREPARE s */;
-
---
--- Table structure for table `vk_comm_users`
---
-
-DROP TABLE IF EXISTS `vk_comm_users`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
 /*!40101 SET character_set_client = utf8 */;
 CREATE TABLE `vk_comm_users` (
@@ -37,12 +6,6 @@ CREATE TABLE `vk_comm_users` (
   PRIMARY KEY (`cid`,`uid`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 /*!40101 SET character_set_client = @saved_cs_client */;
-
---
--- Table structure for table `vk_globals`
---
-
-DROP TABLE IF EXISTS `vk_globals`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
 /*!40101 SET character_set_client = utf8 */;
 CREATE TABLE `vk_globals` (
@@ -52,12 +15,6 @@ CREATE TABLE `vk_globals` (
   PRIMARY KEY (`group_id`,`key`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 /*!40101 SET character_set_client = @saved_cs_client */;
-
---
--- Table structure for table `vk_grabber_blacklist`
---
-
-DROP TABLE IF EXISTS `vk_grabber_blacklist`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
 /*!40101 SET character_set_client = utf8 */;
 CREATE TABLE `vk_grabber_blacklist` (
@@ -68,12 +25,6 @@ CREATE TABLE `vk_grabber_blacklist` (
   PRIMARY KEY (`group_id`,`source_type`,`remote_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8 ROW_FORMAT=COMPACT;
 /*!40101 SET character_set_client = @saved_cs_client */;
-
---
--- Table structure for table `vk_grabber_data`
---
-
-DROP TABLE IF EXISTS `vk_grabber_data`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
 /*!40101 SET character_set_client = utf8 */;
 CREATE TABLE `vk_grabber_data` (
@@ -82,14 +33,8 @@ CREATE TABLE `vk_grabber_data` (
   `text` text CHARACTER SET utf8mb4,
   `attaches` longblob,
   PRIMARY KEY (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=6892447 DEFAULT CHARSET=utf8;
+) ENGINE=InnoDB AUTO_INCREMENT=6892558 DEFAULT CHARSET=utf8;
 /*!40101 SET character_set_client = @saved_cs_client */;
-
---
--- Table structure for table `vk_grabber_data_index`
---
-
-DROP TABLE IF EXISTS `vk_grabber_data_index`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
 /*!40101 SET character_set_client = utf8 */;
 CREATE TABLE `vk_grabber_data_index` (
@@ -114,14 +59,8 @@ CREATE TABLE `vk_grabber_data_index` (
   KEY `likes` (`likes`),
   KEY `comments` (`comments`),
   KEY `grab_time` (`grab_time`)
-) ENGINE=InnoDB AUTO_INCREMENT=24650793 DEFAULT CHARSET=utf8;
+) ENGINE=InnoDB AUTO_INCREMENT=24651045 DEFAULT CHARSET=utf8;
 /*!40101 SET character_set_client = @saved_cs_client */;
-
---
--- Table structure for table `vk_grabber_data_owners`
---
-
-DROP TABLE IF EXISTS `vk_grabber_data_owners`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
 /*!40101 SET character_set_client = utf8 */;
 CREATE TABLE `vk_grabber_data_owners` (
@@ -132,12 +71,6 @@ CREATE TABLE `vk_grabber_data_owners` (
   PRIMARY KEY (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 /*!40101 SET character_set_client = @saved_cs_client */;
-
---
--- Table structure for table `vk_grabber_selected_sources`
---
-
-DROP TABLE IF EXISTS `vk_grabber_selected_sources`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
 /*!40101 SET character_set_client = utf8 */;
 CREATE TABLE `vk_grabber_selected_sources` (
@@ -150,12 +83,6 @@ CREATE TABLE `vk_grabber_selected_sources` (
   UNIQUE KEY `source_id` (`source_id`,`group_id`)
 ) ENGINE=InnoDB AUTO_INCREMENT=52 DEFAULT CHARSET=utf8;
 /*!40101 SET character_set_client = @saved_cs_client */;
-
---
--- Table structure for table `vk_grabber_sources`
---
-
-DROP TABLE IF EXISTS `vk_grabber_sources`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
 /*!40101 SET character_set_client = utf8 */;
 CREATE TABLE `vk_grabber_sources` (
@@ -164,14 +91,8 @@ CREATE TABLE `vk_grabber_sources` (
   `source_id` varchar(255) NOT NULL,
   PRIMARY KEY (`id`),
   UNIQUE KEY `source_type` (`source_type`,`source_id`)
-) ENGINE=InnoDB AUTO_INCREMENT=47567 DEFAULT CHARSET=utf8;
+) ENGINE=InnoDB AUTO_INCREMENT=47571 DEFAULT CHARSET=utf8;
 /*!40101 SET character_set_client = @saved_cs_client */;
-
---
--- Table structure for table `vk_groups`
---
-
-DROP TABLE IF EXISTS `vk_groups`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
 /*!40101 SET character_set_client = utf8 */;
 CREATE TABLE `vk_groups` (
@@ -191,12 +112,6 @@ CREATE TABLE `vk_groups` (
   UNIQUE KEY `pos` (`pos`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 /*!40101 SET character_set_client = @saved_cs_client */;
-
---
--- Table structure for table `vk_join_stat`
---
-
-DROP TABLE IF EXISTS `vk_join_stat`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
 /*!40101 SET character_set_client = utf8 */;
 CREATE TABLE `vk_join_stat` (
@@ -209,12 +124,6 @@ CREATE TABLE `vk_join_stat` (
   PRIMARY KEY (`id`)
 ) ENGINE=InnoDB AUTO_INCREMENT=240738 DEFAULT CHARSET=utf8;
 /*!40101 SET character_set_client = @saved_cs_client */;
-
---
--- Table structure for table `vk_oauth`
---
-
-DROP TABLE IF EXISTS `vk_oauth`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
 /*!40101 SET character_set_client = utf8 */;
 CREATE TABLE `vk_oauth` (
@@ -225,12 +134,6 @@ CREATE TABLE `vk_oauth` (
   PRIMARY KEY (`type`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 /*!40101 SET character_set_client = @saved_cs_client */;
-
---
--- Table structure for table `vk_posts`
---
-
-DROP TABLE IF EXISTS `vk_posts`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
 /*!40101 SET character_set_client = utf8 */;
 CREATE TABLE `vk_posts` (
@@ -243,12 +146,6 @@ CREATE TABLE `vk_posts` (
   PRIMARY KEY (`post_id`,`group_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 /*!40101 SET character_set_client = @saved_cs_client */;
-
---
--- Table structure for table `vk_posts_comments`
---
-
-DROP TABLE IF EXISTS `vk_posts_comments`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
 /*!40101 SET character_set_client = utf8 */;
 CREATE TABLE `vk_posts_comments` (
@@ -261,12 +158,6 @@ CREATE TABLE `vk_posts_comments` (
   KEY `user_id` (`user_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 /*!40101 SET character_set_client = @saved_cs_client */;
-
---
--- Table structure for table `vk_posts_fake_date`
---
-
-DROP TABLE IF EXISTS `vk_posts_fake_date`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
 /*!40101 SET character_set_client = utf8 */;
 CREATE TABLE `vk_posts_fake_date` (
@@ -275,12 +166,6 @@ CREATE TABLE `vk_posts_fake_date` (
   PRIMARY KEY (`group_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 /*!40101 SET character_set_client = @saved_cs_client */;
-
---
--- Table structure for table `vk_posts_likes`
---
-
-DROP TABLE IF EXISTS `vk_posts_likes`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
 /*!40101 SET character_set_client = utf8 */;
 CREATE TABLE `vk_posts_likes` (
@@ -291,12 +176,6 @@ CREATE TABLE `vk_posts_likes` (
   KEY `user_id` (`user_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 /*!40101 SET character_set_client = @saved_cs_client */;
-
---
--- Table structure for table `vk_posts_queue`
---
-
-DROP TABLE IF EXISTS `vk_posts_queue`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
 /*!40101 SET character_set_client = utf8 */;
 CREATE TABLE `vk_posts_queue` (
@@ -309,12 +188,6 @@ CREATE TABLE `vk_posts_queue` (
   KEY `group_id-position` (`group_id`) USING BTREE
 ) ENGINE=InnoDB AUTO_INCREMENT=13811 DEFAULT CHARSET=utf8;
 /*!40101 SET character_set_client = @saved_cs_client */;
-
---
--- Table structure for table `vk_posts_reposts`
---
-
-DROP TABLE IF EXISTS `vk_posts_reposts`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
 /*!40101 SET character_set_client = utf8 */;
 CREATE TABLE `vk_posts_reposts` (
@@ -329,12 +202,6 @@ CREATE TABLE `vk_posts_reposts` (
   KEY `user_id` (`user_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 /*!40101 SET character_set_client = @saved_cs_client */;
-
---
--- Table structure for table `vk_smm_money`
---
-
-DROP TABLE IF EXISTS `vk_smm_money`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
 /*!40101 SET character_set_client = utf8 */;
 CREATE TABLE `vk_smm_money` (
@@ -344,12 +211,6 @@ CREATE TABLE `vk_smm_money` (
   PRIMARY KEY (`group_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 /*!40101 SET character_set_client = @saved_cs_client */;
-
---
--- Table structure for table `vk_smm_money_out`
---
-
-DROP TABLE IF EXISTS `vk_smm_money_out`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
 /*!40101 SET character_set_client = utf8 */;
 CREATE TABLE `vk_smm_money_out` (
@@ -360,12 +221,6 @@ CREATE TABLE `vk_smm_money_out` (
   `sum` decimal(12,2) NOT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 /*!40101 SET character_set_client = @saved_cs_client */;
-
---
--- Table structure for table `vk_special_posts`
---
-
-DROP TABLE IF EXISTS `vk_special_posts`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
 /*!40101 SET character_set_client = utf8 */;
 CREATE TABLE `vk_special_posts` (
@@ -374,12 +229,6 @@ CREATE TABLE `vk_special_posts` (
   PRIMARY KEY (`post_id`,`group_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 /*!40101 SET character_set_client = @saved_cs_client */;
-
---
--- Table structure for table `vkapp`
---
-
-DROP TABLE IF EXISTS `vkapp`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
 /*!40101 SET character_set_client = utf8 */;
 CREATE TABLE `vkapp` (
@@ -393,12 +242,6 @@ CREATE TABLE `vkapp` (
   UNIQUE KEY `app` (`app`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 /*!40101 SET character_set_client = @saved_cs_client */;
-
---
--- Table structure for table `vkapp_catlist_cats`
---
-
-DROP TABLE IF EXISTS `vkapp_catlist_cats`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
 /*!40101 SET character_set_client = utf8 */;
 CREATE TABLE `vkapp_catlist_cats` (
@@ -413,12 +256,6 @@ CREATE TABLE `vkapp_catlist_cats` (
   PRIMARY KEY (`id`)
 ) ENGINE=InnoDB AUTO_INCREMENT=29 DEFAULT CHARSET=utf8;
 /*!40101 SET character_set_client = @saved_cs_client */;
-
---
--- Table structure for table `vkapp_catlist_deny`
---
-
-DROP TABLE IF EXISTS `vkapp_catlist_deny`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
 /*!40101 SET character_set_client = utf8 */;
 CREATE TABLE `vkapp_catlist_deny` (
@@ -427,12 +264,6 @@ CREATE TABLE `vkapp_catlist_deny` (
   PRIMARY KEY (`user_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 /*!40101 SET character_set_client = @saved_cs_client */;
-
---
--- Table structure for table `vkapp_catlist_files`
---
-
-DROP TABLE IF EXISTS `vkapp_catlist_files`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
 /*!40101 SET character_set_client = utf8 */;
 CREATE TABLE `vkapp_catlist_files` (
@@ -442,12 +273,6 @@ CREATE TABLE `vkapp_catlist_files` (
   PRIMARY KEY (`md5`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 /*!40101 SET character_set_client = @saved_cs_client */;
-
---
--- Table structure for table `vkapp_catlist_messages`
---
-
-DROP TABLE IF EXISTS `vkapp_catlist_messages`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
 /*!40101 SET character_set_client = utf8 */;
 CREATE TABLE `vkapp_catlist_messages` (
@@ -456,12 +281,6 @@ CREATE TABLE `vkapp_catlist_messages` (
   PRIMARY KEY (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 /*!40101 SET character_set_client = @saved_cs_client */;
-
---
--- Table structure for table `vkapp_catlist_money_history`
---
-
-DROP TABLE IF EXISTS `vkapp_catlist_money_history`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
 /*!40101 SET character_set_client = utf8 */;
 CREATE TABLE `vkapp_catlist_money_history` (
@@ -474,12 +293,6 @@ CREATE TABLE `vkapp_catlist_money_history` (
   PRIMARY KEY (`id`)
 ) ENGINE=InnoDB AUTO_INCREMENT=11 DEFAULT CHARSET=utf8;
 /*!40101 SET character_set_client = @saved_cs_client */;
-
---
--- Table structure for table `vkapp_catlist_reposts`
---
-
-DROP TABLE IF EXISTS `vkapp_catlist_reposts`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
 /*!40101 SET character_set_client = utf8 */;
 CREATE TABLE `vkapp_catlist_reposts` (
@@ -490,12 +303,6 @@ CREATE TABLE `vkapp_catlist_reposts` (
   PRIMARY KEY (`user_id`,`owner_id`,`post_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 /*!40101 SET character_set_client = @saved_cs_client */;
-
---
--- Table structure for table `vkapp_catlist_settings`
---
-
-DROP TABLE IF EXISTS `vkapp_catlist_settings`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
 /*!40101 SET character_set_client = utf8 */;
 CREATE TABLE `vkapp_catlist_settings` (
@@ -505,12 +312,6 @@ CREATE TABLE `vkapp_catlist_settings` (
   PRIMARY KEY (`key`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 /*!40101 SET character_set_client = @saved_cs_client */;
-
---
--- Table structure for table `vkapp_catlist_shop`
---
-
-DROP TABLE IF EXISTS `vkapp_catlist_shop`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
 /*!40101 SET character_set_client = utf8 */;
 CREATE TABLE `vkapp_catlist_shop` (
@@ -527,12 +328,6 @@ CREATE TABLE `vkapp_catlist_shop` (
   PRIMARY KEY (`id`)
 ) ENGINE=InnoDB AUTO_INCREMENT=13 DEFAULT CHARSET=utf8;
 /*!40101 SET character_set_client = @saved_cs_client */;
-
---
--- Table structure for table `vkapp_catlist_user_cats`
---
-
-DROP TABLE IF EXISTS `vkapp_catlist_user_cats`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
 /*!40101 SET character_set_client = utf8 */;
 CREATE TABLE `vkapp_catlist_user_cats` (
@@ -548,12 +343,6 @@ CREATE TABLE `vkapp_catlist_user_cats` (
   PRIMARY KEY (`id`)
 ) ENGINE=InnoDB AUTO_INCREMENT=11 DEFAULT CHARSET=utf8;
 /*!40101 SET character_set_client = @saved_cs_client */;
-
---
--- Table structure for table `vkapp_catlist_users`
---
-
-DROP TABLE IF EXISTS `vkapp_catlist_users`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
 /*!40101 SET character_set_client = utf8 */;
 CREATE TABLE `vkapp_catlist_users` (
@@ -575,18 +364,3 @@ CREATE TABLE `vkapp_catlist_users` (
   PRIMARY KEY (`user_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 /*!40101 SET character_set_client = @saved_cs_client */;
-/*!50112 SET @disable_bulk_load = IF (@is_rocksdb_supported, 'SET SESSION rocksdb_bulk_load = @old_rocksdb_bulk_load', 'SET @dummy_rocksdb_bulk_load = 0') */;
-/*!50112 PREPARE s FROM @disable_bulk_load */;
-/*!50112 EXECUTE s */;
-/*!50112 DEALLOCATE PREPARE s */;
-/*!40103 SET TIME_ZONE=@OLD_TIME_ZONE */;
-
-/*!40101 SET SQL_MODE=@OLD_SQL_MODE */;
-/*!40014 SET FOREIGN_KEY_CHECKS=@OLD_FOREIGN_KEY_CHECKS */;
-/*!40014 SET UNIQUE_CHECKS=@OLD_UNIQUE_CHECKS */;
-/*!40101 SET CHARACTER_SET_CLIENT=@OLD_CHARACTER_SET_CLIENT */;
-/*!40101 SET CHARACTER_SET_RESULTS=@OLD_CHARACTER_SET_RESULTS */;
-/*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
-/*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
-
--- Dump completed on 2019-06-09 17:54:46
