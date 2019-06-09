@@ -183,13 +183,14 @@ var tpl = {
 		var attaches = tpl.attaches(data.attaches || [], custom);
 		
 		var html =
-			'<div class="row js-post wrapper' + post_class + '" data-id="' + data.remote_id + '" data-type="' + data.source_type + '" data-gid="' + data.source_id + '">' + 
+			'<div class="row js-post wrapper' + post_class + '" data-id="' + data.remote_id + '" data-type="' + data.source_type + '" data-gid="' + data.source_id + '"' + 
+					' data-post_type="'+ data.type +'">' + 
 				'<div class="oh">' + 
 					'<div class="left post-preview relative">' + 
 						'<img src="' + data.owner_avatar + '" alt="" width="50" height="50" />' + 
 					'</div>' + 
 					'<div class="oh">' + 
-						'<span class="time">' + 
+						'<span class="time js-post_time">' + 
 							'<span class="m">' + utils.getHumanDate(data.time) + '</span> ' + 
 						'</span>' + 
 						'<a href="' + owner_url + '" target="_blank" class="m"><b class="post-author post-author-' + data.source_type + '">' + data.owner_name + '</b></a> ' + 
@@ -197,7 +198,7 @@ var tpl = {
 							'<img src="/i/img/external.svg" width="14" height="14" class="m" alt="" />' + 
 						'</a>' + 
 						(data.delta ? 
-							' &nbsp;<span class="green m">+' + calcPostDelta(data.delta) + '</span> ' : 
+							' &nbsp;<span class="green m js-post_delta">+' + calcPostDelta(data.delta) + '</span> ' : 
 							''
 						) + 
 						'<br />' + 

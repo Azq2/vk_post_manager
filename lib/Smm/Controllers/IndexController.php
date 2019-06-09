@@ -101,6 +101,7 @@ class IndexController extends \Smm\GroupController {
 		$by_week = [];
 
 		if ($res->success) {
+			$i = 0;
 			foreach ($res->{$list} as $item) {
 				$from_id = (isset($item->created_by) && $item->created_by ? $item->created_by : (isset($item->from_id) ? $item->from_id : $item->owner_id));
 				
@@ -144,15 +145,20 @@ class IndexController extends \Smm\GroupController {
 					'gifs_cnt'		=> $attaches_info->gifs, 
 					
 					// Параметры очереди
+					'first'			=> !$i, 
+					'last'			=> $i == count($res->{$list}) - 1, 
 					'list'			=> $list, 
 					'special'		=> $item->special, 
 					'period'		=> $date != $last_date ? $date : false, 
 					'delta'			=> $last_time ? $item->date - $last_time : 0, 
-					'scheduled'		=> $item->post_type != 'post' && isset($item->orig_date) && abs($item->date - $item->orig_date) <= 60
+					'published'		=> !in_array($item->post_type, ['postpone', 'suggest']), 
+					'scheduled'		=> in_array($item->post_type, ['postpone', 'suggest']) && isset($item->orig_date) && abs($item->date - $item->orig_date) <= 60
 				];
 				
 				$last_time = $item->date;
 				$last_date = $date;
+				
+				++$i;
 			}
 		}
 		

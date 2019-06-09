@@ -12,6 +12,148 @@ use \Smm\View\Widgets;
 use PhpAmqpLib\Message\AMQPMessage;
 
 class VkPostsController extends \Smm\GroupController {
+	// Время, до которого можно успеть обновить время публикации поста
+	private function getPostDeadLine($time) {
+		$sched_interval = \Z\Config::get("scheduler.interval") * 60;
+		
+		// Период обновления щедулера после поста
+		$next_sched_update = $time + ($sched_interval - ((date("i", $time) * 60 + date("s", $time)) % $sched_interval));
+		
+		// Период обновления щедулера перед постом
+		$next_sched_update -= $sched_interval;
+		
+		// Если между периодом обновления и постом менее минуты, то получаешь предыдущий период
+		if ($time - $sched_interval < 60)
+			$next_sched_update -= $sched_interval;
+		
+		return $next_sched_update;
+	}
+	
+	public function moveAction() {
+		$api = new \Z\Net\VkApi(\Smm\Oauth::getAccessToken('VK'));
+		
+		$id = intval($_REQUEST['id'] ?? 0);
+		$dir = $_REQUEST['dir'] ?? 'up';
+		
+		$this->mode('json');
+		
+		$res = \Smm\VK\Posts::getAll($api, $this->group['id']);
+		
+		$before = NULL;
+		$after = NULL;
+		$current = NULL;
+		
+		$this->content['success'] = false;
+		
+		if (!$res->success) {
+			$this->content['error'] = 'Ошибка, невозможно получить список постов из VK. Попробуйте снова.';
+			return;
+		}
+		
+		foreach ($res->postponed as $post) {
+			if (!in_array($post->post_type, ['postpone', 'suggest']))
+				continue;
+			
+			if ($post->id == $id) {
+				$current = $post;
+			} else {
+				if (!$current)
+					$before = $post;
+				
+				if ($current && !$after)
+					$after = $post;
+				}
+		}
+		
+		if (!$current) {
+			$this->content['error'] = 'Ошибка, пост уже был опубликован или удалён.';
+			return;
+		}
+		
+		if ($this->getPostDeadLine($current->orig_date) - time() < 60) {
+			$this->content['error'] = 'Ошибка, не успеем передвинуть этот пост до его публикации. '.
+				'Крайнее время: '.date("Y-m-d H:i:s", $this->getPostDeadLine($current->orig_date)).', сейчас: '.date("Y-m-d H:i:s");
+			return;
+		}
+		
+		if ($dir == 'up') {
+			if (!$before) {
+				$this->content['error'] = 'Ошибка, пост уже и так первый в списке.';
+				return;
+			}
+			
+			if ($this->getPostDeadLine($before->orig_date) - time() < 60) {
+				$this->content['error'] = 'Ошибка, не успеем передвинуть предыдущий пост до его публикации. '.
+					'Крайнее время: '.date("Y-m-d H:i:s", $this->getPostDeadLine($before->orig_date)).', сейчас: '.date("Y-m-d H:i:s");
+				return;
+			}
+		}
+		
+		if ($dir == 'down') {
+			if (!$after) {
+				$this->content['error'] = 'Ошибка, пост уже и так последний в списке.';
+				return;
+			}
+			
+			if ($this->getPostDeadLine($after->orig_date) - time() < 60) {
+				$this->content['error'] = 'Ошибка, не успеем передвинуть следующий пост до его публикации. '.
+					'Крайнее время: '.date("Y-m-d H:i:s", $this->getPostDeadLine($after->orig_date)).', сейчас: '.date("Y-m-d H:i:s");
+				return;
+			}
+		}
+		
+		$sibling = $dir == 'up' ? $before : $after;
+		
+		DB::begin();
+		
+		$current_entry = DB::select()
+			->forUpdate()
+			->from('vk_posts_queue')
+			->where('group_id', '=', $this->group['id'])
+			->where('id', '=', $current->id)
+			->execute()
+			->current();
+		
+		$sibling_entry = DB::select()
+			->forUpdate()
+			->from('vk_posts_queue')
+			->where('group_id', '=', $this->group['id'])
+			->where('id', '=', $sibling->id)
+			->execute()
+			->current();
+		
+		if (!$current_entry || !$sibling_entry) {
+			$this->content['error'] = 'Ошибка, пост не найден в очереди. WTF?';
+			return;
+		}
+		
+		DB::delete('vk_posts_queue')
+			->where('nid', 'IN', [$current_entry['nid'], $sibling_entry['nid']])
+			->execute();
+		
+		DB::insert('vk_posts_queue')
+			->set([
+				'nid'			=> $sibling_entry['nid'], 
+				'id'			=> $current_entry['id'], 
+				'group_id'		=> $current_entry['group_id'], 
+				'fake_date'		=> $current_entry['fake_date'], 
+			])
+			->execute();
+		
+		DB::insert('vk_posts_queue')
+			->set([
+				'nid'			=> $current_entry['nid'], 
+				'id'			=> $sibling_entry['id'], 
+				'group_id'		=> $sibling_entry['group_id'], 
+				'fake_date'		=> $sibling_entry['fake_date'], 
+			])
+			->execute();
+		
+		DB::commit();
+		
+		$this->content['success'] = true;
+	}
+	
 	public function editAction() {
 		$api = new \Z\Net\VkApi(\Smm\Oauth::getAccessToken('VK'));
 		

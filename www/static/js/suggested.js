@@ -40,6 +40,8 @@ var tpl = {
 			tpl.toolbarCommon() + 
 			'<div class="pad_t oh js-post_toolbar">' + 
 				'<button class="btn js-post_action post-hide_edit m inl" data-action="edit">Редактор</button> ' + 
+				'<button class="btn js-post_action post-hide_edit m inl" data-action="move" data-dir="up">Выше</button> ' + 
+				'<button class="btn js-post_action post-hide_edit m inl" data-action="move" data-dir="down">Ниже</button> ' + 
 				'<button class="btn js-post_action post-show_edit m inl" data-action="save">' + 
 					'<img src="/i/img/spinner.gif" alt="" class="m js-spinner hide" /> ' + 
 					'Сохранить' + 
@@ -57,8 +59,13 @@ var tpl = {
 		
 		return html;
 	}, 
+	toolbarPublished: function (post) {
+		return '<div class="pad_t green">Опубликован</div>';
+	}, 
 	toolbar: function (post) {
-		if (post.type != 'post') {
+		if (post.published) {
+			return tpl.toolbarPublished(post);
+		} else {
 			if (options.list == 'suggests') {
 				return tpl.toolbarSuggests(post);
 			} else if (options.list == 'postponed') {
@@ -96,6 +103,70 @@ function init() {
 	feed.addAction('anon', function (e) {
 		e.post.anon = !e.post.anon;
 		e.target.toggleClass('btn-disabled', !e.post.anon);
+	});
+	
+	feed.addAction('move', function (e) {
+		var el = e.target, 
+			wrap = e.wrap, 
+			status = wrap.find('.js-post_status_text'), 
+			post = e.post, 
+			dir = el.data('dir');
+		
+		if (el.attr("disabled"))
+			return;
+		
+		status.removeClass('hide');
+		
+		var posts = wrap.parent().children('.js-post'), 
+			index = wrap.index('.js-post'), 
+			before = $(posts[index - 1]), 
+			after = $(posts[index + 1]);
+		
+		if ((!before.length || before.data('post_type') != 'postpone') && dir == 'up') {
+			status.html(tpl.error('Это уже и так первый в списке пост.'));
+			return;
+		}
+		
+		if ((!after.length || after.data('post_type') != 'postpone') && dir == 'down') {
+			status.html(tpl.error('Это уже и так последний в списке пост.'));
+			return;
+		}
+		
+		status.html(tpl.spinner('Переносим пост ' + (dir == 'up' ? 'выше' : 'ниже') + '...'));
+		el.attr('disabled', 'disabled');
+		
+		$.api("/?a=vk_posts/move", {gid: options.gid, id: e.post.id, dir: dir}, function (res) {
+			el.removeAttr('disabled');
+			if (res.success) {
+				status.addClass('hide');
+				
+				var scroll_top = $(window).scrollTop(), 
+					diff = scroll_top - wrap.offset().top;
+				
+				var swap = dir == "up" ? before : after;
+				
+				if (dir == "up") {
+					before.insertAfter(wrap);
+				} else {
+					after.insertBefore(wrap);
+				}
+				
+				var post_time = swap.find('.js-post_time').html(), 
+					post_delta = swap.find('.js-post_delta').html();
+					
+				swap.find('.js-post_time').html(wrap.find('.js-post_time').html());
+				swap.find('.js-post_delta').html(wrap.find('.js-post_delta').html());
+				wrap.find('.js-post_time').html(post_time);
+				wrap.find('.js-post_delta').html(post_delta);
+				
+				$('html, body').scrollTop(Math.max(0, wrap.offset().top + diff));
+			} else {
+				status.html(tpl.error(res.error));
+			}
+		}, function () {
+			el.removeAttr('disabled');
+			status.html(tpl.error('Ошибка переноса! Попробуйте снова.'));
+		});
 	});
 	
 	var post_save = function (e) {

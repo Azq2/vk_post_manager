@@ -11,16 +11,19 @@ use \Z\Net\Anticaptcha;
 use \Smm\VK\Captcha;
 
 class Scheduler extends \Z\Task {
-	const SCHED_LIMIT		= 2;
-	const API_FAIL_TRIES	= 10;
-	
 	public function options() {
 		return [
-			'anticaptcha' => 0
+			'anticaptcha'	=> 0, 
+			'from_cron'		=> 0
 		];
 	}
 	
 	public function run($args, $bug = false) {
+		$sched_config = \Z\Config::get('scheduler');
+		
+		if ($args['from_cron'] && (date("i") % $sched_config['interval']) != 0)
+			exit;
+		
 		if (!\Smm\Utils\Lock::lock(__CLASS__) && !$bug) {
 			echo "Already running.\n";
 			return;
@@ -105,7 +108,7 @@ class Scheduler extends \Z\Task {
 							continue;
 						}
 						
-						for ($i = 0; $i < self::API_FAIL_TRIES; ++$i) {
+						for ($i = 0; $i < $sched_config['max_api_fails']; ++$i) {
 							$api_data = [
 								'post_id'		=> $p->id, 
 								'owner_id'		=> $p->owner_id, 
@@ -148,7 +151,7 @@ class Scheduler extends \Z\Task {
 						continue;
 					}
 					
-					for ($i = 0; $i < self::API_FAIL_TRIES; ++$i) {
+					for ($i = 0; $i < $sched_config['max_api_fails']; ++$i) {
 						$api_data = [
 							'post_id'		=> $item->id, 
 							'owner_id'		=> $item->owner_id, 
@@ -186,7 +189,7 @@ class Scheduler extends \Z\Task {
 				}
 				
 				++$limit;
-				if ($limit >= min(self::SCHED_LIMIT, count($comments->postponed)))
+				if ($limit >= min($sched_config['limit'], count($comments->postponed)))
 					break;
 			}
 		}
