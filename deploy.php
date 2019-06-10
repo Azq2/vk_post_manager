@@ -73,7 +73,7 @@ class Deployer {
 		$dst = realpath($this->options->dst);
 		$override = $this->options->override ? realpath($this->options->override) : false;
 		
-		$user = fileowner("$src/cron/crontab");
+		$user = fileowner("$src/install/crontab");
 		if ($user != getmyuid())
 			throw new Exception("Expected user $user, but now ".getmyuid());
 		
@@ -169,8 +169,8 @@ class Deployer {
 		
 		$crontab = 
 			"# <xujxuj-smm>\n".
-			"# Crontab : ".$this->options->dst."/cron/crontab\n".
-			trim(file_get_contents($this->options->dst."/cron/crontab"))."\n".
+			"# Crontab : ".$this->options->dst."/install/crontab\n".
+			trim(file_get_contents($this->options->dst."/install/crontab"))."\n".
 			"# </xujxuj-smm>\n";
 		
 		$crontab = strtr($crontab, [
