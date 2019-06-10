@@ -49,6 +49,7 @@ class Scheduler extends \Z\Task {
 		$groups = DB::select()
 			->from('vk_groups')
 			->where('id', 'IN', $groups_with_queue)
+			->where('deleted', '=', 0)
 			->execute();
 		
 		foreach ($groups as $group) {

@@ -23,7 +23,7 @@ class Grabber extends \Z\Task {
 		
 		// Граббим так же и свои группы, поэтому добавим их в список
 		$sources_selfgrab = [];
-		foreach (DB::select()->from('vk_groups')->execute() as $group) {
+		foreach (DB::select()->from('vk_groups')->where('deleted', '=', 0)->execute() as $group) {
 			DB::insert('vk_grabber_sources')
 				->ignore()
 				->set([

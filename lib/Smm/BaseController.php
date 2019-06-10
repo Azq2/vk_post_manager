@@ -13,6 +13,7 @@ class BaseController extends \Z\Controller {
 	protected $mode = 'html';
 	protected $group;
 	protected $redirect;
+	protected $show_comm_tabs = false;
 	
 	public function before() {
 		$this->user = User::instance();
@@ -95,20 +96,22 @@ class BaseController extends \Z\Controller {
 				$comm_tabs = $sections_tabs = NULL;
 				
 				if ($this->user->logged()) {
-					$comm_tabs = new Widgets\Tabs([
-						'url'		=> Url::current(), 
-						'param'		=> 'gid', 
-						'active'	=> $this->group ? $this->group['id'] : false
-					]);
-					
-					$groups = DB::select('id', 'name')
-						->from('vk_groups')
-						->order('pos', 'ASC')
-						->execute();
-					foreach ($groups as $group) {
-						$comm_tabs->addTab($group['id'], [
-							'name' => $group['name']
+					if ($this->show_comm_tabs) {
+						$comm_tabs = new Widgets\Tabs([
+							'url'		=> Url::current(), 
+							'param'		=> 'gid', 
+							'active'	=> $this->group ? $this->group['id'] : false
 						]);
+						
+						$groups = DB::select('id', 'name')
+							->from('vk_groups')
+							->order('pos', 'ASC')
+							->execute();
+						foreach ($groups as $group) {
+							$comm_tabs->addTab($group['id'], [
+								'name' => $group['name']
+							]);
+						}
 					}
 					
 					$base_url = Url::mk('/');
@@ -125,7 +128,7 @@ class BaseController extends \Z\Controller {
 							'grabber'					=> 'Граббер', 
 							'statistic/join_visual'		=> 'Вступления', 
 						//	'game/catlist'				=> 'Котогочи', 
-							'index/exit'				=> 'Выход ('.$this->user->login.')'
+							'settings/index'			=> 'Настройки'
 						], 
 						'active'	=> isset($_REQUEST['a']) ? $_REQUEST['a'] : 'index'
 					]);

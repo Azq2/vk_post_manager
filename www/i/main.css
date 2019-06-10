@@ -357,6 +357,17 @@ li {
 	background-color: #dcf6d8
 }
 
+/* list-link */
+.list-link {
+    display: block;
+    padding: 5px;
+    border-bottom: 1px solid #c5d3e1;
+}
+
+.list-link:last-child {
+	border-bottom: none
+}
+
 /* btn */
 .btn:focus, btn:active {
 	outline: none

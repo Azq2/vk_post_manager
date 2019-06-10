@@ -11,17 +11,21 @@ class GroupController extends \Smm\BaseController {
 		if ($retval === false)
 			return $retval;
 		
+		$this->show_comm_tabs = true;
+		
 		$gid = isset($_REQUEST['gid']) ? (int) $_REQUEST['gid'] : 0;
 		
 		if ($gid) {
 			$group = DB::select()
 				->from('vk_groups')
+				->where('deleted', '=', 0)
 				->where('id', '=', $gid)
 				->execute()
 				->current();
 		} else {
 			$group = DB::select()
 				->from('vk_groups')
+				->where('deleted', '=', 0)
 				->order('pos', 'ASC')
 				->limit(1)
 				->execute()
