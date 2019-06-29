@@ -202,16 +202,18 @@ var tpl = {
 							''
 						) + 
 						'<br />' + 
-						'<div class="post-text post-hide_edit emoji">' + prepareText(utils.htmlWrap(data.text)) + '</div>' + 
+						'<div class="post-text post-hide_edit emoji">' + prepareText(utils.htmlWrap(data.text), data.spell) + '</div>' + 
 					'</div>' + 
 				'</div>' + 
 				'<div class="js-post_attach_editor hide"></div>' + 
 				'<div class="js-post_editor">' + 
 					'<div class="post-show_edit pad_t">' + 
-						'<div class="pad_b">' + 
+						'<div class="pad_b oh">' + 
 							'<label><input type="checkbox" name="text_add" value="1" class="js-post_textarea_enable" ' + 
 								(data.source_type == 'INSTAGRAM' ? '' : ' checked="checked"') + ' /> Использовать текст</label>' + 
+							'<a href="#" class="right js-post_action" data-action="spellcheck">Проверить текст</a>' + 
 						'</div>' + 
+						'<div class="js-post_spell_result"></div>' + 
 						'<textarea rows="10" class="js-post_textarea" name="text"></textarea>' + 
 						'<div class="js-upload_form pad_t" data-action="/?a=vk_posts/upload&amp;gid=' + custom.gid + '" data-id="vk_upload">' + 
 							'<div class="js-upload_input"></div>' + 
@@ -233,8 +235,17 @@ var tpl = {
 	spinner: function (msg) {
 		return '<img src="/i/img/spinner2.gif" alt="" class="m" /> <span class="m">' + msg + '</span>';
 	}, 
+	error: function (msg) {
+		return '<span class="red">' + msg + '</span>';
+	}, 
 	period: function (period) {
 		return '<div class="grey center row">' + period + '</div>';
+	}, 
+	spellSuggests: function (text) {
+		return '<span style="background: #dae1e8; color: #066; margin: 0 10px">' + utils.htmlWrap(text) + '</span>';
+	}, 
+	spellResult: function (data) {
+		return '<div class="row bord wrapper">' + data.text + '</div>';
 	}
 };
 
@@ -278,6 +289,13 @@ var VkFeed = Class({
 			el.find('.js-post_attach_editor')
 				.addClass('hide')
 				.memeEditor(false);
+		}).on('click', '.js-post_spell_suggests', function (e) {
+			e.preventDefault();
+			e.stopPropagation();
+			e.stopImmediatePropagation();
+			
+			var el = $(this);
+			el.after(tpl.spellSuggests(el.attr("title")));
 		}).on('click', '.js-attach_edit', function (e) {
 			e.preventDefault();
 			e.stopPropagation();
@@ -410,6 +428,36 @@ var VkFeed = Class({
 			--self.busy;
 		});
 		
+		self.addAction('spellcheck', function (e) {
+			var el = e.target, 
+				wrap = e.wrap, 
+				post = e.post, 
+				textarea = wrap.find('.js-post_textarea'), 
+				emojiarea = textarea.data('emojioneArea');
+			
+			var text = $.trim(emojiarea ? emojiarea.getText() : post.text);
+			
+			el.text('Проверяем...').css("opacity", 0.5);
+			
+			var done = function () {
+				el.text('Проверить текст').css("opacity", 1);
+			};
+			
+			$.api('/?a=vk_posts/spellcheck', {text: text}, function (res) {
+				done();
+				
+				wrap.find('.js-post_spell_result').html(tpl.spellResult({
+					text:	prepareText(utils.htmlWrap(text), res.spell)
+				}));
+			}, function () {
+				done();
+				
+				wrap.find('.js-post_spell_result').html(tpl.spellResult({
+					text:	tpl.error('Ошибка проверки.')
+				}));
+			});
+		});
+		
 		self.addAction('edit', function (e) {
 			var wrap = e.wrap;
 			
@@ -531,7 +579,21 @@ function calcPostDelta(delta) {
 	return out;
 }
 
-function prepareText(text) {
+function prepareText(text, spell) {
+	if (spell) {
+		var last_index = 0, new_text = "";
+		$.each(spell, function (k ,v) {
+			var index = text.indexOf(k, last_index);
+			if (index >= 0) {
+				new_text += text.substr(last_index, index);
+				new_text += '<span class="spell cursor js-post_spell_suggests" title="' + utils.htmlWrap(v.join(", ")) + '">' + utils.htmlWrap(k) + '</span>';
+				last_index = index + k.length;
+			}
+		});
+		new_text += text.substr(last_index);
+		text = new_text;
+	}
+	
 	var URL_RE = /(?:([!()?.,\s\n\r]|^)((https?:\/\/)?((?:[a-z0-9_\-]+\.)+(?:[a-z]{2,7}|xn--p1ai|xn--j1amh|xn--80asehdb|xn--80aswg))(\/.*?)?(\#.*?)?)(?:[.!:;,*()]*([\s\r\n]|$))|([!()?.,\s\n\r]|^)((https?:\/\/)?((?:[a-z0-9а-яєґї_\-]+\.)+(?:рф|укр|онлайн|сайт|срб|su))(\/.*?)?(\#.*?)?)(?:[.!:;,*()]*([\s\r\n]|$))|([!()?.,\s\n\r]|^)((https?:\/\/)((?:[a-z0-9а-яєґї_\-]+\.)+(?:[a-z]{2,7}|рф|укр|онлайн|сайт|срб|su))(\/.*?)?(\#.*?)?)(?:[.!:;,*()]*([\s\r\n]|$)))/gi;
 	return emojione.toImage(text.replace(/\[(club|public|id)(\d+)\|([^\]]+)\]/gim, function (_, type, id, title) {
 		return '<a href="https://vk.com/' + type + id + '" target="_blank">' + title + '</a>';

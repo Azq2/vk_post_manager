@@ -239,6 +239,7 @@ class GrabberController extends \Smm\GroupController {
 					'gifs_cnt'			=> $post['gifs_cnt'], 
 					'images_cnt'		=> $post['images_cnt'], 
 					'text'				=> $post_data['text'], 
+					'spell'				=> \Smm\Utils\Spellcheck::check($post_data['text']), 
 					'owner_name'		=> $owner['name'], 
 					'owner_url'			=> $owner['url'], 
 					'owner_avatar'		=> $owner['avatar'], 

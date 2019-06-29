@@ -29,6 +29,15 @@ class VkPostsController extends \Smm\GroupController {
 		return $next_sched_update;
 	}
 	
+	public function spellcheckAction() {
+		$this->mode('json');
+		
+		$text = $_POST['text'] ?? '';
+		
+		$this->content['success'] = true;
+		$this->content['spell'] = \Smm\Utils\Spellcheck::check($text);
+	}
+	
 	public function moveAction() {
 		$api = new \Z\Net\VkApi(\Smm\Oauth::getAccessToken('VK'));
 		

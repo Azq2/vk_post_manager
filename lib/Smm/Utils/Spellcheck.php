@@ -1,0 +1,28 @@
+<?php
+namespace Smm\Utils;
+
+class Spellcheck {
+	protected static $pspell = [];
+	
+	public static function check($text) {
+		$errors = [];
+		if (function_exists('pspell_new')) {
+			preg_match_all("/([a-zа-яё][a-zа-яё'-]+[a-zа-яё]|[a-zа-яё]+)/siu", $text, $m);
+			foreach ($m[1] as $word) {
+				$lang = "en";
+				if (preg_match("/[а-яё]/iu", $word))
+					$lang = "ru";
+				
+				if ($lang != "ru")
+					continue;
+				
+				if (!isset(self::$pspell[$lang]))
+					self::$pspell[$lang] = pspell_new($lang);
+				
+				if (!pspell_check(self::$pspell[$lang], $word))
+					$errors[$word] = pspell_suggest(self::$pspell[$lang], $word);
+			}
+		}
+		return (object) $errors;
+	}
+}

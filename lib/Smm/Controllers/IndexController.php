@@ -128,6 +128,7 @@ class IndexController extends \Smm\GroupController {
 					'id'			=> $item->id, 
 					'owner'			=> $item->owner_id, 
 					'text'			=> $item->text, 
+					'spell'			=> \Smm\Utils\Spellcheck::check($item->text), 
 					'attaches'		=> $attaches_info->attaches, 
 					'source_id'		=> $item->owner_id, 
 					'source_type'	=> 'VK', 
