@@ -35,6 +35,7 @@ class VkPostsController extends \Smm\GroupController {
 		$text = $_POST['text'] ?? '';
 		
 		$this->content['success'] = true;
+		$this->content['spell2'] = mb_strlen($text);
 		$this->content['spell'] = \Smm\Utils\Spellcheck::check($text);
 	}
 	

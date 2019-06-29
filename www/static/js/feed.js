@@ -295,6 +295,7 @@ var VkFeed = Class({
 			e.stopImmediatePropagation();
 			
 			var el = $(this);
+			el.removeClass("js-post_spell_suggests");
 			el.after(tpl.spellSuggests(el.attr("title")));
 		}).on('click', '.js-attach_edit', function (e) {
 			e.preventDefault();
@@ -605,7 +606,7 @@ function prepareText(text, spell) {
 	var URL_RE = /(?:([!()?.,\s\n\r]|^)((https?:\/\/)?((?:[a-z0-9_\-]+\.)+(?:[a-z]{2,7}|xn--p1ai|xn--j1amh|xn--80asehdb|xn--80aswg))(\/.*?)?(\#.*?)?)(?:[.!:;,*()]*([\s\r\n]|$))|([!()?.,\s\n\r]|^)((https?:\/\/)?((?:[a-z0-9а-яєґї_\-]+\.)+(?:рф|укр|онлайн|сайт|срб|su))(\/.*?)?(\#.*?)?)(?:[.!:;,*()]*([\s\r\n]|$))|([!()?.,\s\n\r]|^)((https?:\/\/)((?:[a-z0-9а-яєґї_\-]+\.)+(?:[a-z]{2,7}|рф|укр|онлайн|сайт|срб|su))(\/.*?)?(\#.*?)?)(?:[.!:;,*()]*([\s\r\n]|$)))/gi;
 	
 	// Replace spellcheck tags
-	text = text.replace(/\[spell=([^\]]+)\](.*?)\[\/spell\]/gim, function (_, suggests, word) {
+	text = text.replace(/\[spell=([^\]]*)\](.*?)\[\/spell\]/gim, function (_, suggests, word) {
 		return '<span class="spell cursor js-post_spell_suggests" title="' + suggests + '">' + word + '</span>';
 	});
 	

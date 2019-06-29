@@ -11,7 +11,7 @@ class Spellcheck {
 			foreach ($m[1] as $tmp) {
 				list ($word, $offset) = $tmp;
 				
-				$offset = mb_strlen(substr($text, 0, $offset));
+				$offset = strlen(iconv("UTF-8", "UTF-16LE", substr($text, 0, $offset))) / 2;
 				
 				$lang = "en";
 				if (preg_match("/[а-яё]/iu", $word))
