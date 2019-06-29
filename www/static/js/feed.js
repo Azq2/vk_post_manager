@@ -202,7 +202,7 @@ var tpl = {
 							''
 						) + 
 						'<br />' + 
-						'<div class="post-text post-hide_edit emoji">' + prepareText(utils.htmlWrap(data.text), data.spell) + '</div>' + 
+						'<div class="post-text post-hide_edit emoji">' + prepareText(utils.htmlWrap(prepareSpellCheck(data.text, data.spell))) + '</div>' + 
 					'</div>' + 
 				'</div>' + 
 				'<div class="js-post_attach_editor hide"></div>' + 
@@ -447,7 +447,7 @@ var VkFeed = Class({
 				done();
 				
 				wrap.find('.js-post_spell_result').html(tpl.spellResult({
-					text:	prepareText(utils.htmlWrap(text), res.spell)
+					text:	prepareText(utils.htmlWrap(prepareSpellCheck(text, res.spell)))
 				}));
 			}, function () {
 				done();
@@ -579,30 +579,51 @@ function calcPostDelta(delta) {
 	return out;
 }
 
-function prepareText(text, spell) {
+function prepareSpellCheck(text, spell) {
 	if (spell) {
 		var last_index = 0, new_text = "";
-		$.each(spell, function (k ,v) {
-			var index = text.indexOf(k, last_index);
-			if (index >= 0) {
-				new_text += text.substr(last_index, index);
-				new_text += '<span class="spell cursor js-post_spell_suggests" title="' + utils.htmlWrap(v.join(", ")) + '">' + utils.htmlWrap(k) + '</span>';
-				last_index = index + k.length;
-			}
-		});
-		new_text += text.substr(last_index);
+		for (var i = 0, l = spell.length; i < l; ++i) {
+			var entry = spell[i], 
+				word_offset = entry[0], 
+				word_length = entry[1], 
+				suggests = entry[2], 
+				word = text.substring(word_offset, word_offset + word_length);
+			
+			new_text += text.substring(last_index, word_offset);
+			new_text += "[spell=" + suggests.join(", ") + "]" + word + "[/spell]";
+			last_index = word_offset + word_length;
+		}
+		new_text += text.substring(last_index);
+		
 		text = new_text;
 	}
 	
+	return text;
+}
+
+function prepareText(text, spell) {
 	var URL_RE = /(?:([!()?.,\s\n\r]|^)((https?:\/\/)?((?:[a-z0-9_\-]+\.)+(?:[a-z]{2,7}|xn--p1ai|xn--j1amh|xn--80asehdb|xn--80aswg))(\/.*?)?(\#.*?)?)(?:[.!:;,*()]*([\s\r\n]|$))|([!()?.,\s\n\r]|^)((https?:\/\/)?((?:[a-z0-9а-яєґї_\-]+\.)+(?:рф|укр|онлайн|сайт|срб|su))(\/.*?)?(\#.*?)?)(?:[.!:;,*()]*([\s\r\n]|$))|([!()?.,\s\n\r]|^)((https?:\/\/)((?:[a-z0-9а-яєґї_\-]+\.)+(?:[a-z]{2,7}|рф|укр|онлайн|сайт|срб|su))(\/.*?)?(\#.*?)?)(?:[.!:;,*()]*([\s\r\n]|$)))/gi;
-	return emojione.toImage(text.replace(/\[(club|public|id)(\d+)\|([^\]]+)\]/gim, function (_, type, id, title) {
+	
+	// Replace spellcheck tags
+	text = text.replace(/\[spell=([^\]]+)\](.*?)\[\/spell\]/gim, function (_, suggests, word) {
+		return '<span class="spell cursor js-post_spell_suggests" title="' + suggests + '">' + word + '</span>';
+	});
+	
+	// Replace VK internal links
+	text = text.replace(/\[(club|public|id)(\d+)\|([^\]]+)\]/gim, function (_, type, id, title) {
 		return '<a href="https://vk.com/' + type + id + '" target="_blank">' + title + '</a>';
-	}).replace(URL_RE, function () {
+	});
+	
+	// Replace other links
+	text = text.replace(URL_RE, function () {
 		var m = arguments, 
 			offset = m[4] ? 0 : (m[7 + 4] ? 7 : 14), 
 			url = m[offset + 2];
 		return m[offset + 1] + '<a href="' + url + '" target="_blank">' + url + '</a>' + m[offset + 7];
-	})).replace(/\r\n|\r|\n/gi, "<br />");
+	});
+	
+	// Replace emoji and new lines
+	return emojione.toImage(text).replace(/\r\n|\r|\n/gi, "<br />");
 }
 
 return VkFeed;
