@@ -469,6 +469,11 @@ var VkFeed = Class({
 					pickerPosition: "bottom", 
 					filtersPosition: "bottom", 
 					autocomplete: false, 
+					
+					attributes: {
+						spellcheck:		true
+					},
+					
 					tonesStyle: "checkbox", 
 					events: {
 						change: function () {
