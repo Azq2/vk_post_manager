@@ -213,7 +213,7 @@ class Scheduler extends \Z\Task {
 			if (!$need_rerun)
 				break;
 			
-			sleep(1);
+			sleep(60);
 		} while (true);
 	}
 }
