@@ -20,7 +20,8 @@ class Scheduler extends \Z\Task {
 	
 	public function getNextRun() {
 		$time = time();
-		return $time + ($sched_interval - ((date("i", $time) * 60 + date("s", $time)) % $sched_interval));
+		$sched_config = \Z\Config::get('scheduler');
+		return $time + ($sched_config['interval'] - ((date("i", $time) * 60 + date("s", $time)) % $sched_config['interval']));
 	}
 	
 	public function run($args) {
