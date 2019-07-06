@@ -33,7 +33,7 @@ CREATE TABLE `vk_grabber_data` (
   `text` text CHARACTER SET utf8mb4,
   `attaches` longblob,
   PRIMARY KEY (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=6916522 DEFAULT CHARSET=utf8;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 /*!40101 SET character_set_client = @saved_cs_client */;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
 /*!40101 SET character_set_client = utf8 */;
@@ -59,7 +59,7 @@ CREATE TABLE `vk_grabber_data_index` (
   KEY `likes` (`likes`),
   KEY `comments` (`comments`),
   KEY `grab_time` (`grab_time`)
-) ENGINE=InnoDB AUTO_INCREMENT=24753271 DEFAULT CHARSET=utf8;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 /*!40101 SET character_set_client = @saved_cs_client */;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
 /*!40101 SET character_set_client = utf8 */;
@@ -81,7 +81,7 @@ CREATE TABLE `vk_grabber_selected_sources` (
   `enabled` tinyint(3) unsigned NOT NULL DEFAULT '1',
   PRIMARY KEY (`id`),
   UNIQUE KEY `source_id` (`source_id`,`group_id`)
-) ENGINE=InnoDB AUTO_INCREMENT=53 DEFAULT CHARSET=utf8;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 /*!40101 SET character_set_client = @saved_cs_client */;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
 /*!40101 SET character_set_client = utf8 */;
@@ -91,7 +91,7 @@ CREATE TABLE `vk_grabber_sources` (
   `source_id` varchar(255) NOT NULL,
   PRIMARY KEY (`id`),
   UNIQUE KEY `source_type` (`source_type`,`source_id`)
-) ENGINE=InnoDB AUTO_INCREMENT=48024 DEFAULT CHARSET=utf8;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 /*!40101 SET character_set_client = @saved_cs_client */;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
 /*!40101 SET character_set_client = utf8 */;
@@ -108,6 +108,7 @@ CREATE TABLE `vk_groups` (
   `pos` int(11) NOT NULL,
   `id` int(10) unsigned NOT NULL,
   `name` varchar(255) NOT NULL,
+  `widget` varchar(16) NOT NULL DEFAULT '',
   `period_from` int(10) unsigned NOT NULL DEFAULT '0',
   `period_to` int(10) unsigned NOT NULL DEFAULT '86399',
   `interval` int(10) unsigned NOT NULL DEFAULT '7200',
@@ -125,6 +126,14 @@ CREATE TABLE `vk_groups` (
 /*!40101 SET character_set_client = @saved_cs_client */;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
 /*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `vk_groups_oauth` (
+  `group_id` int(10) unsigned NOT NULL,
+  `access_token` varchar(255) NOT NULL,
+  PRIMARY KEY (`group_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+/*!40101 SET character_set_client = @saved_cs_client */;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
 CREATE TABLE `vk_join_stat` (
   `id` int(10) unsigned NOT NULL AUTO_INCREMENT,
   `cid` int(10) unsigned NOT NULL,
@@ -133,7 +142,7 @@ CREATE TABLE `vk_join_stat` (
   `time` int(10) unsigned NOT NULL,
   `users_cnt` int(10) unsigned NOT NULL,
   PRIMARY KEY (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=240888 DEFAULT CHARSET=utf8;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 /*!40101 SET character_set_client = @saved_cs_client */;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
 /*!40101 SET character_set_client = utf8 */;
@@ -155,7 +164,7 @@ CREATE TABLE `vk_posts_queue` (
   PRIMARY KEY (`nid`),
   UNIQUE KEY `group_id-id` (`group_id`,`id`) USING BTREE,
   KEY `group_id-position` (`group_id`) USING BTREE
-) ENGINE=InnoDB AUTO_INCREMENT=13816 DEFAULT CHARSET=utf8;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 /*!40101 SET character_set_client = @saved_cs_client */;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
 /*!40101 SET character_set_client = utf8 */;
@@ -201,7 +210,7 @@ CREATE TABLE `vkapp_catlist_cats` (
   `sex` tinyint(4) NOT NULL DEFAULT '0',
   `price` decimal(10,0) NOT NULL DEFAULT '0',
   PRIMARY KEY (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=29 DEFAULT CHARSET=utf8;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 /*!40101 SET character_set_client = @saved_cs_client */;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
 /*!40101 SET character_set_client = utf8 */;
@@ -238,7 +247,7 @@ CREATE TABLE `vkapp_catlist_money_history` (
   `value` decimal(10,0) NOT NULL,
   `descr` varchar(1024) NOT NULL,
   PRIMARY KEY (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=11 DEFAULT CHARSET=utf8;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 /*!40101 SET character_set_client = @saved_cs_client */;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
 /*!40101 SET character_set_client = utf8 */;
@@ -273,7 +282,7 @@ CREATE TABLE `vkapp_catlist_shop` (
   `amount` int(10) unsigned NOT NULL DEFAULT '0',
   `deleted` tinyint(4) NOT NULL DEFAULT '0',
   PRIMARY KEY (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=13 DEFAULT CHARSET=utf8;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 /*!40101 SET character_set_client = @saved_cs_client */;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
 /*!40101 SET character_set_client = utf8 */;
@@ -288,7 +297,7 @@ CREATE TABLE `vkapp_catlist_user_cats` (
   `sex` tinyint(3) unsigned NOT NULL,
   `cheerfulness` int(11) NOT NULL DEFAULT '100',
   PRIMARY KEY (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=11 DEFAULT CHARSET=utf8;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 /*!40101 SET character_set_client = @saved_cs_client */;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
 /*!40101 SET character_set_client = utf8 */;
