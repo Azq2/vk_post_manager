@@ -19,6 +19,11 @@ class SettingsController extends \Smm\BaseController {
 		
 		$url = $_POST['url'] ?? '';
 		
+		$avail_widgets = [
+			''				=> 'Выключен', 
+			'top_users'		=> 'ТОП юзеров'
+		];
+		
 		if ($_POST['do_add'] ?? false) {
 			$id = false;
 			if (preg_match("#/(public|club)(\d+)#i", $url, $m)) {
@@ -65,6 +70,7 @@ class SettingsController extends \Smm\BaseController {
 		} else if ($_POST['do_save'] ?? false) {
 			$id = $_POST['id'] ?? 0;
 			$pos = $_POST['pos'] ?? 0;
+			$widget = $_POST['widget'] ?? '';
 			$name = htmlspecialchars(trim($_POST['name'] ?? ''));
 			
 			$group = DB::select()
@@ -77,6 +83,7 @@ class SettingsController extends \Smm\BaseController {
 				DB::update('vk_groups')
 					->set([
 						'name'		=> strlen($name) ? $name : $group['name'], 
+						'widget'	=> isset($avail_widgets[$widget]) ? $widget : '', 
 						'pos'		=> $pos
 					])
 					->where('id', '=', $id)
@@ -144,12 +151,14 @@ class SettingsController extends \Smm\BaseController {
 				'url'		=> "https://vk.com/public".$group['id'], 
 				'name'		=> $group['name'], 
 				'pos'		=> $group['pos'], 
+				'widget'	=> $group['widget'], 
 			];
 		}
 		
 		$this->content = View::factory('settings/groups', [
 			'groups_list'			=> $groups_list, 
 			'error'					=> $error, 
+			'avail_widgets'			=> $avail_widgets, 
 			'url'					=> htmlspecialchars($url)
 		]);
 	}
@@ -248,6 +257,42 @@ class SettingsController extends \Smm\BaseController {
 			}
 		}
 		
+		$oauth_groups_list = [];
+		
+		$vk_groups = DB::select()
+			->from('vk_groups')
+			->where('deleted', '=', 0)
+			->execute();
+		
+		$VK_COMM_MINI_APP = \Z\Config::get("oauth", "VK_COMM_MINI_APP");
+		
+		foreach ($vk_groups as $group) {
+			$access_token = \Smm\Oauth::getGroupAccessToken($group['id']);
+			
+			if (!$access_token) {
+				$status = 'not_set';
+			} else {
+				$api = new VkApi($access_token);
+				$res = $api->exec("groups.getTokenPermissions");
+				
+				if ($res->success()) {
+					if (($res->response->mask & \Smm\Oauth::VK_MINIMAL_GROUP_ACCESS) != \Smm\Oauth::VK_MINIMAL_GROUP_ACCESS) {
+						$status = 'expired';
+					} else {
+						$status = 'success';
+					}
+				} else {
+					$status = 'error';
+				}
+			}
+			
+			$oauth_groups_list[] = [
+				'title'				=> htmlspecialchars($group['name']), 
+				'oauth_url'			=> 'https://vk.com/app'.$VK_COMM_MINI_APP['id'].'_-'.$group['id'], 
+				'status'			=> $status
+			];
+		}
+		
 		$oauth_list = [];
 		
 		foreach ($types as $type => $title) {
@@ -308,9 +353,11 @@ class SettingsController extends \Smm\BaseController {
 		}
 		
 		$this->content = View::factory('settings/oauth', [
-			'ok'			=> $ok, 
-			'error'			=> $error, 
-			'oauth_list'	=> $oauth_list
+			'ok'				=> $ok, 
+			'error'				=> $error, 
+			'oauth_list'		=> $oauth_list, 
+			'oauth_groups_list'	=> $oauth_groups_list, 
+			'groups_app_id'		=> $VK_COMM_MINI_APP['id']
 		]);
 	}
 	

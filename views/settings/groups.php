@@ -45,6 +45,17 @@
 			</div>
 			
 			<div class="row">
+				<label class="lbl">Виджет сообщества:</label><br />
+				<select name="widget">
+					<?php foreach ($avail_widgets as $k => $name): ?>
+						<option value="<?= $k ?>"<?= $k == $group['widget'] ? ' selected="selected"' : '' ?>>
+							<?= $name ?>
+						</option>
+					<?php endforeach; ?>
+				</select>
+			</div>
+			
+			<div class="row">
 				<input type="submit" class="btn" value="Сохранить" name="do_save" />
 				<input type="submit" class="btn btn-delete" value="Удалить" name="do_delete" onclick="return confirm('Точно удалить???');" />
 			</div>

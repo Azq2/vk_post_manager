@@ -1,0 +1,76 @@
+body {
+	margin: 0;
+	color: #323232
+}
+
+textarea, html, body, table, button, input {
+	font-family: Arial;
+	font-size: 16px
+}
+
+.center {
+	text-align: center
+}
+
+.cursor { cursor: pointer }
+
+.pad_t {
+	padding-top: 10px
+}
+
+.pad_b {
+	padding-bottom: 10px
+}
+
+.content {
+	margin: auto;
+	max-width: 640px;
+	padding: 15px;
+	font-family: 16px Arial
+}
+
+.btn {
+	background-color: #5181b8;
+	border: none;
+	outline: none;
+	padding: 10px 15px;
+	color: #fff;
+	border-radius: 4px;
+	cursor: pointer;
+}
+
+.btn[disabled] {
+	opacity: 0.5
+}
+
+li {
+	padding: 5px 0
+}
+
+.red {
+	color: red
+}
+
+.green {
+	color: green
+}
+
+.grey {
+	color: #7a90a0
+}
+
+.m {
+	vertical-align: middle
+}
+
+.table {
+	border-collapse: collapse;
+	margin: 0;
+	padding: 0;
+	width: 100%
+}
+
+.table td {
+	border: 1px solid #b4bed1;
+	padding: 10px;
+}
