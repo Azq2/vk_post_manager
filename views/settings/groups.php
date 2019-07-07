@@ -6,6 +6,12 @@
 	</div>
 <?php endif; ?>
 
+<div class="wrapper">
+	<div class="row row-yellow bord">
+		Внимание! Настройки общие для всех сообществ.
+	</div>
+</div>
+
 <div class="wrapper bord">
 	<div class="row header">
 		Добавить новую группу
@@ -42,17 +48,6 @@
 			<div class="row">
 				<label class="lbl">Позиция в списке:</label><br />
 				<input type="text" name="pos" autocomplete="off" value="<?= $group['pos'] ?>" placeholder="0" size="3" required="required" />
-			</div>
-			
-			<div class="row">
-				<label class="lbl">Виджет сообщества:</label><br />
-				<select name="widget">
-					<?php foreach ($avail_widgets as $k => $name): ?>
-						<option value="<?= $k ?>"<?= $k == $group['widget'] ? ' selected="selected"' : '' ?>>
-							<?= $name ?>
-						</option>
-					<?php endforeach; ?>
-				</select>
 			</div>
 			
 			<div class="row">

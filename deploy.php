@@ -3,11 +3,11 @@
 
 class Deployer {
 	private static $custom_chmod = [
-		"files"					=> 0777, 
+		"www/files"				=> 0777, 
 		"tmp"					=> 0777, 
 		"tmp/download"			=> 0777, 
 		"tmp/download_queue"	=> 0777, 
-		"files/catlist"			=> 0777, 
+		"www/files/catlist"		=> 0777, 
 	];
 	
 	private static $skip = [
@@ -15,7 +15,7 @@ class Deployer {
 	];
 	
 	private static $preserve = [
-		"files", 
+		"www/files", 
 		"tmp", 
 		"logs", 
 	];

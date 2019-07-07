@@ -127,7 +127,7 @@ class BaseController extends \Z\Controller {
 							'index/multipicpost'		=> 'Мультипикчепостинг', 
 							'grabber'					=> 'Граббер', 
 							'statistic/join_visual'		=> 'Вступления', 
-						//	'game/catlist'				=> 'Котогочи', 
+							'vk_widgets/index'			=> 'Виджеты', 
 							'settings/index'			=> 'Настройки'
 						], 
 						'active'	=> isset($_REQUEST['a']) ? $_REQUEST['a'] : 'index'

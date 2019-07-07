@@ -9,20 +9,15 @@ use \Z\Net\VkApi;
 
 use \Smm\View\Widgets;
 
-class SettingsController extends \Smm\BaseController {
+class SettingsController extends \Smm\GroupController {
 	public function groupsAction() {
 		$this->title = 'Настройки : Группы';
 		
 		$error = false;
 		
-		$base_url = Url::mk('/');
+		$base_url = Url::mk('/')->set('gid', $this->group['id']);
 		
 		$url = $_POST['url'] ?? '';
-		
-		$avail_widgets = [
-			''				=> 'Выключен', 
-			'top_users'		=> 'ТОП юзеров'
-		];
 		
 		if ($_POST['do_add'] ?? false) {
 			$id = false;
@@ -70,7 +65,6 @@ class SettingsController extends \Smm\BaseController {
 		} else if ($_POST['do_save'] ?? false) {
 			$id = $_POST['id'] ?? 0;
 			$pos = $_POST['pos'] ?? 0;
-			$widget = $_POST['widget'] ?? '';
 			$name = htmlspecialchars(trim($_POST['name'] ?? ''));
 			
 			$group = DB::select()
@@ -83,7 +77,6 @@ class SettingsController extends \Smm\BaseController {
 				DB::update('vk_groups')
 					->set([
 						'name'		=> strlen($name) ? $name : $group['name'], 
-						'widget'	=> isset($avail_widgets[$widget]) ? $widget : '', 
 						'pos'		=> $pos
 					])
 					->where('id', '=', $id)
@@ -151,14 +144,12 @@ class SettingsController extends \Smm\BaseController {
 				'url'		=> "https://vk.com/public".$group['id'], 
 				'name'		=> $group['name'], 
 				'pos'		=> $group['pos'], 
-				'widget'	=> $group['widget'], 
 			];
 		}
 		
 		$this->content = View::factory('settings/groups', [
 			'groups_list'			=> $groups_list, 
 			'error'					=> $error, 
-			'avail_widgets'			=> $avail_widgets, 
 			'url'					=> htmlspecialchars($url)
 		]);
 	}
@@ -174,7 +165,7 @@ class SettingsController extends \Smm\BaseController {
 		$code				= $_GET['code'] ?? '';
 		$state				= $_GET['state'] ?? '';
 		
-		$base_url = Url::mk('/');
+		$base_url = Url::mk('/')->set('gid', $this->group['id']);
 		
 		$error = false;
 		
@@ -361,15 +352,108 @@ class SettingsController extends \Smm\BaseController {
 		]);
 	}
 	
+	public function callbacksAction() {
+		$this->title = 'Настройки : callbacks';
+		
+		$ok					= $_GET['ok'] ?? 0;
+		$type				= $_GET['type'] ?? '';
+		$access_token		= $_GET['access_token'] ?? '';
+		$refresh_token		= $_GET['refresh_token'] ?? '';
+		$expires			= $_GET['expires'] ?? '';
+		$code				= $_GET['code'] ?? '';
+		$state				= $_GET['state'] ?? '';
+		
+		$base_url = Url::mk('/')->set('gid', $this->group['id']);
+		
+		$error = false;
+		
+		$types = [
+			'activity_stat'		=> [
+				'title'				=> 'Активность участников', 
+				'enable'			=> [
+					'<b>Записи на стене:</b> Репост', 
+					'<b>Комментарии на стене:</b> Добавление', 
+					'<b>Комментарии на стене:</b> Редактирование', 
+					'<b>Комментарии на стене:</b> Удаление', 
+					'<b>Комментарии на стене:</b> Восстановление', 
+				], 
+				'help'				=> [
+					'1. <b>Сообщество</b> &raquo; <b>Настройки</b> &raquo; <b>Работа с API</b> &raquo; <b>Callback API</b>', 
+					'2. Добавить сервер с URL, который указан выше', 
+					'3. Включить все <b>Типы событий</b>, указанные здесь', 
+					'4. Заполнить здесь <b>Строка, которую должен вернуть сервер</b>', 
+					'5. Придумать <b>Секретный ключ</b> и заполнить его в VK и здесь', 
+					'6. Нажать <b>Подтвердить</b> внастройках сервера <b>Callback API</b>'
+				]
+			]
+		];
+		
+		if ($_POST['do_save'] ?? false) {
+			$type = $_POST['type'] ?? '';
+			$secret = $_POST['secret'] ?? '';
+			$install_ack = $_POST['install_ack'] ?? '';
+			
+			$group = DB::select()
+				->from('vk_groups')
+				->where('id', '=', $id)
+				->execute()
+				->current();
+			
+			if (isset($types[$type])) {
+				DB::insert('vk_callbacks')
+					->set([
+						'type'				=> $type, 
+						'secret'			=> $secret, 
+						'install_ack'		=> $install_ack, 
+						'group_id'			=> $this->group['id']
+					])
+					->onDuplicateSetValues('secret')
+					->onDuplicateSetValues('install_ack')
+					->execute();
+				
+				$redirect = $base_url->copy()->set('a', 'settings/callbacks')->url();
+				return $this->redirect($redirect);
+			} else {
+				$error = 'Callback не найден.';
+			}
+		}
+		
+		$callbacks = DB::select()
+			->from('vk_callbacks')
+			->where('group_id', '=', $this->group['id'])
+			->execute()
+			->asArray('type');
+		
+		$callbacks_list = [];
+		
+		foreach ($types as $type => $data) {
+			$callbacks_list[] = [
+				'type'			=> $type, 
+				'title'			=> $data['title'], 
+				'enable'		=> $data['enable'], 
+				'help'			=> $data['help'], 
+				'url'			=> Url::mk("http://".$_SERVER['HTTP_HOST']."/")->set('a', 'vk_callbacks/'.$type)->href(), 
+				'secret'		=> $callbacks[$type]['secret'] ?? '', 
+				'install_ack'	=> $callbacks[$type]['install_ack'] ?? ''
+			];
+		}
+		
+		$this->content = View::factory('settings/callbacks', [
+			'error'				=> $error, 
+			'callbacks_list'	=> $callbacks_list
+		]);
+	}
+	
 	public function indexAction() {
 		$this->title = 'Настройки';
 		
-		$base_url = Url::mk('/');
+		$base_url = Url::mk('/')->set('gid', $this->group['id']);
 		
 		$this->content = View::factory('settings/index', [
 			'exit_url'			=> $base_url->copy()->set('a', 'index/exit')->href(), 
 			'oauth_url'			=> $base_url->copy()->set('a', 'settings/oauth')->href(), 
 			'groups_url'		=> $base_url->copy()->set('a', 'settings/groups')->href(), 
+			'callbacks_url'		=> $base_url->copy()->set('a', 'settings/callbacks')->href(), 
 			'is_admin'			=> $this->user->can('admin'), 
 			'login'				=> $this->user->login
 		]);

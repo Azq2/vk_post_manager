@@ -223,13 +223,13 @@ class Posts {
 				
 				if ($file->success()) {
 					$att = $is_doc ? 
-						'doc'.$file->response[0]->owner_id.'_'.$file->response[0]->id : 
+						'doc'.$file->response->doc->owner_id.'_'.$file->response->doc->id : 
 						'photo'.$file->response[0]->owner_id.'_'.$file->response[0]->id;
 					
-					$attachments[$att] = $file->response[0];
+					$attachments[$att] = $is_doc ? $file->response->doc : $file->response[0];
 					
 					if ($progress)
-						$progress($att, $file->response[0]);
+						$progress($att, $attachments[$att]);
 					
 					$result->error = false;
 					break;
@@ -857,6 +857,34 @@ class Posts {
 		});
 		
 		return $new_posts;
+	}
+	
+	public static function analyzeComment($comment) {
+		$images_cnt = 0;
+		$stickers_cnt = 0;
+		
+		if (!isset($comment->attachments))
+			$comment->attachments = [];
+		
+		foreach ($comment->attachments as $att) {
+			if (in_array($att->type, ['photo', 'posted_photo', 'graffiti'])) {
+				++$images_cnt;
+			} else if ($att->type == 'sticker') {
+				++$stickers_cnt;
+			} else if ($att->type == 'doc') {
+				// 3 — gif;
+				// 4 — изображения;
+				if ($att->doc->type == 3 || $att->doc->type == 4)
+					++$images_cnt;
+			}
+		}
+		
+		return [
+			'images_cnt'		=> $images_cnt, 
+			'stickers_cnt'		=> $stickers_cnt, 
+			'attaches_cnt'		=> count($comment->attachments), 
+			'text_length'		=> mb_strlen(trim($comment->text))
+		];
 	}
 	
 	public static function pseudoRand($val, $min, $max) {

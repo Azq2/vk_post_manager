@@ -15,6 +15,12 @@
 	</div>
 <?php endif; ?>
 
+<div class="wrapper">
+	<div class="row row-yellow bord">
+		Внимание! Настройки общие для всех сообществ.
+	</div>
+</div>
+
 <div class="wrapper bord">
 	<div class="row header cursor">
 		OAuth приложения сообщества

@@ -50,7 +50,7 @@ input[type="text"]:focus, input[type="password"]:focus, input[type="number"]:foc
 }
 
 .emojionearea-editor {
-	color: #323232 !important
+	color: #000 !important
 }
 
 .emojionearea {
@@ -64,6 +64,22 @@ input[type="text"]:focus, input[type="password"]:focus, input[type="number"]:foc
 	border-radius: 0 !important;
 	-webkit-border-radius: 0 !important;
 	-moz-border-radius: 0 !important;
+	
+	font-size: inherit !important
+}
+
+.emojionearea-source {
+	padding: 5px;
+	line-height: 22px;
+	min-height: 32px;
+}
+
+.emojionearea .emojionearea-editor[rows="1"] {
+	max-height: none;
+	min-height: auto;
+	padding: 5px;
+	line-height: 22px;
+	min-height: 32px;
 }
 
 .emojionearea.focused {

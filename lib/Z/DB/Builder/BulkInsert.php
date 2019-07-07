@@ -62,6 +62,10 @@ class BulkInsert extends \Z\DB\Builder {
 		return $this;
 	}
 	
+	public function countValues() {
+		return count($this->values);
+	}
+	
 	public function compile($db = NULL) {
 		$db = $this->getDB($db);
 		

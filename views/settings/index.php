@@ -15,6 +15,12 @@
 				Группы ВК
 			</a>
 		</div>
+		
+		<div class="row">
+			<a href="<?= $callbacks_url ?>">
+				Callbacks API
+			</a>
+		</div>
 	<?php endif; ?>
 	
 	<div class="row">
