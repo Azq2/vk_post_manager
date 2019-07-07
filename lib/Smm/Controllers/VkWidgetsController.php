@@ -65,6 +65,32 @@ class VkWidgetsController extends \Smm\GroupController {
 		return $this->redirect($base_url->url());
 	}
 	
+	public function top_users_blacklistAction() {
+		$user_id = $_GET['user_id'] ?? 0;
+		
+		if ($_GET['delete'] ?? false) {
+			DB::delete('vk_widget_top_users_blacklist')
+				->where('group_id', '=', $this->group['id'])
+				->where('user_id', '=', $user_id)
+				->execute();
+		} else {
+			DB::insert('vk_widget_top_users_blacklist')
+				->ignore()
+				->set([
+					'group_id'		=> $this->group['id'], 
+					'user_id'		=> $user_id
+				])
+				->execute();
+		}
+		
+		$base_url = Url::mk('/')
+			->set('gid', $this->group['id'])
+			->set('a', 'vk_widgets/top_users');
+		
+		$redirect = $base_url->url();
+		return $this->redirect($redirect);
+	}
+	
 	public function top_usersAction() {
 		$widget = DB::select()
 			->from('vk_widget_top_users')
@@ -84,7 +110,7 @@ class VkWidgetsController extends \Smm\GroupController {
 			->set('gid', $this->group['id'])
 			->set('a', 'vk_widgets/top_users');
 		
-		$ALLOWED_SIZES = ['160x160', '160x240'];
+		$ALLOWED_SIZES = ['480x480', '480x720'];
 		
 		// Common settings
 		if ($_POST['do_upload_images'] ?? false) {
@@ -169,6 +195,12 @@ class VkWidgetsController extends \Smm\GroupController {
 		
 		$formula = '(SUM(likes) * '.$widget['cost_likes'].' + SUM(reposts) * '.$widget['cost_reposts'].' + SUM(comments_meaningful) * '.$widget['cost_comments'].')';
 		
+		$blacklist = DB::select()
+			->from('vk_widget_top_users_blacklist')
+			->where('group_id', '=', $this->group['id'])
+			->execute()
+			->asArray(NULL, 'user_id');
+		
 		$users = DB::select(
 			'user_id', 
 			['SUM(likes)', 'likes'], 
@@ -182,10 +214,15 @@ class VkWidgetsController extends \Smm\GroupController {
 			->where('user_id', '>', 0)
 			->order('points', 'DESC')
 			->group('user_id')
-			->limit(100)
-			->execute()
-			->asArray('user_id');
+			->limit(100);
 		
+		/*
+		if ($blacklist)
+			$users->where('user_id', 'NOT IN', $blacklist);
+		*/
+		
+		$users = $users->execute()->asArray('user_id');
+	
 		$api = new \Z\Net\VkApi(\Smm\Oauth::getAccessToken('VK'));
 		
 		$res = $api->exec("users.get", [
@@ -207,13 +244,23 @@ class VkWidgetsController extends \Smm\GroupController {
 			];
 			
 			$users_list[] = [
-				'avatar'	=> $vk_user->photo_50, 
-				'name'		=> $vk_user->first_name.' '.$vk_user->last_name, 
-				'url'		=> "https://vk.com/".($vk_user->screen_name ?: "id$id"), 
-				'points'	=> $user['points'], 
-				'likes'		=> $user['likes'], 
-				'reposts'	=> $user['reposts'], 
-				'comments'	=> $user['comments_meaningful']
+				'avatar'			=> $vk_user->photo_50, 
+				'name'				=> $vk_user->first_name.' '.$vk_user->last_name, 
+				'url'				=> "https://vk.com/".($vk_user->screen_name ?: "id$id"), 
+				'points'			=> $user['points'], 
+				'likes'				=> $user['likes'], 
+				'reposts'			=> $user['reposts'], 
+				'comments'			=> $user['comments_meaningful'], 
+				'blacklisted'		=> in_array($id, $blacklist), 
+				'blacklist_url'		=> $base_url->copy()
+					->set('a', 'vk_widgets/top_users_blacklist')
+					->set('user_id', $id)
+					->href(), 
+				'unblacklist_url'	=> $base_url->copy()
+					->set('a', 'vk_widgets/top_users_blacklist')
+					->set('delete', 1)
+					->set('user_id', $id)
+					->href()
 			];
 		}
 		

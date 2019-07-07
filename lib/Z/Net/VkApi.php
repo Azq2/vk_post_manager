@@ -15,7 +15,7 @@ class VkApi {
 		$this->api_version = $api_version;
 		curl_setopt_array($this->ch, [
 			CURLOPT_RETURNTRANSFER		=> true, 
-			CURLOPT_USERAGENT			=> 'Mozilla/5.0', 
+			CURLOPT_USERAGENT			=> 'Mozilla/5.0'
 		]);
 	}
 	
@@ -40,6 +40,9 @@ class VkApi {
 			$args[$key] = new \CURLFile($f['path']);
 			if (isset($f['name']))
 				$args[$key]->setPostFilename($f['name']);
+			if (isset($f['mime']))
+				$args[$key]->setMimeType($f['mime']);
+			$args[$key]->setPostFilename($key);
 			++$i;
 		}
 		return $this->_sendRequest($url, $args);

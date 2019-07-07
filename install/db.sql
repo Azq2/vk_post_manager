@@ -275,12 +275,20 @@ CREATE TABLE `vk_widget_top_users` (
   `cost_comments` int(10) unsigned NOT NULL DEFAULT '0',
   `days` int(10) unsigned NOT NULL DEFAULT '30',
   `title` varchar(100) NOT NULL DEFAULT '',
-  `tile_title` varchar(50) NOT NULL DEFAULT '',
-  `tile_descr` varchar(50) NOT NULL DEFAULT '',
-  `tile_link` varchar(50) NOT NULL DEFAULT '',
+  `tile_title` varchar(256) NOT NULL DEFAULT '',
+  `tile_descr` varchar(256) NOT NULL DEFAULT '',
+  `tile_link` varchar(256) NOT NULL DEFAULT '',
   `tiles` varchar(256) NOT NULL DEFAULT '',
   `mtime` int(10) unsigned NOT NULL DEFAULT '0',
   PRIMARY KEY (`group_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+/*!40101 SET character_set_client = @saved_cs_client */;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `vk_widget_top_users_blacklist` (
+  `group_id` int(10) unsigned NOT NULL,
+  `user_id` int(10) unsigned NOT NULL,
+  PRIMARY KEY (`group_id`,`user_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 /*!40101 SET character_set_client = @saved_cs_client */;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;

@@ -13,7 +13,7 @@ use \Smm\VK\Captcha;
 class GroupActivity extends \Z\Task {
 	public function options() {
 		return [
-			'mode'		=> 'fast'
+			'mode'		=> 'likes'
 		];
 	}
 	
@@ -52,11 +52,14 @@ class GroupActivity extends \Z\Task {
 				case "likes":
 					echo date("Y-m-d H:i:s")." - #".$group['id']." [ GROUP: ".$group['name']." ]\n";
 					
-					$start = microtime(true);
-					$this->grabStat($group, 0, 100, true);
-					$elapsed = microtime(true) - $start;
-					
-					echo date("Y-m-d H:i:s")." - chunk done, ".round($elapsed, 2)."\n";
+					if ($progress['done'] || $progress['offset'] >= 100) {
+						$start = microtime(true);
+						$this->grabStat($group, 0, 100, true);
+						$elapsed = microtime(true) - $start;
+						echo date("Y-m-d H:i:s")." - chunk done, ".round($elapsed, 2)."\n";
+					} else {
+						echo date("Y-m-d H:i:s")." - no old data, skip\n";
+					}
 				break;
 				
 				case "archive":
@@ -217,6 +220,7 @@ class GroupActivity extends \Z\Task {
 		$fetch_likes = [];
 		$fetch_comments = [];
 		$fetch_reposts = [];
+		$post2date = [];
 		
 		foreach ($all_posts->response->items as $post) {
 			if (!$only_likes) {
@@ -228,9 +232,11 @@ class GroupActivity extends \Z\Task {
 				$fetch_likes[] = $post->id;
 			
 			if (!$only_likes) {
-				if ($post->reposts->count)
-					$fetch_reposts[] = $post->id;
+			//	if ($post->reposts->count)
+			//		$fetch_reposts[] = $post->id;
 			}
+			
+			$post2date[$post->id] = $post->date;
 		}
 		
 		echo "posts with likes: ".count($fetch_likes).", with comments: ".count($fetch_comments).", with reposts: ".count($fetch_reposts)."\n";
@@ -362,7 +368,7 @@ class GroupActivity extends \Z\Task {
 					if ($flood)
 						return 'error';
 					
-					sleep(60);
+					sleep(1);
 				}
 			}
 			
@@ -391,7 +397,7 @@ class GroupActivity extends \Z\Task {
 							$group['id'], 
 							$post_id, 
 							$like, 
-							$offset ? date("Y-m-d H:i:s", $post->date) : date("Y-m-d H:i:s", time())
+							!$only_likes ? date("Y-m-d H:i:s", $post2date[$post_id]) : date("Y-m-d H:i:s", time())
 						]);
 						++$query_items;
 					}
@@ -481,7 +487,7 @@ class GroupActivity extends \Z\Task {
 			if ($only_likes) {
 				sleep(3);
 			} else {
-				sleep(60);
+				sleep(1);
 			}
 		}
 		

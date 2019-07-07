@@ -133,7 +133,7 @@
 
 <div class="wrapper">
 	<?php foreach ($users_list as $n => $u): ?>
-		<div class="row wrapper">
+		<div class="row wrapper<?= $u['blacklisted'] ? ' deleted' : '' ?>">
 			<div class="oh">
 				<div class="left post-preview relative">
 					<img src="<?= $u['avatar'] ?: "/i/img/transparent.gif" ?>" alt="" width="50" height="50" />
@@ -163,6 +163,20 @@
 					
 					<img src="/i/img/repost.svg" class="m" width="16" height="16">
 					<span class="darkblue m"><?= $u['reposts'] ?></span>
+					
+					<?php if ($u['blacklisted']): ?>
+						<a href="<?= $u['unblacklist_url'] ?>">
+							<button class="btn btn-yellow right m">
+								Восстановить
+							</button>
+						</a>
+					<?php else: ?>
+						<a href="<?= $u['blacklist_url'] ?>">
+							<button class="btn btn-delete right m">
+								ЧС
+							</button>
+						</a>
+					<?php endif; ?>
 				</div>
 			</div>
 		</div>
