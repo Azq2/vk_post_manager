@@ -368,7 +368,11 @@ class GroupActivity extends \Z\Task {
 					if ($flood)
 						return 'error';
 					
-					sleep(1);
+					if ($only_likes) {
+						sleep(1);
+					} else {
+						sleep(60);
+					}
 				}
 			}
 			
@@ -487,7 +491,7 @@ class GroupActivity extends \Z\Task {
 			if ($only_likes) {
 				sleep(3);
 			} else {
-				sleep(1);
+				sleep(60);
 			}
 		}
 		
