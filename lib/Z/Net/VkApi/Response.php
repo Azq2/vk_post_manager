@@ -3,6 +3,7 @@ namespace Z\Net\VkApi;
 
 class Response {
 	const VK_ERR_TOO_FAST		= 6;
+	const VK_ERR_FLOOD			= 9;
 	const VK_ERR_NEED_CAPTCHA	= 14;
 	
 	protected $data;

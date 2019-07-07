@@ -57,7 +57,10 @@ class VkMiniAppsController extends \Smm\VkAppController {
 			}
 		}
 		
-		$group_widget = \Smm\VK\AppsWidget::get($group['id']);
+		$group_widget = [
+			'type'			=> 'text', 
+			'code'			=> 'return false;'
+		];
 		
 		$this->content = View::factory('vk_apps/widgets', [
 			'group_id'				=> $group['id'], 
