@@ -354,11 +354,11 @@ class VkWidgets extends \Z\Task {
 				}
 				
 				echo "$image_id - uploaded [$md5]\n";
-				
-				$cache->set("top_users_widget:$md5", $image_id, 3600 * 24 * 7);
 			} else {
 				echo "$image_id - file from cache [$md5]\n";
 			}
+			
+			$cache->set("top_users_widget:$md5", $image_id, 3600 * 24 * 7);
 			
 			$widget_tiles_items[] = [
 				'title'			=> \Smm\Utils\Text::prepareMacroses($widget['tile_title'], $macroses), 

@@ -10,7 +10,7 @@
 </div>
 
 <div class="center pad_t">
-	<a href="https://vk.com/add_community_app?aid=<?= $app_id ?>">
+	<a href="https://vk.com/add_community_app?aid=<?= $app_id ?>" target="_blank">
 		<button class="btn">Установить приложение</button>
 	</a>
 </div>
