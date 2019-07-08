@@ -19,6 +19,11 @@ class VkApi {
 		]);
 	}
 	
+	public function setProxy($url) {
+		curl_setopt($this->ch, CURLOPT_PROXY, $url);
+		return $this;
+	}
+	
 	public function setLimit($requests_cnt, $period) {
 		$this->max_requests_cnt = $requests_cnt;
 		$this->max_requests_period = $period;

@@ -29,4 +29,4 @@
 */30 * * * * php {project}/www/index.php Smm/Task/GroupActivity --mode=archive >> {project}/logs/groups_activity_archive.log 2>&1
 
 # Обновление виджета
-* * * * * php {project}/www/index.php Smm/Task/VkWidgets >> {project}/logs/vk_widgets.log 2>&1
+*/5 * * * * php {project}/www/index.php Smm/Task/VkWidgets >> {project}/logs/vk_widgets.log 2>&1

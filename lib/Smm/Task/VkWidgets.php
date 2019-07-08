@@ -280,6 +280,8 @@ class VkWidgets extends \Z\Task {
 			return;
 		}
 		
+		$cache = \Z\Cache::instance();
+		
 		$widget_tiles_items = [];
 		
 		// Upload images and generate "Tile" widget
@@ -293,65 +295,79 @@ class VkWidgets extends \Z\Task {
 				'balls'			=> $tile['points'], 
 			];
 			
-			// Upload
-			$error = false;
-			for ($i = 0; $i < 3; ++$i) {
-				$upload_raw = $api->upload($upload_server->response->upload_url, [
-					['path' => $tile['tmp_path'], 'name' => 'file.png', 'key' => 'image', 'mime' => 'image/png']
-				]);
-				$upload = @json_decode($upload_raw->body);
-				
-				if ($upload_raw->code != 200) {
-					$error = "Upload network error: (path: ".$tile['tmp_path'].", server: ".$res->response->upload_url.", code: ".$upload_raw->code.")";
-					sleep(1);
-				} else if (!$upload) {
-					$error = "Bad answer: ".$upload_raw->body;
-					sleep(1);
-				} else if (isset($upload->error)) {
-					$error = $upload->error;
-					sleep(1);
-				} else {
-					$error = false;
-					break;
-				}
-			}
+			$md5 = md5_file($tile['tmp_path']);
+			$image_id = $cache->get("top_users_widget:$md5");
 			
-			if ($error) {
-				echo "Upload error for #$n: $error\n";
-				return;
-			}
-			
-			// Try save
-			for ($i = 0; $i < 3; ++$i) {
-				$file = $api->exec("appWidgets.saveGroupImage", [
-					'hash'			=> $upload->hash, 
-					'image'			=> $upload->image
-				]);
-				
-				if ($file->success()) {
-					$error = false;
+			if (!$image_id) {
+				// Upload
+				$error = false;
+				for ($i = 0; $i < 3; ++$i) {
+					$upload_raw = $api->upload($upload_server->response->upload_url, [
+						['path' => $tile['tmp_path'], 'name' => 'file.png', 'key' => 'image', 'mime' => 'image/png']
+					]);
+					$upload = @json_decode($upload_raw->body);
 					
-					$widget_tiles_items[] = [
-						'title'			=> \Smm\Utils\Text::prepareMacroses($widget['tile_title'], $macroses), 
-						'descr'			=> \Smm\Utils\Text::prepareMacroses($widget['tile_descr'], $macroses), 
-						'link'			=> \Smm\Utils\Text::prepareMacroses($widget['tile_link'], $macroses), 
-						'icon_id'		=> $file->response->id, 
-						'link_url'		=> 'https://vk.com/public'.$group['id'], 
-						'url'			=> 'https://vk.com/public'.$group['id'], 
-					];
-					break;
-				} else {
-					$error = $file->error();
-					
-					if ($file->errorCode() == VkApi\Response::VK_ERR_TOO_FAST)
-						sleep(3);
+					if ($upload_raw->code != 200) {
+						$error = "Upload network error: (path: ".$tile['tmp_path'].", server: ".$res->response->upload_url.", code: ".$upload_raw->code.")";
+						sleep(1);
+					} else if (!$upload) {
+						$error = "Bad answer: ".$upload_raw->body;
+						sleep(1);
+					} else if (isset($upload->error)) {
+						$error = $upload->error;
+						sleep(1);
+					} else {
+						$error = false;
+						break;
+					}
 				}
+				
+				if ($error) {
+					echo "Upload error for #$n: $error\n";
+					return;
+				}
+				
+				// Try save
+				for ($i = 0; $i < 3; ++$i) {
+					$file = $api->exec("appWidgets.saveGroupImage", [
+						'hash'			=> $upload->hash, 
+						'image'			=> $upload->image
+					]);
+					
+					if ($file->success()) {
+						$error = false;
+						
+						$image_id = $file->response->id;
+						
+						break;
+					} else {
+						$error = $file->error();
+						
+						if ($file->errorCode() == VkApi\Response::VK_ERR_TOO_FAST)
+							sleep(3);
+					}
+				}
+				
+				if ($error) {
+					echo "Upload save error for #$n: $error\n";
+					return;
+				}
+				
+				echo "$image_id - uploaded [$md5]\n";
+				
+				$cache->set("top_users_widget:$md5", $image_id, 3600 * 24 * 7);
+			} else {
+				echo "$image_id - file from cache [$md5]\n";
 			}
 			
-			if ($error) {
-				echo "Upload save error for #$n: $error\n";
-				return;
-			}
+			$widget_tiles_items[] = [
+				'title'			=> \Smm\Utils\Text::prepareMacroses($widget['tile_title'], $macroses), 
+				'descr'			=> \Smm\Utils\Text::prepareMacroses($widget['tile_descr'], $macroses), 
+				'link'			=> \Smm\Utils\Text::prepareMacroses($widget['tile_link'], $macroses), 
+				'icon_id'		=> $image_id, 
+				'link_url'		=> 'https://vk.com/public'.$group['id'], 
+				'url'			=> 'https://vk.com/public'.$group['id'], 
+			];
 		}
 		
 		// Try save
