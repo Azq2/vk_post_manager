@@ -36,6 +36,7 @@ class Downloader extends \Z\Task {
 		Captcha::setMode($args['anticaptcha'] ? 'anticaptcha' : 'cli');
 		
 		$this->api = new \Z\Net\VkApi(\Smm\Oauth::getAccessToken('VK'));
+		$this->api->setLimit(3, 1.1);
 		$this->processQueue();
 	}
 	
@@ -141,6 +142,9 @@ class Downloader extends \Z\Task {
 					}
 				}
 				
+				if (\Smm\Utils\GD::stripMetadata($file['out']))
+					echo "  strip metadata OK\n";
+				
 				$upload = [];
 				if ($file['type'] == 'photo') {
 					$upload[] = [
@@ -189,6 +193,7 @@ class Downloader extends \Z\Task {
 						
 						break;
 					}
+					sleep(1);
 					--$tries;
 				}
 				
@@ -282,7 +287,7 @@ class Downloader extends \Z\Task {
 	
 	public function cancelDownload($id) {
 		if (isset($this->download_queue[$id])) {
-			curl_multi_remove_handle($this->curl_multi, $this->download_queue[$id]->handle);
+			curl_multi_remove_handle($this->curl_multi, $this->download_queue[$id]->curl);
 			unset($this->download_queue[$id]);
 		}
 	}
@@ -310,7 +315,7 @@ class Downloader extends \Z\Task {
 			CURLOPT_FILE				=> $fp, 
 			CURLOPT_FOLLOWLOCATION		=> true, 
 			CURLOPT_URL					=> $url, 
-			CURLOPT_VERBOSE				=> true, 
+			CURLOPT_VERBOSE				=> false, 
 			CURLOPT_USERAGENT			=> "Mozilla/5.0 (Linux; Android 6.0.1; SM-G532G Build/MMB29T) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/63.0.3239.83 Mobile Safari/537.36", 
 			CURLOPT_IPRESOLVE			=> CURL_IPRESOLVE_V4
 		]);

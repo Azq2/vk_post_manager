@@ -47,7 +47,6 @@ class VkApi {
 				$args[$key]->setPostFilename($f['name']);
 			if (isset($f['mime']))
 				$args[$key]->setMimeType($f['mime']);
-			$args[$key]->setPostFilename($key);
 			++$i;
 		}
 		return $this->_sendRequest($url, $args);

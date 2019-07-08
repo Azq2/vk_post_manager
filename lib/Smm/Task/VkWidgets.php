@@ -251,6 +251,9 @@ class VkWidgets extends \Z\Task {
 					echo "Can't save image (".$tmp_path.") for tile #$n!\n";
 					return;
 				}
+			} else {
+				echo "Can't find avatar placeholder for tile #$n!\n";
+				return;
 			}
 			
 			$last_width = $width;

@@ -32,4 +32,28 @@ class GD {
 		
 		return $image;
 	}
+	
+	public static function stripMetadata($file) {
+		$size = getimagesize($file);
+		
+		if ($size['mime'] == 'image/pjpeg' || $size['mime'] == 'image/jpeg') {
+			$tmp_file = APP.'tmp/convert_'.md5(uniqid()).'.jpg';
+			$ret = system("jpegoptim -s --all-progressive ".escapeshellarg($file)." --stdout > ".escapeshellarg($tmp_file));
+			if ($ret != 0 || !imagecreatefromjpeg($tmp_file)) {
+				if (file_exists($tmp_file))
+					unlink($tmp_file);
+				return false;
+			}
+			
+			if (!rename($tmp_file, $file)) {
+				if (file_exists($tmp_file))
+					unlink($tmp_file);
+				return false;
+			}
+			
+			return true;
+		}
+		
+		return false;
+	}
 }
