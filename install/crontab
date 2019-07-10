@@ -19,14 +19,14 @@
 # Лог участников (кто ушёл, пришёл)
 */10 * * * * php {project}/www/index.php Smm/Task/LogMembers >> {project}/logs/cron_members.log 2>&1
 
-# Сбора статистики по лайкам
+# Сбор статистики по лайкам
 */10 * * * * php {project}/www/index.php Smm/Task/GroupActivity --mode=likes >> {project}/logs/groups_activity_likes.log 2>&1
 
 # Агрегация статистики
 * * * * * php {project}/www/index.php Smm/Task/GroupActivity --mode=aggregation >> {project}/logs/groups_activity_aggregation.log 2>&1
 
 # Сбор старой статистики
-*/30 * * * * php {project}/www/index.php Smm/Task/GroupActivity --mode=archive >> {project}/logs/groups_activity_archive.log 2>&1
+# */30 * * * * php {project}/www/index.php Smm/Task/GroupActivity --mode=archive >> {project}/logs/groups_activity_archive.log 2>&1
 
 # Обновление виджета
 * * * * * php {project}/www/index.php Smm/Task/VkWidgets >> {project}/logs/vk_widgets.log 2>&1

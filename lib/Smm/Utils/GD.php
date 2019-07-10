@@ -33,13 +33,64 @@ class GD {
 		return $image;
 	}
 	
+	public static function fakeExif($file) {
+		$size = getimagesize($file);
+		
+		if ($size['mime'] == 'image/pjpeg' || $size['mime'] == 'image/jpeg') {
+			$base_time = mt_rand(time() - 3600 * 24 * 365, time());
+			$exif_date = mt_rand(strtotime(date("Y-m-d 08:00:00", $base_time)), strtotime(date("Y-m-d 17:00:00", $base_time)));
+			
+			$params = [
+				'ExifImageWidth'		=> $size[0], 
+				'ExifImageHeight'		=> $size[1], 
+				'CreateDate'			=> date("Y-m-d H:i:s", $exif_date), 
+				'DateTimeOriginal'		=> date("Y-m-d H:i:s", $exif_date), 
+				'ModifyDate'			=> date("Y-m-d H:i:s", $exif_date), 
+			];
+
+			$tmp = [];
+			foreach ($params as $k => $v)
+				$tmp[] = "-$k=".escapeshellarg($v);
+			
+			$tmp_file = APP.'tmp/convert_'.md5(uniqid()).'.jpg';
+			
+			if (!copy($file, "$file.jpg"))
+				return false;
+			
+			$ret = 1;
+			$stdout = [];
+			exec("exiftool -m ".escapeshellarg("$file.jpg")." -tagsFromFile ".escapeshellarg(APP."www/static/exif-template.jpg")." ".implode(" ", $tmp)." -o ".escapeshellarg($tmp_file), $stdout, $ret);
+			if ($ret != 0 || !file_exists($tmp_file) || !filesize($tmp_file) || !imagecreatefromjpeg($tmp_file)) {
+				if (file_exists($tmp_file))
+					unlink($tmp_file);
+				if (file_exists("$file.jpg"))
+					unlink("$file.jpg");
+				return false;
+			}
+			
+			unlink("$file.jpg");
+			
+			if (!rename($tmp_file, $file)) {
+				if (file_exists($tmp_file))
+					unlink($tmp_file);
+				return false;
+			}
+			
+			return true;
+		}
+		
+		return false;
+	}
+	
 	public static function stripMetadata($file) {
 		$size = getimagesize($file);
 		
 		if ($size['mime'] == 'image/pjpeg' || $size['mime'] == 'image/jpeg') {
 			$tmp_file = APP.'tmp/convert_'.md5(uniqid()).'.jpg';
-			$ret = system("jpegoptim -s --all-progressive ".escapeshellarg($file)." --stdout > ".escapeshellarg($tmp_file));
-			if ($ret != 0 || !imagecreatefromjpeg($tmp_file)) {
+			$ret = 1;
+			$stdout = [];
+			exec("jpegoptim -f -s --all-progressive ".escapeshellarg($file)." --stdout > ".escapeshellarg($tmp_file), $stdout, $ret);
+			if ($ret != 0 || !file_exists($tmp_file) || !filesize($tmp_file) || !imagecreatefromjpeg($tmp_file)) {
 				if (file_exists($tmp_file))
 					unlink($tmp_file);
 				return false;

@@ -52,9 +52,14 @@ class GroupActivity extends \Z\Task {
 				case "likes":
 					echo date("Y-m-d H:i:s")." - #".$group['id']." [ GROUP: ".$group['name']." ]\n";
 					
-					if ($progress['done'] || $progress['offset'] >= 100) {
+					$max_offset = 400;
+					
+					if ($progress['done'] || $progress['offset'] >= $max_offset) {
 						$start = microtime(true);
-						$this->grabStat($group, 0, 100, true);
+						for ($i = 0; $i <= $max_offset; $i += 100) {
+							if ($this->grabStat($group, $i, 100, true) != 'ok')
+								break;
+						}
 						$elapsed = microtime(true) - $start;
 						echo date("Y-m-d H:i:s")." - chunk done, ".round($elapsed, 2)."\n";
 					} else {
@@ -75,9 +80,10 @@ class GroupActivity extends \Z\Task {
 						if ($status != 'error') {
 							DB::update('vk_users_stat_progress')
 								->set([
-									'done'		=> $status == 'no_more_posts' ? 0 : 1, 
-									'offset'	=> $status == 'no_more_posts' ? $progress['offset'] + 100 : 0
+									'done'		=> $status == 'no_more_posts' ? 1 : 0, 
+									'offset'	=> $status == 'no_more_posts' ? 0 : $progress['offset'] + 100
 								])
+								->where('group_id', '=', $group['id'])
 								->execute();
 						}
 					}
@@ -371,7 +377,7 @@ class GroupActivity extends \Z\Task {
 					if ($only_likes) {
 						sleep(1);
 					} else {
-						sleep(60);
+						sleep(1);
 					}
 				}
 			}
@@ -396,6 +402,9 @@ class GroupActivity extends \Z\Task {
 				list ($post_id, $likes) = $chunk;
 				
 				if ($likes) {
+					if (!isset($post2date[$post_id]))
+						die("BUG: $post_id\n");
+					
 					foreach ($likes->items as $like) {
 						$query->values([
 							$group['id'], 
@@ -491,7 +500,7 @@ class GroupActivity extends \Z\Task {
 			if ($only_likes) {
 				sleep(3);
 			} else {
-				sleep(60);
+				sleep(1);
 			}
 		}
 		
