@@ -2,24 +2,20 @@ define(['jquery', 'colorpicker', 'utils', 'api', 'comm/data'], function ($, _, u
 //
 var MEME_WIDTH			= 510, 
 	MEME_HEIGHT			= 510, 
-	MEME_FONT			= 'Impact, ImpactExternal', 
-	MEME_TEXT_BLOCK_PAD	= 10, 
-	
-	MEME_WATERMARK_FONT			= '"Goudy Old Style", "Goudy Old Style External"', 
-	MEME_WATERMARK_FONT_SIZE	= 10;
+	MEME_TEXT_BLOCK_PAD	= 10;
 
 var FONTS = {
+	LOBSTER:	'Lobster, LobsterExternal', 
 	IMPACT:		'Impact, ImpactExternal', 
 	GOUDY:		'"Goudy Old Style", "Goudy Old Style External"', 
 	TAHOMA:		'Tahoma', 
-	ARIAL:		'Arial, "Arial External"', 
 	TIMES:		'"Times New Roman", "Times New Roman External"'
 };
 
 var REQUIRED_FONTS = {
 	"10px Impact":				"10px ImpactExternal", 
-	// "10px Arial":			"10px 'Arial External'", 
-	"10px 'Times New Roman'":		"10px 'Times New Roman External'", 
+	"10px Lobster":				"10px LobsterExternal", 
+	"10px 'Times New Roman'":	"10px 'Times New Roman External'", 
 	"10px 'Goudy Old Style'":	"10px 'Goudy Old Style External'"
 };
 
@@ -46,14 +42,13 @@ var TEXTBOXES_CONFIG = {
 		fontSize:	20, 
 		fontStroke:	0, 
 		fontAlpha:	100, 
-		font:		FONTS.TIMES, 
+		font:		'TIMES', 
 		
 		edit:		{
 			fontSizeAndColor:	true, 
 			strokeSizeAndColor:	false, 
 			alpha:				false, 
 			position:			false, 
-			fontFamily:			false, 
 			bgColor:			true
 		}
 	}, 
@@ -72,14 +67,13 @@ var TEXTBOXES_CONFIG = {
 		fontSize:	20, 
 		fontStroke:	0, 
 		fontAlpha:	100, 
-		font:		FONTS.TIMES, 
+		font:		'TIMES', 
 		
 		edit:		{
 			fontSizeAndColor:	true, 
 			strokeSizeAndColor:	false, 
 			alpha:				false, 
 			position:			false, 
-			fontFamily:			false, 
 			bgColor:			true
 		}
 	}, 
@@ -89,20 +83,22 @@ var TEXTBOXES_CONFIG = {
 		type:		'line', 
 		align:		'center', 
 		enabled:	true, 
+		bgColor:		'#FFFFFF', 
+		strokeColor:	'#000000', 
+		textColor:		'#FFFFFF', 
 		
 		uc:			true, 
 		bold:		false, 
 		fontSize:	35, 
 		fontStroke:	2, 
 		fontAlpha:	100, 
-		font:		FONTS.IMPACT, 
+		font:		'LOBSTER', 
 		
 		edit:		{
 			fontSizeAndColor:	true, 
 			strokeSizeAndColor:	true, 
 			alpha:				true, 
 			position:			false, 
-			fontFamily:			false, 
 			bgColor:			false
 		}
 	}, 
@@ -112,20 +108,22 @@ var TEXTBOXES_CONFIG = {
 		type:		'line', 
 		align:		'center', 
 		enabled:	true, 
+		bgColor:		'#FFFFFF', 
+		strokeColor:	'#000000', 
+		textColor:		'#FFFFFF', 
 		
 		uc:			true, 
 		bold:		false, 
 		fontSize:	35, 
 		fontStroke:	2, 
 		fontAlpha:	100, 
-		font:		FONTS.IMPACT, 
+		font:		'LOBSTER', 
 		
 		edit:		{
 			fontSizeAndColor:	true, 
 			strokeSizeAndColor:	true, 
 			alpha:				true, 
 			position:			false, 
-			fontFamily:			false, 
 			bgColor:			false
 		}
 	}, 
@@ -135,20 +133,22 @@ var TEXTBOXES_CONFIG = {
 		type:		'line', 
 		align:		'center', 
 		enabled:	false, 
+		bgColor:		'#FFFFFF', 
+		strokeColor:	'#000000', 
+		textColor:		'#FFFFFF', 
 		
 		uc:			true, 
 		bold:		false, 
 		fontSize:	35, 
 		fontStroke:	2, 
 		fontAlpha:	100, 
-		font:		FONTS.IMPACT, 
+		font:		'LOBSTER', 
 		
 		edit:		{
 			fontSizeAndColor:	true, 
 			strokeSizeAndColor:	true, 
 			alpha:				true, 
 			position:			false, 
-			fontFamily:			false, 
 			bgColor:			false
 		}
 	}, 
@@ -158,20 +158,22 @@ var TEXTBOXES_CONFIG = {
 		type:		'line', 
 		align:		'right', 
 		enabled:	false, 
+		bgColor:		'#FFFFFF', 
+		strokeColor:	'#000000', 
+		textColor:		'#FFFFFF', 
 		
 		uc:			true, 
 		bold:		false, 
 		fontSize:	10, 
 		fontStroke:	1, 
 		fontAlpha:	100, 
-		font:		FONTS.GOUDY, 
+		font:		'GOUDY', 
 		
 		edit:		{
 			fontSizeAndColor:	true, 
 			strokeSizeAndColor:	true, 
 			alpha:				true, 
 			position:			true, 
-			fontFamily:			false, 
 			bgColor:			false
 		}
 	}
@@ -201,6 +203,12 @@ var tpl = {
 		return html;
 	}, 
 	textBoxEdit: function (data) {
+		var fonts = '';
+		
+		$.each(FONTS, function (k, v) {
+			fonts += '<option value="' + k + '"' + (data.font == k ? ' selected="selected"' : '') + '>' + k + '</option>';
+		});
+		
 		var html =
 			'<div class="js-meme_textbox" data-id="' + data.id + '">' + 
 				'<div class="row">' + 
@@ -230,7 +238,7 @@ var tpl = {
 					
 						'&nbsp;' + 
 						
-						'<button name="font_stroke" type="submit" class="js-meme_color btn btn-colorpicker" value="#FFFFFF" data-type="textColor" ' + 
+						'<button name="font_stroke" type="submit" class="js-meme_color btn btn-colorpicker" value="' + data.textColor + '" data-type="textColor" ' + 
 								'style="background: ' + data.textColor + '">' + 
 							'&nbsp;' + 
 						'</button>' + 
@@ -243,14 +251,14 @@ var tpl = {
 						
 						'&nbsp;' + 
 						
-						'<button name="font_stroke" type="submit" class="js-meme_color btn btn-colorpicker" value="#000000" data-type="strokeColor" ' + 
+						'<button name="font_stroke" type="submit" class="js-meme_color btn btn-colorpicker" value="' + data.strokeColor + '" data-type="strokeColor" ' + 
 								'style="background: ' + data.strokeColor + '">' + 
 							'&nbsp;' + 
 						'</button>' + 
 					'</div>' + 
 					'<div class="row inl_bl' + (data.edit.bgColor ? '' : ' hide') + '">' + 
 						'<label class="lbl">Фон</label><br />' + 
-						'<button name="font_stroke" type="submit" class="js-meme_color btn btn-colorpicker" value="#000000" data-type="bgColor" ' + 
+						'<button name="font_stroke" type="submit" class="js-meme_color btn btn-colorpicker" value="' + data.bgColor + '" data-type="bgColor" ' + 
 								'style="background: ' + data.bgColor + '">' + 
 							'&nbsp;' + 
 						'</button>' + 
@@ -274,11 +282,10 @@ var tpl = {
 							'<option value="bottom">Низ</option>' + 
 						'</select>' + 
 					'</div>' + 
-					'<div class="row inl_bl' + (data.edit.fontFamily ? '' : ' hide') + '">' + 
+					'<div class="row inl_bl">' + 
 						'<label class="lbl">Шрифт</label><br />' + 
-						'<select name="text_align" class="js-meme_font">' + 
-							'<option value="' + utils.htmlWrap(MEME_FONT) + '">Impact</option>' + 
-							'<option value="' + utils.htmlWrap(MEME_WATERMARK_FONT) + '">GOUDOS</option>' + 
+						'<select name="font" class="js-meme_font">' + 
+							fonts + 
 						'</select> ' + 
 					'</div>' + 
 				'</div>' + 
@@ -624,7 +631,7 @@ function MemeEditor(el, options) {
 				line_width, n = 0, 
 				font_str;
 			while (true) {
-				font_str = (tb.bold.prop("checked") ? "bold " : "") + font_size + "px " + tb.font.val();
+				font_str = (tb.bold.prop("checked") ? "bold " : "") + font_size + "px " + FONTS[tb.font.val()];
 				ctx.font = font_str;
 				
 				line_width = ctx.measureText(lines[i]).width + stroke * 2;
@@ -726,7 +733,7 @@ function MemeEditor(el, options) {
 			render_lines = [], 
 			actual_meme_width = MEME_HEIGHT * (opts.width / opts.height), 
 			font_size = Math.ceil(tb.fontSize.val() * (opts.width / actual_meme_width)), 
-			font_str = (tb.bold.prop("checked") ? "bold " : "") + font_size + "px " + tb.font.val(), 
+			font_str = (tb.bold.prop("checked") ? "bold " : "") + font_size + "px " + FONTS[tb.font.val()], 
 			padding = Math.ceil(MEME_TEXT_BLOCK_PAD * (opts.width / actual_meme_width)), 
 			max_width = opts.width - padding * 2;
 		
@@ -853,7 +860,6 @@ function MemeEditor(el, options) {
 	
 	function drawResized(dst_ctx, img, x, y, w, h) {
 		var steps = Math.ceil(Math.log(img.width / w) / Math.log(2));
-		console.log('steps='+steps, x, y, w, h);
 		
 		if (steps > 1) {
 			var buffer = document.createElement('canvas'), 
@@ -978,7 +984,7 @@ function MemeEditor(el, options) {
 	}
 	
 	function serialize() {
-		var save = ['text', 'textColor', 'bgColor', 'strokeColor', 'fontSize', 'fontAlpha', 'bold', 'uc'];
+		var save = ['text', 'textColor', 'bgColor', 'strokeColor', 'font', 'fontSize', 'fontAlpha', 'bold', 'uc'];
 		var settings = {textboxes: {}};
 		$.each(textboxes, function (k, tb) {
 			var tmp = {};
@@ -1024,6 +1030,9 @@ function MemeEditor(el, options) {
 	
 	function addTextBox(name, config) {
 		var saved = (opts.template && opts.template.textboxes[name]) || {};
+		
+		if (saved.font && !FONTS[saved.font])
+			delete saved.font;
 		
 		var tb = $.extend({
 			id:				textboxes.length, 

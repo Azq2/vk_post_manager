@@ -543,6 +543,10 @@ li {
     font-family: 'Times New Roman External';
     src: url('/static/fonts/times.ttf');
 }
+@font-face {
+    font-family: 'LobsterExternal';
+    src: url('/static/fonts/Lobster-Regular.ttf');
+}
 .meme-textbox {
 	position: absolute;
 	top: 0;
