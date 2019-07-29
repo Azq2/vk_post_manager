@@ -562,8 +562,14 @@ function findBestThumb(hash, size) {
 			ret.orig_src = hash[w];
 	}
 	
-	if (!ret)
+	if (!ret) {
 		console.log('findBestThumb(', hash, size, ') = ', ret);
+		ret = {
+			w: 320, 
+			h: 320, 
+			src: "/i/img/transparent.gif"
+		};
+	}
 	
 	return ret;
 }
