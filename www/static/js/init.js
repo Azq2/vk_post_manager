@@ -7,6 +7,8 @@ requirejs.config({
 		"emojionearea":			"vendor/emojionearea", 
 		"emojione":				"vendor/emojione", 
 		
+		"howler":				"//cdnjs.cloudflare.com/ajax/libs/howler/2.1.2/howler.min", 
+		
 		// amcharts
 		"amcharts":				"//cdnjs.cloudflare.com/ajax/libs/amcharts/3.21.12/amcharts",
 		"amcharts.funnel":		"//cdnjs.cloudflare.com/ajax/libs/amcharts/3.21.12/funnel",

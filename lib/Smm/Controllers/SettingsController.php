@@ -454,6 +454,7 @@ class SettingsController extends \Smm\GroupController {
 			'oauth_url'			=> $base_url->copy()->set('a', 'settings/oauth')->href(), 
 			'groups_url'		=> $base_url->copy()->set('a', 'settings/groups')->href(), 
 			'callbacks_url'		=> $base_url->copy()->set('a', 'settings/callbacks')->href(), 
+			'catificator_url'	=> $base_url->copy()->set('a', 'catificator/index')->href(), 
 			'is_admin'			=> $this->user->can('admin'), 
 			'login'				=> $this->user->login
 		]);

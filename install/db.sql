@@ -1,5 +1,33 @@
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
 /*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `catificator_categories` (
+  `id` int(10) unsigned NOT NULL AUTO_INCREMENT,
+  `title` varchar(128) DEFAULT NULL,
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+/*!40101 SET character_set_client = @saved_cs_client */;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `catificator_category_triggers` (
+  `category_id` int(10) unsigned NOT NULL,
+  `word` varchar(128) NOT NULL,
+  PRIMARY KEY (`category_id`,`word`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+/*!40101 SET character_set_client = @saved_cs_client */;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `catificator_tracks` (
+  `id` int(10) unsigned NOT NULL AUTO_INCREMENT,
+  `md5` char(32) NOT NULL,
+  `category_id` int(10) unsigned NOT NULL,
+  `filename` varchar(128) DEFAULT NULL,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `md5` (`md5`),
+  KEY `category_id` (`category_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+/*!40101 SET character_set_client = @saved_cs_client */;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
 CREATE TABLE `vk_activity_stat_progress` (
   `group_id` int(11) NOT NULL,
   `offset` int(10) unsigned DEFAULT '0',
@@ -241,6 +269,17 @@ CREATE TABLE `vk_user_reposts` (
   `date` datetime NOT NULL,
   PRIMARY KEY (`group_id`,`post_id`,`user_id`),
   KEY `date` (`date`,`group_id`,`user_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+/*!40101 SET character_set_client = @saved_cs_client */;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `vk_users_posts` (
+  `post_id` int(10) unsigned NOT NULL,
+  `group_id` int(10) unsigned NOT NULL,
+  `likes` int(10) unsigned NOT NULL DEFAULT '0',
+  `reposts` int(10) unsigned NOT NULL DEFAULT '0',
+  `comments` int(10) unsigned NOT NULL DEFAULT '0',
+  PRIMARY KEY (`post_id`,`group_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 /*!40101 SET character_set_client = @saved_cs_client */;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
