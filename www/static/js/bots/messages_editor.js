@@ -29,18 +29,10 @@ $('body').on('click', '.js-message_save', function (e) {
 	
 	toggle_spinner(true);
 	
-	$.ajax({
-		url: $('#add_form').prop("action"), 
-		method: 'POST', 
-		data: {
-			id:		wrap.data('id'), 
-			text:	wrap.find('.js-message_text').prop("emojioneArea").getText()
-		}, 
-		processData: false, 
-		contentType: false, 
-		cache: false, 
-		dataType: "json"
-	}).success(function (res) {
+	$.post($('#add_form').prop("action"),  {
+		id:		wrap.data('id'), 
+		text:	wrap.find('.js-message_text').prop("emojioneArea").getText()
+	}, "json").success(function (res) {
 		toggle_spinner(false);
 		if (res.success) {
 			wrap.find('.js-status_text').removeClass('hide').text('сохранено');

@@ -8,6 +8,8 @@ use \Z\Util\Url;
 
 use \Smm\View\Widgets;
 
+use PhpAmqpLib\Message\AMQPMessage;
+
 class VkCallbacksController extends \Z\Controller {
 	protected $group, $callback, $input;
 	protected $content;
@@ -101,6 +103,18 @@ class VkCallbacksController extends \Z\Controller {
 					->where('group_id', '=', $this->group['id'])
 					->where('comment_id', '=', $this->input->object->id)
 					->execute();
+			break;
+			
+			case "message_new":
+			case "message_allow":
+			case "message_deny":
+				switch ($this->group['bot']) {
+					case "catificator":
+						$amqp = \Z\Net\AMQP::instance();
+						$amqp->queue_declare('catificator_queue', false, true);
+						$amqp->basic_publish(new AMQPMessage(json_encode($this->input)), '', 'catificator_queue');
+					break;
+				}
 			break;
 		}
 		

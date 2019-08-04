@@ -3,8 +3,6 @@ namespace Smm\Utils;
 
 class Text {
 	public static function prepareMacroses($text, $args = []) {
-		$args = $args;
-		
 		// {var_name}
 		$text = preg_replace_callback("/{([\w\d+_-]+)}/is", function ($m) use ($args) {
 			if (isset($args[$m[1]]))
@@ -13,7 +11,7 @@ class Text {
 		}, $text);
 		
 		// {for_NAME}
-		$text = preg_replace_callback("/\{for_([\w\d_]+)\}(.*?)\{\/for_\1\}/is", function ($m) use ($args) {
+		$text = preg_replace_callback("/\{for_([\w\d_]+)\}(.*?)\{\/for_([\w\d_]+)\}/is", function ($m) use ($args) {
 			if (isset($args["is_".$m[1]]) && $args["is_".$m[1]])
 				return $m[2];
 			return "";

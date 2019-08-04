@@ -29,7 +29,7 @@
 				<table>
 					<tr>
 						<td width="100%" class="m">
-							<input type="file" name="file" />
+							<input type="file" name="file[]" multiple="multiple" />
 						</td>
 						
 						<td class="m">
@@ -49,7 +49,7 @@
 				<img src="/i/img/play_audio.svg" alt="" width="16" height="16" class="js-track_play m cursor" />
 				<img src="/i/img/pause_audio.svg" alt="" width="16" height="16" class="js-track_pause hide m cursor" />
 				
-				<span class="m grey"><?= $track['filename'] ?></span>
+				<span class="m grey"><?= $track['filename'] ?> (<?= $track['duration'] ?> сек.)</span>
 			</div>
 		<?php endforeach; ?>
 	</div>

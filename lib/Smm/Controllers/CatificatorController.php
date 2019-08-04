@@ -48,51 +48,68 @@ class CatificatorController extends \Smm\BaseController {
 		$errors = [];
 		
 		if ($_POST) {
-			if (!isset($_FILES['file'])) {
-				$errors[] = 'Файл не обнаружен!';
-			} elseif ($_FILES['file']['error']) {
-				$errors[] = 'Ошибка загрузки #'.$_FILES['file']['error'];
-			} elseif ($_FILES['file']['size'] >= 1024 * 1024) {
-				$errors[] = 'Слишком большой файл.';
-			} else if (\Smm\Utils\File::mime($_FILES['file']['tmp_name']) != 'audio/mpeg') {
-				$errors[] = 'Файл должен быть mp3! Загруженный файл: '.\Smm\Utils\File::mime($_FILES['file']['tmp_name']);
-			} else {
-				$md5sum = md5_file($_FILES['file']['tmp_name']);
+			$n = count($_FILES['file']['error']);
+			
+			if (!$n)
+				$errors[] = 'Файлы не обнаружены!';
+			
+			for ($i = 0; $i < $n; ++$i) {
+				$name = htmlspecialchars($_FILES['file']['name'][$i] ?? '');
 				
-				$duplicate = DB::select()
-					->from('catificator_tracks')
-					->where('md5', '=', $md5sum)
-					->execute()
-					->current();
-				
-				if ($duplicate) {
-					$errors[] = 'Точно такой же файл уже был добавлен!';
+				if ($_FILES['file']['error'][$i]) {
+					$errors[] = '#'.$n.' ('.$name.'): Ошибка загрузки #'.$_FILES['file']['error'][$i];
+				} elseif ($_FILES['file']['size'][$i] >= 1024 * 1024) {
+					$errors[] = '#'.$n.' ('.$name.'): Слишком большой файл.';
+				} else if (\Smm\Utils\File::mime($_FILES['file']['tmp_name'][$i]) != 'audio/mpeg') {
+					$errors[] = '#'.$n.' ('.$name.'): Файл должен быть mp3! Загруженный файл: '.\Smm\Utils\File::mime($_FILES['file']['tmp_name'][$i]);
 				} else {
-					$new_path = APP.'www/files/catificator/'.$md5sum.'.mp3';
+					$md5sum = md5_file($_FILES['file']['tmp_name'][$i]);
 					
-					if (!file_exists(dirname($new_path))) {
-						umask(0);
-						mkdir(dirname($new_path), 0777, true);
-					}
+					$duration = \Smm\Utils\File::getDuration($_FILES['file']['tmp_name'][$i]);
 					
-					if (!move_uploaded_file($_FILES['file']['tmp_name'], $new_path)) {
-						$errors[] = 'Невозможно сохранить файл на диск.';
+					$duplicate = DB::select()
+						->from('catificator_tracks')
+						->where('md5', '=', $md5sum)
+						->where('category_id', '!=', $id)
+						->execute()
+						->current();
+					
+					if (!$duration) {
+						$errors[] = '#'.$n.' ('.$name.'): Невозможно получить длительность!';
+					} elseif ($duplicate) {
+						$errors[] = '#'.$n.' ('.$name.'): Точно такой же файл уже был добавлен в другую категорию!';
 					} else {
-						DB::insert('catificator_tracks')
-							->set([
-								'filename'		=> basename($_FILES['file']['name']), 
-								'md5'			=> $md5sum, 
-								'category_id'	=> $id
-							])
-							->execute();
+						$new_path = APP.'www/files/catificator/'.$md5sum.'.mp3';
 						
-						$base_url = Url::mk('/')
-							->set('gid', $this->group['id'])
-							->set('a', 'catificator/index');
+						if (!file_exists(dirname($new_path))) {
+							umask(0);
+							mkdir(dirname($new_path), 0777, true);
+						}
 						
-						return $this->redirect($base_url->url());
+						if (!move_uploaded_file($_FILES['file']['tmp_name'][$i], $new_path)) {
+							$errors[] = '#'.$n.' ('.$name.'): Невозможно сохранить файл на диск.';
+						} else {
+							DB::insert('catificator_tracks')
+								->set([
+									'filename'		=> basename($_FILES['file']['name'][$i]), 
+									'md5'			=> $md5sum, 
+									'category_id'	=> $id, 
+									'duration'		=> $duration
+								])
+								->onDuplicateSetValues('filename')
+								->onDuplicateSetValues('duration')
+								->execute();
+						}
 					}
 				}
+			}
+			
+			if (!$errors) {
+				$base_url = Url::mk('/')
+					->set('gid', $this->group['id'])
+					->set('a', 'catificator/index');
+				
+				return $this->redirect($base_url->url());
 			}
 		}
 		
@@ -163,6 +180,8 @@ class CatificatorController extends \Smm\BaseController {
 		
 		if ($_POST && !$errors) {
 			$cat['title'] = trim($_POST['title'] ?? '');
+			$cat['only_triggers'] = isset($_POST['only_triggers']) ? 1 : 0;
+			$cat['random'] = isset($_POST['random']) ? 1 : 0;
 			
 			$triggers = [];
 			foreach ($_POST['trigger'] as $word) {
@@ -252,6 +271,7 @@ class CatificatorController extends \Smm\BaseController {
 				$tracks[] = [
 					'id'			=> $track['id'], 
 					'filename'		=> htmlspecialchars($track['filename']), 
+					'duration'		=> round($track['duration']), 
 					'url'			=> '/files/catificator/'.$track['md5'].'.mp3', 
 					'delete_link'	=> $base_url->copy()->set('a', 'catificator/delete_track')->set('id', $track['id'])->href(), 
 				];

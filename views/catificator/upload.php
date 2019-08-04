@@ -16,7 +16,7 @@
 				<table>
 					<tr>
 						<td width="100%" class="m">
-							<input type="file" name="file" />
+							<input type="file" name="file[]" multiple="multiple" />
 						</td>
 						
 						<td class="m">

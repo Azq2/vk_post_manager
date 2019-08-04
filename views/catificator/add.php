@@ -40,6 +40,20 @@
 			<input type="submit" class="btn js-trigger_add" value="Добавить ещё триггер" />
 		</div>
 		
+		<div class="row">
+			<label>
+				<input type="checkbox" name="only_triggers" <?= $cat['only_triggers'] ? ' checked="checked"' : '' ?> />
+				Только триггеры
+			</label>
+		</div>
+		
+		<div class="row">
+			<label>
+				<input type="checkbox" name="random" <?= $cat['random'] ? ' checked="checked"' : '' ?> />
+				Рандом
+			</label>
+		</div>
+		
 		<div class="row oh">
 			<?php if ($is_edit): ?>
 				<input type="submit" class="btn btn-green" name="save" value="Сохранить" />

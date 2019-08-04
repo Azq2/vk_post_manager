@@ -30,3 +30,16 @@
 
 # Обновление виджета
 * * * * * php {project}/www/index.php Smm/Task/VkWidgets >> {project}/logs/vk_widgets.log 2>&1
+
+
+# Бот-котификатор
+* * * * * php {project}/www/index.php Smm/Task/CatificatorBot --instance=0 >> {project}/logs/catificator.0.log 2>&1
+* * * * * php {project}/www/index.php Smm/Task/CatificatorBot --instance=1 >> {project}/logs/catificator.1.log 2>&1
+* * * * * php {project}/www/index.php Smm/Task/CatificatorBot --instance=2 >> {project}/logs/catificator.2.log 2>&1
+* * * * * php {project}/www/index.php Smm/Task/CatificatorBot --instance=3 >> {project}/logs/catificator.3.log 2>&1
+* * * * * php {project}/www/index.php Smm/Task/CatificatorBot --instance=4 >> {project}/logs/catificator.4.log 2>&1
+* * * * * php {project}/www/index.php Smm/Task/CatificatorBot --instance=5 >> {project}/logs/catificator.5.log 2>&1
+* * * * * php {project}/www/index.php Smm/Task/CatificatorBot --instance=6 >> {project}/logs/catificator.6.log 2>&1
+* * * * * php {project}/www/index.php Smm/Task/CatificatorBot --instance=7 >> {project}/logs/catificator.7.log 2>&1
+* * * * * php {project}/www/index.php Smm/Task/CatificatorBot --instance=8 >> {project}/logs/catificator.8.log 2>&1
+* * * * * php {project}/www/index.php Smm/Task/CatificatorBot --instance=9 >> {project}/logs/catificator.9.log 2>&1

@@ -1,9 +1,11 @@
 <?php
 namespace Smm\Bot;
 
+use \Z\DB;
+
 class Messages {
 	protected static $instances = [];
-	protected $vars = [], $messages = [];
+	protected $vars = [], $messages = [], $type;
 	
 	public function __construct($type) {
 		$this->messages = DB::select()
@@ -11,6 +13,7 @@ class Messages {
 			->where('type', '=', $type)
 			->execute()
 			->asArray('id', 'text');
+		$this->type = $type;
 	}
 	
 	public static function instance($type) {
@@ -20,7 +23,7 @@ class Messages {
 	}
 	
 	public function setGlobals($vars) {
-		$this->vars = array_merge($this->vars, $vars);
+		$this->vars = $vars;
 		return $this;
 	}
 	
@@ -36,7 +39,8 @@ class Messages {
 				->ignore()
 				->set([
 					'id'		=> $id, 
-					'text'		=> $this->messages[$id]
+					'text'		=> $this->messages[$id], 
+					'type'		=> $this->type
 				])
 				->execute();
 		}
