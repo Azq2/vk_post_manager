@@ -249,14 +249,16 @@ class CatificatorBot extends \Z\Task {
 						->onDuplicateSetValues('date')
 						->execute();
 					
-					DB::insert('catificator_used_tracks')
-						->set([
-							'user_id'		=> $msg->object->from_id, 
-							'track_id'		=> $track['id'], 
-							'date'			=> date("Y-m-d H:i:s", time())
-						])
-						->onDuplicateSetValues('date')
-						->execute();
+					if (!$this->categories[$track['category_id']]['random']) {
+						DB::insert('catificator_used_tracks')
+							->set([
+								'user_id'		=> $msg->object->from_id, 
+								'track_id'		=> $track['id'], 
+								'date'			=> date("Y-m-d H:i:s", time())
+							])
+							->onDuplicateSetValues('date')
+							->execute();
+					}
 				}
 			}
 		} else {
