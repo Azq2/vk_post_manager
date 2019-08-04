@@ -3,6 +3,8 @@
 CREATE TABLE `catificator_categories` (
   `id` int(10) unsigned NOT NULL AUTO_INCREMENT,
   `title` varchar(128) DEFAULT NULL,
+  `only_triggers` tinyint(4) NOT NULL DEFAULT '0',
+  `random` tinyint(4) NOT NULL DEFAULT '0',
   PRIMARY KEY (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 /*!40101 SET character_set_client = @saved_cs_client */;
@@ -16,14 +18,36 @@ CREATE TABLE `catificator_category_triggers` (
 /*!40101 SET character_set_client = @saved_cs_client */;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
 /*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `catificator_log` (
+  `id` int(10) unsigned NOT NULL AUTO_INCREMENT,
+  `date` datetime NOT NULL,
+  `user_id` int(10) unsigned NOT NULL,
+  `category_id` int(10) unsigned NOT NULL,
+  `track_id` int(10) unsigned NOT NULL,
+  PRIMARY KEY (`id`),
+  KEY `date` (`date`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+/*!40101 SET character_set_client = @saved_cs_client */;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
 CREATE TABLE `catificator_tracks` (
   `id` int(10) unsigned NOT NULL AUTO_INCREMENT,
   `md5` char(32) NOT NULL,
   `category_id` int(10) unsigned NOT NULL,
   `filename` varchar(128) DEFAULT NULL,
+  `duration` float NOT NULL DEFAULT '0',
   PRIMARY KEY (`id`),
   UNIQUE KEY `md5` (`md5`),
   KEY `category_id` (`category_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+/*!40101 SET character_set_client = @saved_cs_client */;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `catificator_used_tracks` (
+  `user_id` int(10) unsigned NOT NULL,
+  `track_id` int(10) unsigned NOT NULL,
+  `date` datetime NOT NULL,
+  PRIMARY KEY (`user_id`,`track_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 /*!40101 SET character_set_client = @saved_cs_client */;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
