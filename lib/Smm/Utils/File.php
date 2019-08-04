@@ -10,4 +10,29 @@ class File {
 		$raw = @json_decode(shell_exec("ffprobe ".escapeshellarg($file)." -print_format json -show_format 2>/dev/null"));
 		return $raw->format->duration ?? false;
 	}
+	
+	public static function getVolume($file) {
+		$cache = \Z\Cache::instance();
+		
+		$ret = $cache->get("ffmpeg_volume:347:$file");
+		if (!$ret) {
+			$raw = shell_exec("ffmpeg -i ".escapeshellarg($file)." -af volumedetect -f null /dev/null 2>&1");
+			
+			$ret = [
+				'max'		=> 0, 
+				'mean'		=> 0
+			];
+			
+			if (preg_match("/mean_volume:\s*([\d.-]+)/si", $raw, $m))
+				$ret['mean'] = $m[1];
+			if (preg_match("/max_volume:\s*([\d.-]+)/si", $raw, $m))
+				$ret['max'] = $m[1];
+		}
+		
+		$cache->set("ffmpeg_volume:347:$file", $ret, 3600 * 24);
+		
+		return $ret;
+	}
+	
+	
 }

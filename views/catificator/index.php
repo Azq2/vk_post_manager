@@ -41,7 +41,7 @@
 		</div>
 		
 		<?php foreach ($cat['tracks'] as $track): ?>
-			<div class="list-link js-track oh relative" data-url="<?= $track['url'] ?>">
+			<div class="list-link js-track oh relative" data-url="<?= $track['url'] ?>?<?= microtime(true) ?>">
 				<div style="background:rgba(0, 150, 136, 0.2);position:absolute;top:0;left:0;right:0;bottom:0;width:0%;z-index:-1;" class="js-track_progress"></div>
 				
 				<a href="<?= $track['delete_link'] ?>" class="red right m">Удалить</a>
@@ -49,7 +49,14 @@
 				<img src="/i/img/play_audio.svg" alt="" width="16" height="16" class="js-track_play m cursor" />
 				<img src="/i/img/pause_audio.svg" alt="" width="16" height="16" class="js-track_pause hide m cursor" />
 				
-				<span class="m grey"><?= $track['filename'] ?> (<?= $track['duration'] ?> сек.)</span>
+				<span class="m grey"><?= $track['filename'] ?> (<?= $track['duration'] ?> сек., 
+					<?php if ($track['volume']['mean'] < -20): ?>
+						<b class="red">
+					<?php else: ?>
+						<b class="green">
+					<?php endif; ?>
+					<?= $track['volume']['mean'] ?> dB</b>)
+				</span>
 			</div>
 		<?php endforeach; ?>
 	</div>

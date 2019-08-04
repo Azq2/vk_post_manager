@@ -124,7 +124,7 @@ class CatificatorBot extends \Z\Task {
 			]
 		], JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE);
 		
-		if (count($words) == 1 && $words[0] == "помощь") {
+		if (count($words) == 1 && ($words[0] == "помощь" || $words[0] == "начать")) {
 			$this->sendMessage([
 				'user_id'		=> $msg->object->from_id, 
 				'message'		=> $messages->L("help"), 
@@ -161,6 +161,8 @@ class CatificatorBot extends \Z\Task {
 			if ($cached_track) {
 				list ($attach_id, $track_id) = $cached_track;
 				echo "=> track ".$track_id." [cache]\n";
+				
+				$attach_id = false; // temp
 			} else {
 				$this->api->exec("messages.setActivity", [
 					'user_id'			=> $msg->object->from_id, 
@@ -256,14 +258,14 @@ class CatificatorBot extends \Z\Task {
 						}
 					}
 				}
+			}
+			
+			if ($track_id && !$attach_id) {
+				$track = $this->tracks[$track_id];
+				$attach_id = $this->getDoc(APP.'www/files/catificator/'.$track['md5'].'.mp3', $msg->object->from_id);
 				
-				if ($track_id) {
-					$track = $this->tracks[$track_id];
-					$attach_id = $this->getDoc(APP.'www/files/catificator/'.$track['md5'].'.mp3', $msg->object->from_id);
-					
-					if (!$this->categories[$track['category_id']]['random'])
-						$cache->set($text_uniq, [$attach_id, $track_id], 3600 * 24);
-				}
+				if (!$this->categories[$track['category_id']]['random'])
+					$cache->set($text_uniq, [$attach_id, $track_id], 3600 * 24);
 			}
 			
 			if ($attach_id) {

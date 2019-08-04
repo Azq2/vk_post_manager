@@ -274,6 +274,7 @@ class CatificatorController extends \Smm\BaseController {
 					'duration'		=> round($track['duration']), 
 					'url'			=> '/files/catificator/'.$track['md5'].'.mp3', 
 					'delete_link'	=> $base_url->copy()->set('a', 'catificator/delete_track')->set('id', $track['id'])->href(), 
+					'volume'		=> \Smm\Utils\File::getVolume(APP.'www/files/catificator/'.$track['md5'].'.mp3')
 				];
 			}
 			
