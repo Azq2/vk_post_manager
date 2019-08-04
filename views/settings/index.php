@@ -21,12 +21,6 @@
 				Callbacks API
 			</a>
 		</div>
-		
-		<div class="row">
-			<a href="<?= $catificator_url ?>">
-				Котификатор
-			</a>
-		</div>
 	<?php endif; ?>
 	
 	<div class="row">

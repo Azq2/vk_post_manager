@@ -21,3 +21,27 @@
 		</div>
 	<?php endforeach; ?>
 </div>
+
+<div class="wrapper bord">
+	<div class="row header cursor">
+		Боты для сообществ
+	</div>
+	
+	<?php foreach ($bots as $link): ?>
+		<div class="row oh">
+			<a href="<?= $link['url'] ?>">
+				<?= $link['title'] ?>
+			</a>
+			
+			<?php if ($link['installed']): ?>
+				<a href="<?= $link['delete_url'] ?>" class="red right">
+					Отключить
+				</a>
+			<?php else: ?>
+				<a href="<?= $link['install_url'] ?>" class="green right">
+					Установить
+				</a>
+			<?php endif; ?>
+		</div>
+	<?php endforeach; ?>
+</div>

@@ -8,7 +8,7 @@ use \Z\Util\Url;
 
 use \Smm\View\Widgets;
 
-class CatificatorController extends \Smm\GroupController {
+class CatificatorController extends \Smm\BaseController {
 	public function delete_trackAction() {
 		$id = intval($_GET['id'] ?? 0);
 		
@@ -258,18 +258,19 @@ class CatificatorController extends \Smm\GroupController {
 			}
 			
 			$categories[] = [
-				'id'			=> $row['id'], 
-				'title'			=> htmlspecialchars($row['title']), 
-				'edit_link'		=> $base_url->copy()->set('a', 'catificator/add')->set('id', $row['id'])->href(), 
-				'upload_link'	=> $base_url->copy()->set('a', 'catificator/upload')->set('id', $row['id'])->href(), 
-				'tracks'		=> $tracks
+				'id'					=> $row['id'], 
+				'title'					=> htmlspecialchars($row['title']), 
+				'edit_link'				=> $base_url->copy()->set('a', 'catificator/add')->set('id', $row['id'])->href(), 
+				'upload_link'			=> $base_url->copy()->set('a', 'catificator/upload')->set('id', $row['id'])->href(), 
+				'tracks'				=> $tracks
 			];
 		}
 		
 		$this->title = 'Боты : Котофикатор';
 		$this->content = View::factory('catificator/index', [
-			'categories'		=> $categories, 
-			'add_link'			=> $base_url->copy()->set('a', 'catificator/add')->href()
+			'categories'			=> $categories, 
+			'add_link'				=> $base_url->copy()->set('a', 'catificator/add')->href(), 
+			'edit_messages_link'	=> $base_url->copy()->set('a', 'vk_bots/messages')->set('type', 'catificator')->href(), 
 		]);
 	}
 	

@@ -41,8 +41,15 @@
 		</div>
 		
 		<div class="row oh">
-			<input type="submit" class="btn btn-green" name="save" value="Сохранить" />
-			<input type="submit" class="btn btn-delete right" name="delete" value="Удалить" onclick="return confirm('Точно удалить???');" />
+			<?php if ($is_edit): ?>
+				<input type="submit" class="btn btn-green" name="save" value="Сохранить" />
+			<?php else: ?>
+				<input type="submit" class="btn btn-green" name="save" value="Добавить" />
+			<?php endif; ?>
+			
+			<?php if ($is_edit): ?>
+				<input type="submit" class="btn btn-delete right" name="delete" value="Удалить" onclick="return confirm('Точно удалить???');" />
+			<?php endif; ?>
 		</div>
 	</form>
 </div>

@@ -12,6 +12,13 @@ class Text {
 			return $m[0];
 		}, $text);
 		
+		// {for_NAME}
+		$text = preg_replace_callback("/\{for_([\w\d_]+)\}(.*?)\{\/for_\1\}/is", function ($m) use ($args) {
+			if (isset($args["is_".$m[1]]) && $args["is_".$m[1]])
+				return $m[2];
+			return "";
+		}, $text);
+		
 		// sex
 		$text = preg_replace_callback("/{([\w\d+_-]+_)?sex\|\|(.*?)\|\|(.*?)}/is", function ($m) use ($args) {
 			$var_name = $m[1]."sex";

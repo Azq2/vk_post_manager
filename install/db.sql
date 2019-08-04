@@ -38,6 +38,15 @@ CREATE TABLE `vk_activity_stat_progress` (
 /*!40101 SET character_set_client = @saved_cs_client */;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
 /*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `vk_bots_messages` (
+  `type` varchar(16) NOT NULL,
+  `id` varchar(32) NOT NULL,
+  `text` text NOT NULL,
+  PRIMARY KEY (`type`,`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+/*!40101 SET character_set_client = @saved_cs_client */;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
 CREATE TABLE `vk_callbacks` (
   `group_id` int(10) unsigned NOT NULL,
   `type` varchar(16) NOT NULL,
@@ -157,6 +166,7 @@ CREATE TABLE `vk_groups` (
   `id` int(10) unsigned NOT NULL,
   `name` varchar(255) NOT NULL,
   `widget` varchar(16) NOT NULL DEFAULT '',
+  `bot` varchar(16) NOT NULL DEFAULT '',
   `period_from` int(10) unsigned NOT NULL DEFAULT '0',
   `period_to` int(10) unsigned NOT NULL DEFAULT '86399',
   `interval` int(10) unsigned NOT NULL DEFAULT '7200',

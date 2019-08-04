@@ -1,9 +1,19 @@
 <div class="wrapper bord">
-	<a href="<?= $add_link ?>">
-		<div class="row header cursor">
+	<div class="row header cursor">
+		Настройки
+	</div>
+	
+	<div class="row">
+		<a href="<?= $add_link ?>">
 			Добавить категорию
-		</div>
-	</a>
+		</a>
+	</div>
+	
+	<div class="row">
+		<a href="<?= $edit_messages_link ?>">
+			Изменить сообщения бота
+		</a>
+	</div>
 </div>
 
 <?php foreach ($categories as $cat): ?>

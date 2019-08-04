@@ -1,8 +1,6 @@
 define(['jquery', 'utils', 'howler'], function ($, utils) {
 //
 
-console.log('AAAAAAAA');
-
 $('body').on('click', '.js-trigger_add', function (e) {
 	e.preventDefault();
 	

@@ -13,6 +13,10 @@ class VkWidgetsController extends \Smm\GroupController {
 		'top_users'		=> 'Виджет ТОП юзеров'
 	];
 	
+	protected static $AVAIL_BOTS = [
+		'catificator'	=> 'Котификатор'
+	];
+	
 	public function indexAction() {
 		$base_url = Url::mk('/')->set('gid', $this->group['id']);
 		
@@ -27,10 +31,43 @@ class VkWidgetsController extends \Smm\GroupController {
 			];
 		}
 		
+		$bots = [];
+		foreach (self::$AVAIL_BOTS as $bot_id => $title) {
+			$bots[] = [
+				'title'			=> $title, 
+				'url'			=> $base_url->set('a', $bot_id.'/index')->href(), 
+				'install_url'	=> $base_url->set('a', 'vk_widgets/bot_install')->set('type', $bot_id)->href(), 
+				'delete_url'	=> $base_url->set('a', 'vk_widgets/bot_install')->set('type', '')->href(), 
+				'installed'		=> $this->group['bot'] == $bot_id
+			];
+		}
+		
 		$this->title = 'Виджеты сообществ VK';
 		$this->content = View::factory('vk_widgets/index', [
-			'widgets'		=> $widgets
+			'widgets'		=> $widgets, 
+			'bots'			=> $bots
 		]);
+	}
+	
+	public function bot_installAction() {
+		$type = $_GET['type'] ?? '';
+		
+		DB::begin();
+		
+		DB::update('vk_groups')
+			->set([
+				'bot'		=> isset(self::$AVAIL_BOTS[$type]) ? $type : ''
+			])
+			->where('id', '=', $this->group['id'])
+			->execute();
+		
+		DB::commit();
+		
+		$base_url = Url::mk('/')
+			->set('gid', $this->group['id'])
+			->set('a', 'vk_widgets/index');
+		
+		return $this->redirect($base_url->url());
 	}
 	
 	public function installAction() {
