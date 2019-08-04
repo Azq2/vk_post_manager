@@ -160,6 +160,7 @@ class CatificatorBot extends \Z\Task {
 			
 			if ($cached_track) {
 				list ($attach_id, $track_id) = $cached_track;
+				echo "=> track ".$track_id." [cache]\n";
 			} else {
 				$this->api->exec("messages.setActivity", [
 					'user_id'			=> $msg->object->from_id, 
@@ -168,53 +169,91 @@ class CatificatorBot extends \Z\Task {
 				
 				arsort($matched_categories);
 				
-				while (true) {
-					$used_tracks = DB::select()
-						->from('catificator_used_tracks')
-						->where('date', '>=', date("Y-m-d H:i:s", time() - 3600 * 24))
-						->where('user_id', '=', $msg->object->from_id)
-						->execute()
-						->asArray(NULL, 'track_id');
-					
-					$track_id = false;
-					foreach ($matched_categories as $category_id => $cnt) {
+				$top_category_id = array_keys($matched_categories)[0] ?? false;
+				if ($top_category_id && $this->categories[$top_category_id]['random']) {
+					while (true) {
+						$used_tracks = DB::select()
+							->from('catificator_used_tracks')
+							->where('date', '>=', date("Y-m-d H:i:s", time() - 3600 * 24))
+							->where('user_id', '=', $msg->object->from_id)
+							->execute()
+							->asArray(NULL, 'track_id');
+						
+						$to_delete = [];
 						$matched_tracks = [];
 						foreach ($this->tracks as $track) {
-							if (!$category_id && $this->categories[$track['category_id']]['only_triggers'])
+							if ($track['category_id'] != $top_category_id)
 								continue;
 							
-							if (in_array($track['id'], $used_tracks))
+							if (in_array($track['id'], $used_tracks)) {
+								$to_delete[] = $track['id'];
 								continue;
-							
-							if (!$category_id || $track['category_id'] == $category_id) {
-								$matched_tracks[] = [
-									'track_id'		=> $track['id'], 
-									'delta'			=> abs($track['duration'] - $duration)
-								];
 							}
+							
+							$matched_tracks[] = $track['id'];
 						}
 						
-						if ($category_id && $this->categories[$category_id]['random'] && $matched_tracks)
-							$matched_tracks = [$matched_tracks[array_rand($matched_tracks)]];
-						
-						usort($matched_tracks, function ($a, $b) {
-							return $a['delta'] <=> $b['delta'];
-						});
-						
-						if ($matched_tracks) {
-							echo "=> track ".$matched_tracks[0]['track_id']." with delta ".$matched_tracks[0]['delta']." s.\n";
-							$track_id = $matched_tracks[0]['track_id'];
+						$track_id = $matched_tracks ? $matched_tracks[array_rand($matched_tracks)] : false;
+						if ($track_id) {
+							echo "=> track ".$track_id." [random]\n";
+							break;
+						} else if ($to_delete) {
+							echo "=> No matched tracks! Try reset...\n";
+							DB::delete('catificator_used_tracks')
+								->where('user_id', '=', $msg->object->from_id)
+								->where('track_id', 'IN', $to_delete)
+								->execute();
+						} else {
+							echo "=> No matched tracks!\n";
 							break;
 						}
 					}
-					
-					if (!$track_id && $used_tracks) {
-						echo "=> No matched tracks! Try reset...\n";
-						DB::delete('catificator_used_tracks')
+				} else {
+					while (true) {
+						$used_tracks = DB::select()
+							->from('catificator_used_tracks')
+							->where('date', '>=', date("Y-m-d H:i:s", time() - 3600 * 24))
 							->where('user_id', '=', $msg->object->from_id)
-							->execute();
-					} else {
-						break;
+							->execute()
+							->asArray(NULL, 'track_id');
+						
+						$track_id = false;
+						foreach ($matched_categories as $category_id => $cnt) {
+							$matched_tracks = [];
+							foreach ($this->tracks as $track) {
+								if (!$category_id && $this->categories[$track['category_id']]['only_triggers'])
+									continue;
+								
+								if (in_array($track['id'], $used_tracks))
+									continue;
+								
+								if (!$category_id || $track['category_id'] == $category_id) {
+									$matched_tracks[] = [
+										'track_id'		=> $track['id'], 
+										'delta'			=> abs($track['duration'] - $duration)
+									];
+								}
+							}
+							
+							usort($matched_tracks, function ($a, $b) {
+								return $a['delta'] <=> $b['delta'];
+							});
+							
+							if ($matched_tracks) {
+								echo "=> track ".$matched_tracks[0]['track_id']." with delta ".$matched_tracks[0]['delta']." s.\n";
+								$track_id = $matched_tracks[0]['track_id'];
+								break;
+							}
+						}
+						
+						if (!$track_id && $used_tracks) {
+							echo "=> No matched tracks! Try reset...\n";
+							DB::delete('catificator_used_tracks')
+								->where('user_id', '=', $msg->object->from_id)
+								->execute();
+						} else {
+							break;
+						}
 					}
 				}
 				
@@ -249,16 +288,14 @@ class CatificatorBot extends \Z\Task {
 						->onDuplicateSetValues('date')
 						->execute();
 					
-					if (!$this->categories[$track['category_id']]['random']) {
-						DB::insert('catificator_used_tracks')
-							->set([
-								'user_id'		=> $msg->object->from_id, 
-								'track_id'		=> $track['id'], 
-								'date'			=> date("Y-m-d H:i:s", time())
-							])
-							->onDuplicateSetValues('date')
-							->execute();
-					}
+					DB::insert('catificator_used_tracks')
+						->set([
+							'user_id'		=> $msg->object->from_id, 
+							'track_id'		=> $track['id'], 
+							'date'			=> date("Y-m-d H:i:s", time())
+						])
+						->onDuplicateSetValues('date')
+						->execute();
 				}
 			}
 		} else {
