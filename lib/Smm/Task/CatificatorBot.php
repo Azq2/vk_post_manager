@@ -105,8 +105,10 @@ class CatificatorBot extends \Z\Task {
 		]);
 		
 		$need_show_motivator = false;
-		if ($this->vk_user->is_member && !$cache->get("catificator_motivator:".$msg->object->from_id))
-			$need_show_motivator = true;
+		if ($this->vk_user->is_member) {
+			$last_motivator_show = $cache->get("catificator_motivator:".$msg->object->from_id) ?: 0;
+			$need_show_motivator = time() - $last_motivator_show >= 3600 * 2;
+		}
 		
 		$words = $this->parseText($msg->object->text);
 		sort($words);
@@ -385,7 +387,7 @@ class CatificatorBot extends \Z\Task {
 				
 				if ($ok) {
 					if ($need_show_motivator)
-						$cache->set("catificator_motivator:".$msg->object->from_id, time(), 3600 * 12);
+						$cache->set("catificator_motivator:".$msg->object->from_id, time(), 3600 * 24);
 					
 					DB::insert('catificator_log')
 						->set([
