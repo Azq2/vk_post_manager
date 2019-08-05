@@ -5,6 +5,8 @@ CREATE TABLE `catificator_categories` (
   `title` varchar(128) DEFAULT NULL,
   `only_triggers` tinyint(4) NOT NULL DEFAULT '0',
   `random` tinyint(4) NOT NULL DEFAULT '0',
+  `important` tinyint(4) NOT NULL DEFAULT '0',
+  `default` tinyint(4) NOT NULL DEFAULT '0',
   PRIMARY KEY (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 /*!40101 SET character_set_client = @saved_cs_client */;
@@ -30,12 +32,24 @@ CREATE TABLE `catificator_log` (
 /*!40101 SET character_set_client = @saved_cs_client */;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
 /*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `catificator_reposts` (
+  `owner_id` int(11) NOT NULL,
+  `id` int(10) unsigned NOT NULL,
+  `user_id` int(11) NOT NULL,
+  `date` datetime NOT NULL,
+  PRIMARY KEY (`owner_id`,`id`,`user_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+/*!40101 SET character_set_client = @saved_cs_client */;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
 CREATE TABLE `catificator_tracks` (
   `id` int(10) unsigned NOT NULL AUTO_INCREMENT,
   `md5` char(32) NOT NULL,
   `category_id` int(10) unsigned NOT NULL,
   `filename` varchar(128) DEFAULT NULL,
   `duration` float NOT NULL DEFAULT '0',
+  `volume_mean` float NOT NULL DEFAULT '0',
+  `volume_max` float NOT NULL DEFAULT '0',
   PRIMARY KEY (`id`),
   UNIQUE KEY `md5` (`md5`),
   KEY `category_id` (`category_id`)
@@ -139,7 +153,8 @@ CREATE TABLE `vk_grabber_data_index` (
   KEY `reposts` (`reposts`),
   KEY `likes` (`likes`),
   KEY `comments` (`comments`),
-  KEY `grab_time` (`grab_time`)
+  KEY `grab_time` (`grab_time`),
+  KEY `time-source_id` (`time`,`source_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 /*!40101 SET character_set_client = @saved_cs_client */;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;

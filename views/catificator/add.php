@@ -54,6 +54,20 @@
 			</label>
 		</div>
 		
+		<div class="row">
+			<label>
+				<input type="checkbox" name="important" <?= $cat['important'] ? ' checked="checked"' : '' ?> />
+				Приоритетная категория
+			</label>
+		</div>
+		
+		<div class="row">
+			<label>
+				<input type="checkbox" name="default" <?= $cat['default'] ? ' checked="checked"' : '' ?> />
+				По-умолчанию
+			</label>
+		</div>
+		
 		<div class="row oh">
 			<?php if ($is_edit): ?>
 				<input type="submit" class="btn btn-green" name="save" value="Сохранить" />

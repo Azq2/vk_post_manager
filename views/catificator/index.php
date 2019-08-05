@@ -55,7 +55,7 @@
 					<?php else: ?>
 						<b class="green">
 					<?php endif; ?>
-					<?= $track['volume']['mean'] ?> dB</b>)
+					<?= $track['volume']['mean'] ?: '?' ?> dB</b>)
 				</span>
 			</div>
 		<?php endforeach; ?>

@@ -23,7 +23,7 @@ class CatificatorController extends \Smm\BaseController {
 				->where('id', '=', $id)
 				->execute();
 			
-			unlink(APP.'www/files/catificator/'.$track['md5'].'.mp3');
+			unlink(APP.'www/files/catificator/'.$track['md5'].'.ogg');
 		}
 		
 		$base_url = Url::mk('/')
@@ -79,22 +79,23 @@ class CatificatorController extends \Smm\BaseController {
 					} elseif ($duplicate) {
 						$errors[] = '#'.$n.' ('.$name.'): Точно такой же файл уже был добавлен в другую категорию!';
 					} else {
-						$new_path = APP.'www/files/catificator/'.$md5sum.'.mp3';
+						$new_path = APP.'www/files/catificator/'.$md5sum.'.ogg';
 						
 						if (!file_exists(dirname($new_path))) {
 							umask(0);
 							mkdir(dirname($new_path), 0777, true);
 						}
 						
-						if (!move_uploaded_file($_FILES['file']['tmp_name'][$i], $new_path)) {
-							$errors[] = '#'.$n.' ('.$name.'): Невозможно сохранить файл на диск.';
+						$ret = system("ffmpeg -i ".escapeshellarg($_FILES['file']['tmp_name'][$i])." -ac 1 -c:a libvorbis -q:a 4 ".escapeshellarg($new_path));
+						if ($ret != 0 || !file_exists($new_path) || !filesize($new_path)) {
+							$errors[] = '#'.$n.' ('.$name.'): Невозможно сконвертировать файл в OGG.';
 						} else {
 							DB::insert('catificator_tracks')
 								->set([
-									'filename'		=> basename($_FILES['file']['name'][$i]), 
+									'filename'		=> str_replace(".mp3", "", basename($_FILES['file']['name'][$i])), 
 									'md5'			=> $md5sum, 
 									'category_id'	=> $id, 
-									'duration'		=> $duration
+									'duration'		=> $duration, 
 								])
 								->onDuplicateSetValues('filename')
 								->onDuplicateSetValues('duration')
@@ -142,7 +143,11 @@ class CatificatorController extends \Smm\BaseController {
 				->asArray(NULL, 'word');
 		} else {
 			$cat = [
-				'title'		=> ''
+				'title'				=> '', 
+				'random'			=> 0, 
+				'only_triggers'		=> 0, 
+				'important'			=> 0, 
+				'default'			=> 0
 			];
 		}
 		
@@ -182,6 +187,8 @@ class CatificatorController extends \Smm\BaseController {
 			$cat['title'] = trim($_POST['title'] ?? '');
 			$cat['only_triggers'] = isset($_POST['only_triggers']) ? 1 : 0;
 			$cat['random'] = isset($_POST['random']) ? 1 : 0;
+			$cat['important'] = isset($_POST['important']) ? 1 : 0;
+			$cat['default'] = isset($_POST['default']) ? 1 : 0;
 			
 			$triggers = [];
 			foreach ($_POST['trigger'] as $word) {
@@ -272,9 +279,12 @@ class CatificatorController extends \Smm\BaseController {
 					'id'			=> $track['id'], 
 					'filename'		=> htmlspecialchars($track['filename']), 
 					'duration'		=> round($track['duration']), 
-					'url'			=> '/files/catificator/'.$track['md5'].'.mp3', 
+					'url'			=> '/files/catificator/'.$track['md5'].'.ogg', 
 					'delete_link'	=> $base_url->copy()->set('a', 'catificator/delete_track')->set('id', $track['id'])->href(), 
-					'volume'		=> \Smm\Utils\File::getVolume(APP.'www/files/catificator/'.$track['md5'].'.mp3')
+					'volume'		=> [
+						'mean'		=> $track['volume_mean'], 
+						'max'		=> $track['volume_max']
+					]
 				];
 			}
 			

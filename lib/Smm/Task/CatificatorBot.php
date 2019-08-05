@@ -119,10 +119,91 @@ class CatificatorBot extends \Z\Task {
 							'payload'	=> '{"command": "help"}'
 						], 
 						'color'		=> 'positive'
+					], 
+					[
+						'action'	=> [
+							'type'		=> 'text', 
+							'label'		=> 'Список дел', 
+							'payload'	=> '{"command": "repost_random_list"}'
+						], 
+						'color'		=> 'primary'
 					]
 				]
 			]
 		], JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE);
+		
+		if (count($words) == 2 && in_array("список", $words) && in_array("дел", $words)) {
+			$source_id = DB::select('id')
+				->from('vk_grabber_sources')
+				->where('source_type', '=', \Smm\Grabber::SOURCE_VK)
+				->where('source_id', '=', -$msg->group_id)
+				->execute()
+				->get('id');
+			
+			$random_post_id = false;
+			
+			if ($source_id) {
+				$remote_ids = DB::select('i.remote_id')
+					->from(['vk_grabber_data_index', 'i'])
+					->join(['vk_grabber_data', 'd'], 'INNER')
+						->on('d.id', '=', 'i.data_id')
+					->where('i.time', '>=', time() - 3600 * 24 * 30)
+					->where('i.source_id', '=', $source_id)
+					->where('d.text', 'LIKE', '%1.%')
+					->execute()
+					->asArray(NULL, 'remote_id');
+				
+				$remote_ids = array_map(function ($v) {
+					return explode("_", $v)[1];
+				}, $remote_ids);
+				
+				if ($remote_ids) {
+					$blacklisted = DB::select('id')
+						->from('catificator_reposts')
+						->where('owner_id', '=', -$msg->group_id)
+						->where('user_id', '=', $msg->object->from_id)
+						->where('id', 'IN', $remote_ids)
+						->execute()
+						->asArray('id', 'id');
+					
+					$remote_ids = array_filter($remote_ids, function ($id) use (&$blacklisted) {
+						return !isset($blacklisted[$id]);
+					});
+					
+					if ($remote_ids)
+						$random_post_id = $remote_ids[array_rand($remote_ids)];
+				}
+			}
+			
+			if ($random_post_id) {
+				$ok = $this->sendMessage([
+					'user_id'		=> $msg->object->from_id, 
+					'message'		=> $messages->L("repost"), 
+					'random_id'		=> microtime(true), 
+					'keyboard'		=> $keyboard, 
+					'attachment'	=> 'wall-'.$msg->group_id.'_'.$random_post_id
+				]);
+				
+				if ($ok) {
+					DB::insert('catificator_reposts')
+						->set([
+							'owner_id'		=> -$msg->group_id, 
+							'id'			=> $random_post_id, 
+							'user_id'		=> $msg->object->from_id, 
+							'date'			=> date("Y-m-d H:i:s", time())
+						])
+						->execute();
+				}
+			} else {
+				$this->sendMessage([
+					'user_id'		=> $msg->object->from_id, 
+					'message'		=> $messages->L("repost_no_more_posts"), 
+					'random_id'		=> microtime(true), 
+					'keyboard'		=> $keyboard
+				]);
+			}
+			return;
+		}
 		
 		if (count($words) == 1 && ($words[0] == "помощь" || $words[0] == "начать")) {
 			$this->sendMessage([
@@ -138,7 +219,8 @@ class CatificatorBot extends \Z\Task {
 			$duration = mb_strlen(implode(" ", $words)) * 0.1;
 			echo "=> duration: $duration sec.\n"; 
 			 
-			$matched_categories = [0 => 0];
+			// $matched_categories = [0 => 0];
+			$matched_categories = [];
 			foreach ($this->triggers as $trigger) {
 				$word = mb_strtolower(trim($trigger['word']));
 				
@@ -148,6 +230,9 @@ class CatificatorBot extends \Z\Task {
 					++$matched_categories[$trigger['category_id']];
 				}
 			}
+			
+			if (!$matched_categories)
+				$matched_categories = [0 => 0];
 			
 			// Уникальный id предложения
 			$text_uniq = "text2mew:".$msg->object->from_id.":".md5(implode(",", $words));
@@ -169,7 +254,12 @@ class CatificatorBot extends \Z\Task {
 					'type'				=> 'audiomessage'
 				]);
 				
-				arsort($matched_categories);
+				uksort($matched_categories, function ($a, $b) use ($matched_categories) {
+					$ret = $this->categories[$b]['important'] <=> $this->categories[$a]['important'];
+					if ($ret == 0)
+						$ret = $matched_categories[$b] <=> $matched_categories[$a];
+					return $ret;
+				});
 				
 				$top_category_id = array_keys($matched_categories)[0] ?? false;
 				if ($top_category_id && $this->categories[$top_category_id]['random']) {
@@ -223,7 +313,7 @@ class CatificatorBot extends \Z\Task {
 						foreach ($matched_categories as $category_id => $cnt) {
 							$matched_tracks = [];
 							foreach ($this->tracks as $track) {
-								if (!$category_id && $this->categories[$track['category_id']]['only_triggers'])
+								if (!$category_id && !$this->categories[$track['category_id']]['default'])
 									continue;
 								
 								if (in_array($track['id'], $used_tracks))
@@ -262,7 +352,7 @@ class CatificatorBot extends \Z\Task {
 			
 			if ($track_id && !$attach_id) {
 				$track = $this->tracks[$track_id];
-				$attach_id = $this->getDoc(APP.'www/files/catificator/'.$track['md5'].'.mp3', $msg->object->from_id);
+				$attach_id = $this->getDoc(APP.'www/files/catificator/'.$track['md5'].'.ogg', $msg->object->from_id);
 				
 				if (!$this->categories[$track['category_id']]['random'])
 					$cache->set($text_uniq, [$attach_id, $track_id], 3600 * 24);
@@ -389,7 +479,7 @@ class CatificatorBot extends \Z\Task {
 		$upload_data = false;
 		for ($i = 0; $i < 3; ++$i) {
 			$upload_raw = $this->api->upload($upload_audiomsg->response->upload_url, [
-				['path' => $file, 'name' => 'audiomsg.mp3', 'key' => 'file']
+				['path' => $file, 'name' => 'audiomsg.ogg', 'key' => 'file']
 			]);
 			$upload = @json_decode($upload_raw->body);
 			
