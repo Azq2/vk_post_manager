@@ -89,6 +89,7 @@ class CatificatorBot extends \Z\Task {
 	}
 	
 	public function handleNewMessage($msg) {
+		$cache = \Z\Cache::instance();
 		$this->vk_user = $this->getUser($msg->object->from_id);
 		
 		if (!$this->vk_user)
@@ -103,6 +104,10 @@ class CatificatorBot extends \Z\Task {
 			'is_guest'		=> !$this->vk_user->is_member, 
 		]);
 		
+		$need_show_motivator = false;
+		if ($this->vk_user->is_member && !$cache->get("catificator_motivator:".$msg->object->from_id))
+			$need_show_motivator = true;
+		
 		$words = $this->parseText($msg->object->text);
 		sort($words);
 		
@@ -115,10 +120,20 @@ class CatificatorBot extends \Z\Task {
 					[
 						'action'	=> [
 							'type'		=> 'text', 
+							'label'		=> 'Мур', 
+							'payload'	=> '{"command": "murmur"}'
+						], 
+						'color'		=> 'positive'
+					], 
+				], 
+				[
+					[
+						'action'	=> [
+							'type'		=> 'text', 
 							'label'		=> 'Помощь', 
 							'payload'	=> '{"command": "help"}'
 						], 
-						'color'		=> 'positive'
+						'color'		=> 'secondary'
 					], 
 					[
 						'action'	=> [
@@ -240,7 +255,6 @@ class CatificatorBot extends \Z\Task {
 			$attach_id = false;
 			$track_id = false;
 			
-			$cache = \Z\Cache::instance();
 			$cached_track = $cache->get($text_uniq);
 			
 			if ($cached_track) {
@@ -363,13 +377,16 @@ class CatificatorBot extends \Z\Task {
 				
 				$ok = $this->sendMessage([
 					'user_id'		=> $msg->object->from_id, 
-					'message'		=> $messages->L("result"), 
+					'message'		=> $need_show_motivator ? $messages->L("result_motivator") : $messages->L("result"), 
 					'random_id'		=> microtime(true), 
 					'attachment'	=> $attach_id, 
 					'keyboard'		=> $keyboard, 
 				]);
 				
 				if ($ok) {
+					if ($need_show_motivator)
+						$cache->set("catificator_motivator:".$msg->object->from_id, time(), 3600 * 12);
+					
 					DB::insert('catificator_log')
 						->set([
 							'user_id'		=> $msg->object->from_id, 
