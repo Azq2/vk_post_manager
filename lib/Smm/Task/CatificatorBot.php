@@ -8,10 +8,13 @@ use \Z\Net\VkApi;
 
 use \Smm\VK\Captcha;
 
+declare(ticks = 1);
+
 class CatificatorBot extends \Z\Task {
 	protected $tracks = [];
 	protected $triggers = [];
 	protected $categories = [];
+	protected $need_stop = false;
 	
 	public function options() {
 		return [
@@ -22,6 +25,10 @@ class CatificatorBot extends \Z\Task {
 	public function run($args) {
 		if (!\Smm\Utils\Lock::lock(__CLASS__.':'.$args['instance']))
 			return;
+		
+		pcntl_signal(SIGINT, function () {
+			$this->need_stop = true;
+		});
 		
 		echo date("Y-m-d H:i:s")." - daemon start with pid ".getmygid()."\n";
 		
@@ -53,6 +60,11 @@ class CatificatorBot extends \Z\Task {
 				$this->handle(json_decode($amqp_msg->body));
 			} else {
 				usleep(100000);
+			}
+			
+			if ($this->need_stop) {
+				echo "Stopping daemon by signal...\n";
+				exit;
 			}
 		}
 	}
@@ -196,7 +208,7 @@ class CatificatorBot extends \Z\Task {
 				$ok = $this->sendMessage([
 					'user_id'		=> $msg->object->from_id, 
 					'message'		=> $messages->L("repost"), 
-					'random_id'		=> microtime(true), 
+					'random_id'		=> microtime(true) * 1000, 
 					'keyboard'		=> $keyboard, 
 					'attachment'	=> 'wall-'.$msg->group_id.'_'.$random_post_id
 				]);
@@ -215,7 +227,7 @@ class CatificatorBot extends \Z\Task {
 				$this->sendMessage([
 					'user_id'		=> $msg->object->from_id, 
 					'message'		=> $messages->L("repost_no_more_posts"), 
-					'random_id'		=> microtime(true), 
+					'random_id'		=> microtime(true) * 1000, 
 					'keyboard'		=> $keyboard
 				]);
 			}
@@ -226,7 +238,7 @@ class CatificatorBot extends \Z\Task {
 			$this->sendMessage([
 				'user_id'		=> $msg->object->from_id, 
 				'message'		=> $messages->L("help"), 
-				'random_id'		=> microtime(true), 
+				'random_id'		=> microtime(true) * 1000, 
 				'keyboard'		=> $keyboard, 
 			]);
 			return;
@@ -380,7 +392,7 @@ class CatificatorBot extends \Z\Task {
 				$ok = $this->sendMessage([
 					'user_id'		=> $msg->object->from_id, 
 					'message'		=> $need_show_motivator ? $messages->L("result_motivator") : $messages->L("result"), 
-					'random_id'		=> microtime(true), 
+					'random_id'		=> microtime(true) * 1000, 
 					'attachment'	=> $attach_id, 
 					'keyboard'		=> $keyboard, 
 				]);
@@ -410,12 +422,23 @@ class CatificatorBot extends \Z\Task {
 				}
 			}
 		} else {
-			echo "=> no parsed words!\n";
+			echo "=> no parsed words! send random...\n";
+			$random_answers = explode(";", $messages->L("random_answers"));
+			$answer = trim($random_answers[array_rand($random_answers)]);
+			
+			if ($answer) {
+				$this->sendMessage([
+					'user_id'		=> $msg->object->from_id, 
+					'message'		=> $answer, 
+					'random_id'		=> microtime(true) * 1000, 
+					'keyboard'		=> $keyboard, 
+				]);
+			}
 		}
 	}
 	
 	public function sendMessage($data) {
-		for ($i = 0; $i < 3; ++$i) {
+		for ($i = 0; $i < 6; ++$i) {
 			$send_req = $this->api->exec("messages.send", $data);
 			if (!$send_req->success()) {
 				echo "=> Can't send message: ".$send_req->error()."\n";
