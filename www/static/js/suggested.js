@@ -174,8 +174,15 @@ function init() {
 			wrap = e.wrap, 
 			status = wrap.find('.js-post_status_text'), 
 			post = e.post, 
+			
 			textarea = wrap.find('.js-post_textarea'), 
-			emojiarea = textarea.data('emojioneArea');
+			emojiarea = textarea.data('emojioneArea'), 
+			text_enable_cb = wrap.find('.js-post_textarea_enable'), 
+			text_enable = !text_enable_cb.length || text_enable_cb.prop("checked"), 
+			
+			comment_textarea = wrap.find('.js-post_comment_textarea'), 
+			comment_emojiarea = comment_textarea.data('emojioneArea'), 
+			comment_enable = wrap.find('.js-post_action[data-action="enable_comment"]').prop("checked");
 		
 		if (el.attr("disabled"))
 			return;
@@ -185,7 +192,8 @@ function init() {
 			id:			e.post.id, 
 			signed:		e.post.anon ? 0 : 1, 
 			type:		post.type, 
-			message:	$.trim(emojiarea ? emojiarea.getText() : post.text), 
+			message:	text_enable ? $.trim(emojiarea ? emojiarea.getText() : post.text) : "", 
+			comment:	comment_enable ? $.trim(comment_emojiarea ? comment_emojiarea.getText() : post.comment_text) : "", 
 			attachments: []
 		};
 		
@@ -243,6 +251,9 @@ function init() {
 					
 					if (emojiarea)
 						emojiarea.disable();
+					
+					if (comment_emojiarea)
+						comment_emojiarea.disable();
 				}
 			} else {
 				status.html(tpl.error(res.error));

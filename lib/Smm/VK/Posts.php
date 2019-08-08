@@ -427,6 +427,12 @@ class Posts {
 		$max_date = 0;
 		
 		$queue = self::getQueue($group_id);
+		$first_comments = DB::select()
+			->from('vk_posts_comments')
+			->where('group_id', '=', $group_id)
+			->execute()
+			->asArray('id', 'text');
+		
 		foreach ($items as $post) {
 			$post->special = false;
 			if (isset($post->marked_as_ads) && $post->marked_as_ads) {
@@ -434,6 +440,7 @@ class Posts {
 				$specials[] = $post;
 			}
 			
+			$post->comment_text = $first_comments[$post->id] ?? '';
 			$post->orig_date = $post->date;
 			
 			if (isset($queue[$post->id]) || $post->special || !in_array($post->post_type, ['postpone', 'suggest'])) {

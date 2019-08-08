@@ -203,18 +203,42 @@ var tpl = {
 						) + 
 						'<br />' + 
 						'<div class="post-text post-hide_edit emoji">' + prepareText(utils.htmlWrap(prepareSpellCheck(data.text, data.spell))) + '</div>' + 
+						(data.comment_text ? 
+							'<div class="post-text post-hide_edit emoji pad_t">' + 
+								'<div class="row-blue row">' + 
+									'<b>Первонах комментарий:</b>' + 
+									'<div class="pad_t">' + 
+										prepareText(utils.htmlWrap(prepareSpellCheck(data.comment_text, data.comment_spell))) + 
+									'</div>' + 
+								'</div>' + 
+							'</div>' : ''
+						) + 
 					'</div>' + 
 				'</div>' + 
 				'<div class="js-post_attach_editor hide"></div>' + 
 				'<div class="js-post_editor">' + 
 					'<div class="post-show_edit pad_t">' + 
-						'<div class="pad_b oh">' + 
-							'<label><input type="checkbox" name="text_add" value="1" class="js-post_textarea_enable" ' + 
-								(data.source_type == 'INSTAGRAM' ? '' : ' checked="checked"') + ' /> Использовать текст</label>' + 
-							'<a href="#" class="right js-post_action" data-action="spellcheck">Проверить текст</a>' + 
+						'<div class="js-post_textarea_wrap">' + 
+							'<div class="pad_b oh">' + 
+								'<label><input type="checkbox" name="text_add" value="1" class="js-post_textarea_enable" ' + 
+									(data.source_type == 'INSTAGRAM' ? '' : ' checked="checked"') + ' /> Использовать текст</label>' + 
+								'<a href="#" class="right js-post_action" data-action="spellcheck">Проверить текст</a>' + 
+							'</div>' + 
+							'<div class="js-post_spell_result"></div>' + 
+							'<textarea rows="10" class="js-post_textarea" name="text"></textarea>' + 
 						'</div>' + 
-						'<div class="js-post_spell_result"></div>' + 
-						'<textarea rows="10" class="js-post_textarea" name="text"></textarea>' + 
+						
+						'<div class="js-post_textarea_wrap pad_t">' + 
+							'<div class="pad_b oh">' + 
+								'<label><input type="checkbox" name="text_add" value="1" data-action="enable_comment" class="js-post_action" /> Первонах комментарий</label>' + 
+								'<a href="#" class="right js-post_action hide" data-action="spellcheck">Проверить текст</a>' + 
+							'</div>' + 
+							'<div class="js-post_comment_edit hide">' + 
+								'<div class="js-post_spell_result"></div>' + 
+								'<textarea rows="10" class="js-post_comment_textarea" name="comment_text"></textarea>' + 
+							'</div>' + 
+						'</div>' + 
+						
 						'<div class="js-upload_form pad_t" data-action="/?a=vk_posts/upload&amp;gid=' + custom.gid + '" data-id="vk_upload">' + 
 							'<div class="js-upload_input"></div>' + 
 							'<div class="js-upload_files pad_t hide"></div>' + 
@@ -378,7 +402,8 @@ var VkFeed = Class({
 				}
 			}
 		}).on('click', '.js-post_action', function (e) {
-			e.preventDefault();
+			if ($(this).prop("type") != "checkbox" && $(this).prop("type") != "radio")
+				e.preventDefault();
 			
 			if (self.busy) {
 				alert("Дождитесь загрузки файла!");
@@ -429,11 +454,22 @@ var VkFeed = Class({
 			--self.busy;
 		});
 		
+		self.addAction('enable_comment', function (e) {
+			var el = e.target, 
+				wrap = e.wrap, 
+				post = e.post;
+			
+			var textarea_wrap = el.parents('.js-post_textarea_wrap');
+			textarea_wrap
+				.find('.js-post_comment_edit, [data-action="spellcheck"]')
+				.toggleClass('hide', !el.prop("checked"));
+		});
+		
 		self.addAction('spellcheck', function (e) {
 			var el = e.target, 
 				wrap = e.wrap, 
 				post = e.post, 
-				textarea = wrap.find('.js-post_textarea'), 
+				textarea = textarea_wrap.find('.js-post_comment_textarea, .js-post_textarea'), 
 				emojiarea = textarea.data('emojioneArea');
 			
 			var text = $.trim(emojiarea ? emojiarea.getText() : post.text);
@@ -444,16 +480,18 @@ var VkFeed = Class({
 				el.text('Проверить текст').css("opacity", 1);
 			};
 			
+			var textarea_wrap = el.parents('.js-post_textarea_wrap');
+			
 			$.api('/?a=vk_posts/spellcheck', {text: text}, function (res) {
 				done();
 				
-				wrap.find('.js-post_spell_result').html(tpl.spellResult({
+				textarea_wrap.find('.js-post_spell_result').html(tpl.spellResult({
 					text:	prepareText(utils.htmlWrap(prepareSpellCheck(text, res.spell)))
 				}));
 			}, function () {
 				done();
 				
-				wrap.find('.js-post_spell_result').html(tpl.spellResult({
+				textarea_wrap.find('.js-post_spell_result').html(tpl.spellResult({
 					text:	tpl.error('Ошибка проверки.')
 				}));
 			});
@@ -481,6 +519,23 @@ var VkFeed = Class({
 						}
 					}
 				});
+			
+			wrap.find('.js-post_comment_textarea')
+				.val(e.post.comment_text)
+				.emojioneArea({
+					pickerPosition: "bottom", 
+					filtersPosition: "bottom", 
+					autocomplete: false, 
+					
+					attributes: {
+						spellcheck:		true
+					},
+					
+					tonesStyle: "checkbox"
+				});
+			
+			if (e.post.comment_text)
+				wrap.find('.js-post_action[data-action="enable_comment"]').click();
 			
 			wrap.genericUploader();
 			

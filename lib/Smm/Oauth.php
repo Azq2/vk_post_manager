@@ -11,13 +11,15 @@ class Oauth {
 	const VK_ACCESS_GROUP_MESSAGES		= (1 << 12);
 	const VK_ACCESS_GROUP_DOCS			= (1 << 17);
 	const VK_ACCESS_GROUP_MANAGE		= (1 << 18);
+	const VK_ACCESS_WALL				= (1 << 13);
 	
 	const VK_MINIMAL_GROUP_ACCESS =
 		self::VK_ACCESS_GROUP_PHOTOS | 
 		self::VK_ACCESS_GROUP_APP_WIDGETS | 
 		self::VK_ACCESS_GROUP_MESSAGES | 
 		self::VK_ACCESS_GROUP_DOCS | 
-		self::VK_ACCESS_GROUP_MANAGE;
+		self::VK_ACCESS_GROUP_MANAGE | 
+		self::VK_ACCESS_WALL;
 	
 	public static function getAccessToken($type) {
 		return DB::select('access_token')

@@ -9,6 +9,67 @@ use \Z\Util\Url;
 use \Smm\View\Widgets;
 
 class CatificatorController extends \Smm\BaseController {
+	public function statAction() {
+		$start = strtotime(date("Y-m-d 00:00:00", time() - 3600 * 24 * 2));
+		$end = strtotime(date("Y-m-d 23:59:59", time()));
+		
+		$stat = [];
+		for ($cursor = $start; $cursor <= $end; $cursor += 3600) {
+			$date = date("Y-m-d H:i:s", $cursor);
+			$stat[$date] = [
+				'date'		=> $date, 
+				'reposts'	=> 0, 
+				'voice'		=> 0
+			];
+		}
+		
+		$query = DB::select(['COUNT(*)', 'cnt'], ['UNIX_TIMESTAMP(date)', 'unix_time'])
+			->from('catificator_log')
+			->where('date', 'BETWEEN', [date("Y-m-d 00:00:00", $start), date("Y-m-d 23:59:59", $end)])
+			->group(DB::expr('YEAR(date)'))
+			->group(DB::expr('MONTH(date)'))
+			->group(DB::expr('DAY(date)'))
+			->group(DB::expr('HOUR(date)'));
+		
+		foreach ($query->execute() as $row)
+			$stat[date("Y-m-d H:00:00", $row['unix_time'])]['voice'] = $row['cnt'];
+		
+		$query = DB::select(['COUNT(*)', 'cnt'], ['UNIX_TIMESTAMP(date)', 'unix_time'])
+			->from('catificator_reposts')
+			->where('date', 'BETWEEN', [date("Y-m-d 00:00:00", $start), date("Y-m-d 23:59:59", $end)])
+			->group(DB::expr('YEAR(date)'))
+			->group(DB::expr('MONTH(date)'))
+			->group(DB::expr('DAY(date)'))
+			->group(DB::expr('HOUR(date)'));
+		
+		foreach ($query->execute() as $row)
+			$stat[date("Y-m-d H:00:00", $row['unix_time'])]['reposts'] = $row['cnt'];
+		
+		$fields = [
+			'reposts'	=> ['title' => 'Списки дел', 'color' => ['#00ff00', '#00ff00']], 
+			'voice'		=> ['title' => 'Войсы', 'color' => ['#0000ff', '#0000ff']], 
+		];
+		
+		$graphs = [];
+		foreach ($fields as $k => $g) {
+			$graphs[] = [
+				'title'					=> $g['title'], 
+				'lineColor'				=> $g['color'][0], 
+				'negativeLineColor'		=> $g['color'][1], 
+				'lineThickness'			=> 1.5, 
+				'bulletSize'			=> 5, 
+				'valueField'			=> $k, 
+				'balloonText'			=> '[[title]]: [[value]]'
+			];
+		}
+		
+		$this->title = 'Боты : Котофикатор : Статистика';
+		$this->content = View::factory('catificator/stat', [
+			'stat'			=> array_values($stat), 
+			'graphs'		=> $graphs
+		]);
+	}
+	
 	public function delete_trackAction() {
 		$id = intval($_GET['id'] ?? 0);
 		

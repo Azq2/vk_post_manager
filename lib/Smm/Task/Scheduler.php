@@ -193,6 +193,15 @@ class Scheduler extends \Z\Task {
 							$res = $api->exec("wall.edit", $api_data);
 							if ($res->success()) {
 								echo "\t=> #".$p->id." - OK\n";
+								
+								DB::update('vk_posts_queue')
+									->set([
+										'real_date'		=> $api_data['publish_date']
+									])
+									->where('group_id', '=', $group['id'])
+									->where('id', '=', $item->id)
+									->execute();
+								
 								break;
 							}
 							
@@ -203,6 +212,14 @@ class Scheduler extends \Z\Task {
 						}
 					} else { // Время поста уже верное
 						echo "[OLD] QUEUE: #".$item->id." at ".date("d/m/Y H:i", $item->date)."\n";
+						
+						DB::update('vk_posts_queue')
+							->set([
+								'real_date'		=> $item->orig_date
+							])
+							->where('group_id', '=', $group['id'])
+							->where('id', '=', $item->id)
+							->execute();
 					}
 					
 					++$limit;
@@ -216,5 +233,23 @@ class Scheduler extends \Z\Task {
 			
 			sleep(60);
 		} while (true);
+		
+		DB::begin();
+		$old_queue = DB::select()
+			->from('vk_posts_queue')
+			->where('fake_date', '<=', time() - 3600 * 24 * 7)
+			->execute();
+		
+		foreach ($old_queue as $row) {
+			DB::delete('vk_posts_queue')
+				->where('id', '=', $row['id'])
+				->where('group_id', '=', $row['group_id'])
+				->execute();
+			DB::delete('vk_posts_comments')
+				->where('id', '=', $row['id'])
+				->where('group_id', '=', $row['group_id'])
+				->execute();
+		}
+		DB::commit();
 	}
 }

@@ -96,10 +96,10 @@ class IndexController extends \Smm\GroupController {
 		$last_time = 0;
 		$last_posted = 0;
 		$last_postponed = 0;
-
+		
 		$by_week_max = 0;
 		$by_week = [];
-
+		
 		if ($res->success) {
 			$i = 0;
 			foreach ($res->{$list} as $item) {
@@ -135,6 +135,8 @@ class IndexController extends \Smm\GroupController {
 					'remote_id'		=> $item->owner_id.'_'.$item->id, 
 					'time'			=> $item->date, 
 					'type'			=> $item->post_type, 
+					'comment_text'	=> $item->comment_text, 
+					'comment_spell'	=> \Smm\Utils\Spellcheck::check($item->comment_text), 
 					'likes'			=> 0, 
 					'reposts'		=> 0, 
 					'comments'		=> 0, 

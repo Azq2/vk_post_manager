@@ -176,6 +176,7 @@ class VkPostsController extends \Smm\GroupController {
 		$message		= $_REQUEST['message'] ?? '';
 		$attachments	= $_REQUEST['attachments'] ?? '';
 		$post_type		= $_REQUEST['type'] ?? '';
+		$comment		= trim($_REQUEST['comment'] ?? '');
 		
 		$this->content['success'] = false;
 		$this->content['post_type'] = $post_type;
@@ -207,6 +208,29 @@ class VkPostsController extends \Smm\GroupController {
 				'long'			=> $long, 
 				'attachments'	=> $attachments
 			];
+			
+			$fake_date = DB::select('fake_date')
+				->from('vk_posts_queue')
+				->where('group_id', '=', $this->group['id'])
+				->where('id', '=', $id)
+				->execute()
+				->get('fake_date', 0);
+			
+			if (strlen($comment) > 0) {
+				DB::insert('vk_posts_comments')
+					->set([
+						'text'			=> $comment, 
+						'group_id'		=> $this->group['id'], 
+						'id'			=> $id
+					])
+					->onDuplicateSetValues('text')
+					->execute();
+			} else {
+				DB::delete('vk_posts_comments')
+					->where('group_id', '=', $this->group['id'])
+					->where('id', '=', $id)
+					->execute();
+			}
 			
 			if ($post->post_type != 'post')
 				$api_data['publish_date'] = $post->date;
@@ -241,6 +265,7 @@ class VkPostsController extends \Smm\GroupController {
 		$message		= $_REQUEST['message'] ?? '';
 		$attachments	= $_REQUEST['attachments'] ?? '';
 		$post_type		= $_REQUEST['type'] ?? '';
+		$comment		= trim($_REQUEST['comment'] ?? '');
 		
 		$this->content['success'] = false;
 		$this->content['post_type'] = $post_type;
@@ -292,6 +317,17 @@ class VkPostsController extends \Smm\GroupController {
 				])
 				->onDuplicateSetValues('fake_date')
 				->execute();
+			
+			if (strlen($comment) > 0) {
+				DB::insert('vk_posts_comments')
+					->set([
+						'text'			=> $comment, 
+						'group_id'		=> $this->group['id'], 
+						'id'			=> $res->response->post_id
+					])
+					->onDuplicateSetValues('text')
+					->execute();
+			}
 			
 			$this->content['success'] = true;
 			$this->content['link'] = 'https://m.vk.com/wall-'.$this->group['id'].'_'.$vk_post_id;
