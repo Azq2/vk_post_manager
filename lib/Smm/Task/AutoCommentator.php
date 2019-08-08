@@ -43,6 +43,8 @@ class AutoCommentator extends \Z\Task {
 		$sched_config = \Z\Config::get('scheduler');
 		$api = new VkApi(\Smm\Oauth::getAccessToken('VK_SCHED'));
 		
+		$waits = 0;
+		
 		while (true) {
 			$need_to_post = $this->getCommentsQueue();
 			
@@ -120,12 +122,7 @@ class AutoCommentator extends \Z\Task {
 									$api_data['captcha_sid'] = $captcha_code['sid'];
 								}
 								
-								$comment_api = $api;
-								$group_access_token = \Smm\Oauth::getGroupAccessToken(-$item->owner_id);
-								if ($group_access_token)
-									$comment_api = new \Z\Net\VkApi($group_access_token);
-								
-								$res = $comment_api->exec("wall.createComment", $api_data);
+								$res = $api->exec("wall.createComment", $api_data);
 								if ($res->success()) {
 									echo "\t=> #".$item->id." - OK, comment created\n";
 									
@@ -133,6 +130,12 @@ class AutoCommentator extends \Z\Task {
 										->where('id', '=', $queue['id'])
 										->where('group_id', '=', $queue['group_id'])
 										->execute();
+									
+									$api->exec("likes.add", [
+										'type'			=> 'comment', 
+										'item_id'		=> $res->response->comment_id, 
+										'owner_id'		=> $item->owner_id, 
+									]);
 									
 									break;
 								}
@@ -157,7 +160,14 @@ class AutoCommentator extends \Z\Task {
 			$delta = $min_date - time();
 			if ($min_date !== false && $delta < 120) {
 				echo "Has items in queue... wait... [delta=$delta, min_date=$min_date]\n";
-				sleep(max(3, $delta));
+				if ($delta >= 1) {
+					sleep($delta);
+				} else if ($waits <= 10) {
+					++$waits;
+					usleep(300000);
+				} else {
+					sleep(3);
+				}
  			} else {
 				echo "Done! No items in queue.\n";
 				break;
