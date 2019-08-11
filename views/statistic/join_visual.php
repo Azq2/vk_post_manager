@@ -30,6 +30,31 @@
 	</span>
 </div>
 
+<div class="row">
+	<span class="">
+		Забанены: <?= number_format($banned_cnt, 0, ',', ' ') ?>
+		(<?= round(($banned_cnt / $total_cnt) * 100, 1) ?>%)
+	</span>
+	&nbsp;&nbsp;&nbsp; + &nbsp;&nbsp;&nbsp;
+	
+	<span class="">
+		Удалены (совсем): <?= number_format($deleted_cnt, 0, ',', ' ') ?>
+		(<?= round(($deleted_cnt / $total_cnt) * 100, 1) ?>%)
+	</span>
+	&nbsp;&nbsp;&nbsp; + &nbsp;&nbsp;&nbsp;
+	
+	<span class="">
+		Не заходили (пол года): <?= number_format($inactive_6m_cnt, 0, ',', ' ') ?>
+		(<?= round(($inactive_6m_cnt / $total_cnt) * 100, 1) ?>%)
+	</span>
+	&nbsp;&nbsp;&nbsp; = &nbsp;&nbsp;&nbsp;
+	
+	<span class="red">
+		<?= number_format(($banned_cnt + $deleted_cnt + $inactive_6m_cnt), 0, ',', ' ') ?>
+		(<?= round((($banned_cnt + $deleted_cnt + $inactive_6m_cnt) / $total_cnt) * 100, 1) ?>%)
+	</span>
+</div>
+
 <div id="chartdiv" style="width: 100%; height: 600px"></div>
 <div id="chart_legend" style="width: 100%"></div>
 

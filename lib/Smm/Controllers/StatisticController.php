@@ -177,12 +177,46 @@ class StatisticController extends \Smm\GroupController {
 			'active'	=> $period
 		]);
 		
+		$total_cnt = DB::select(['COUNT(*)', 'cnt'])
+			->from('vk_comm_users')
+			->where('cid', '=', $this->group['id'])
+			->execute()
+			->get('cnt', 0);
+		
+		$banned_cnt = DB::select(['COUNT(*)', 'cnt'])
+			->from('vk_comm_users')
+			->where('deactivated', '=', 1)
+			->where('cid', '=', $this->group['id'])
+			->execute()
+			->get('cnt', 0);
+		
+		$deleted_cnt = DB::select(['COUNT(*)', 'cnt'])
+			->from('vk_comm_users')
+			->where('deactivated', '=', 3)
+			->where('cid', '=', $this->group['id'])
+			->execute()
+			->get('cnt', 0);
+		
+		$inactive_6m_cnt = DB::select(['COUNT(*)', 'cnt'])
+			->from('vk_comm_users')
+			->where('last_seen', '<=', date("Y-m-d H:i:s", time() - 3600 * 24 * 30 * 3))
+			->where('last_seen', '>', "2000-01-01 00:00:00")
+			->where('deactivated', '=', 0)
+			->where('cid', '=', $this->group['id'])
+			->execute()
+			->get('cnt', 0);
+		
 		$this->title = 'Пользователи';
 		$this->content = View::factory('statistic/join_visual', [
 			'stat'			=> array_reverse(array_values($stat)), 
 			'graphs'		=> $graphs, 
 			'total_join'	=> $total_join, 
 			'total_leave'	=> $total_leave, 
+			
+			'total_cnt'				=> $total_cnt, 
+			'banned_cnt'			=> $banned_cnt, 
+			'deleted_cnt'			=> $deleted_cnt, 
+			'inactive_6m_cnt'		=> $inactive_6m_cnt, 
 			
 			'type_tabs'		=> $type_tabs->render(), 
 			'output_tabs'	=> $output_tabs->render(), 

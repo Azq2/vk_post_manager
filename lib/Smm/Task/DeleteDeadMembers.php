@@ -11,63 +11,65 @@ use \Smm\VK\Captcha;
 class DeleteDeadMembers extends \Z\Task {
 	public function options() {
 		return [
-			'group_id' => 0
+			'group_id'		=> 0, 
+			'type'			=> '', 
+			'commit'		=> 0
 		];
 	}
 	
 	public function run($args) {
 		echo date("Y-m-d H:i:s")."\n";
 		
-		$vk = new VkApi(\Smm\Oauth::getAccessToken('VK'));
+		$for_delete = [];
 		
-		$offset = 0;
-		$errors = 0;
-		
-		echo date("H:i:s d/m/Y")." #".$args['group_id'].": fetch all members\n";
-		while (true) {
-			$result = $vk->exec("groups.getMembers", [
-				"group_id"		=> $args['group_id'], 
-				"count"			=> 1000, 
-				"fields"		=> "last_seen", 
-				"offset"		=> $offset
-			]);
+		$for_delete = DB::select()
+			->from('vk_comm_users')
 			
-			if ($result->success()) {
-				$users_cnt = $result->response->count;
-				
-				foreach ($result->response->items as $u) {
-					if ($u->deactivated ?? false) {
-						if (!isset($dead_stat[$u->deactivated]))
-							$dead_stat[$u->deactivated] = 0;
-						++$dead_stat[$u->deactivated];
-					} else if ($u->last_seen) {
-						if (time() - $u->last_seen->time >= 3600 * 24 * 7) {
-							if (!isset($dead_stat['last_seen']))
-								$dead_stat['last_seen'] = 0;
-							++$dead_stat['last_seen'];
-						}
+			->orOpenGroup()
+				->where('deactivated', 'IN', [1, 3])
+				->where('cid', '=', $args['group_id'])
+			->orCloseGroup()
+			
+			->orOpenGroup()
+				->where('last_seen', '<=', date("Y-m-d H:i:s", time() - 3600 * 24 * 30 * 6))
+				->where('last_seen', '>', "2000-01-01 00:00:00")
+				->where('deactivated', '=', 0)
+				->where('cid', '=', $args['group_id'])
+			->orCloseGroup()
+			
+			->execute()
+			->asArray();
+		
+		$api = new \Z\Net\VkApi(\Smm\Oauth::getAccessToken('VK'));
+		//$api->setLimit(3, 1.1);
+		
+		echo "For delete: ".count($for_delete)."\n";
+		
+		foreach ($for_delete as $u) {
+			$info = $u['last_seen'];
+			if ($u['deactivated'] == 1) {
+				$info = 'Заблокирован';
+			} elseif ($u['deactivated'] == 3) {
+				$info = 'Заблокирован';
+			}
+			
+			echo "https://vk.com/id".$u['uid']." ".$u['first_name']." ".$u['last_name']." $info\n";
+			
+			if ($args['commit']) {
+				$res = $api->exec("groups.removeUser", [
+					'user_id'		=> $u['uid'], 
+					'group_id'		=> $args['group_id']
+				]);
+				for ($i = 0; $i < 3; ++$i) {
+					if ($res->success()) {
+						echo "\t=>deleted\n";
+						break;
 					} else {
-						if (!isset($dead_stat['last_seen2']))
-							$dead_stat['last_seen2'] = 0;
-						++$dead_stat['last_seen2'];
+						echo "\t=>error: ".$res->error()."\n";
 					}
 				}
-				
-				if ($result->response->count <= $offset + 1000)
-					break;
-				$offset += 1000;
-				usleep(100000);
-			} else {
-				if (++$errors > 5) {
-					echo date("H:i:s d/m/Y")." too many error! :(\n";
-					return;
-				}
-				
-				echo date("H:i:s d/m/Y")." ".$result->error()."\n";
-				sleep(10);
+				usleep(300000);
 			}
 		}
-		
-		var_dump($dead_stat, $users_cnt);
 	}
 }
