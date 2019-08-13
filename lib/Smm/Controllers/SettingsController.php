@@ -173,6 +173,7 @@ class SettingsController extends \Smm\GroupController {
 			'VK'			=> 'ВК (предложки и прочее)', 
 			'VK_SCHED'		=> 'ВК (щедулер)', 
 			'VK_GRABBER'	=> 'ВК (граббер)', 
+			'VK_STAT'		=> 'ВК (стата)', 
 			'OK'			=> 'Одноклассники (не используется)'
 		];
 		
@@ -218,6 +219,7 @@ class SettingsController extends \Smm\GroupController {
 				case "VK":
 				case "VK_SCHED":
 				case "VK_GRABBER":
+				case "VK_STAT":
 					curl_setopt($ch, CURLOPT_URL, "https://oauth.vk.com/access_token");
 					curl_setopt($ch, CURLOPT_POSTFIELDS, http_build_query([
 						'client_id'		=> \Z\Config::get('oauth.VK.id'), 
@@ -313,6 +315,7 @@ class SettingsController extends \Smm\GroupController {
 				case "VK":
 				case "VK_SCHED":
 				case "VK_GRABBER":
+				case "VK_STAT":
 					$api = new VkApi(\Smm\Oauth::getAccessToken($type));
 					$res = $api->exec("users.get");
 					
