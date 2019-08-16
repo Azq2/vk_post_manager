@@ -13,7 +13,7 @@ class Response {
 	}
 	
 	public function success() {
-		return isset($this->data->response);
+		return array_key_exists('response', $this->data);
 	}
 	
 	public function error() {

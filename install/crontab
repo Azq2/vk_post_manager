@@ -22,6 +22,9 @@
 # Лог участников (кто ушёл, пришёл)
 */10 * * * * php {project}/www/index.php Smm/Task/LogMembers >> {project}/logs/cron_members.log 2>&1
 
+# Сбор статистики
+*/10 * * * * php {project}/www/index.php Smm/Task/GroupActivityGrabber >> {project}/logs/groups_activity_grabber.log 2>&1
+
 # Сбор статистики по лайкам
 */10 * * * * php {project}/www/index.php Smm/Task/GroupActivity --mode=likes >> {project}/logs/groups_activity_likes.log 2>&1
 
@@ -34,6 +37,8 @@
 # Обновление виджета
 * * * * * php {project}/www/index.php Smm/Task/VkWidgets >> {project}/logs/vk_widgets.log 2>&1
 
+# Лог полностью удалённых юзеров
+0 0 * * * php {project}/www/index.php Smm/Task/LogDeletedMembers >> {project}/logs/log_deleted_members.log 2>&1
 
 # Бот-котификатор
 * * * * * php {project}/www/index.php Smm/Task/CatificatorVolumeTester >> {project}/logs/catificator_volume_tester.log 2>&1
