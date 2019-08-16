@@ -66,6 +66,61 @@ CREATE TABLE `catificator_used_tracks` (
 /*!40101 SET character_set_client = @saved_cs_client */;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
 /*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `vk_activity_comments` (
+  `owner_id` int(11) NOT NULL,
+  `post_id` int(11) NOT NULL,
+  `comment_id` int(11) NOT NULL,
+  `user_id` int(11) NOT NULL,
+  `date` datetime NOT NULL,
+  `text_length` int(10) unsigned NOT NULL DEFAULT '0',
+  `images_cnt` int(10) unsigned NOT NULL DEFAULT '0',
+  `attaches_cnt` int(10) unsigned NOT NULL DEFAULT '0',
+  `stickers_cnt` int(10) unsigned NOT NULL DEFAULT '0',
+  PRIMARY KEY (`owner_id`,`post_id`,`comment_id`),
+  KEY `date` (`date`,`owner_id`,`user_id`),
+  KEY `post_id` (`post_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+/*!40101 SET character_set_client = @saved_cs_client */;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `vk_activity_likes` (
+  `owner_id` int(11) NOT NULL,
+  `post_id` int(11) NOT NULL,
+  `user_id` int(11) NOT NULL,
+  `date` datetime NOT NULL,
+  PRIMARY KEY (`owner_id`,`post_id`,`user_id`),
+  KEY `date` (`date`,`owner_id`,`user_id`),
+  KEY `post_id` (`post_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+/*!40101 SET character_set_client = @saved_cs_client */;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `vk_activity_posts` (
+  `id` int(10) NOT NULL,
+  `owner_id` int(10) NOT NULL,
+  `date` int(10) unsigned NOT NULL,
+  `last_check` int(10) unsigned NOT NULL,
+  `likes` int(10) unsigned NOT NULL DEFAULT '0',
+  `comments` int(10) unsigned NOT NULL DEFAULT '0',
+  `need_check_likes` tinyint(4) NOT NULL DEFAULT '0',
+  `need_check_comments` tinyint(4) NOT NULL DEFAULT '0',
+  `last_likes_check` int(11) NOT NULL DEFAULT '0',
+  `last_comments_check` int(11) NOT NULL DEFAULT '0',
+  PRIMARY KEY (`owner_id`,`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+/*!40101 SET character_set_client = @saved_cs_client */;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `vk_activity_sources` (
+  `owner_id` int(10) NOT NULL,
+  `offset` int(10) unsigned NOT NULL DEFAULT '0',
+  `count` int(10) unsigned NOT NULL DEFAULT '0',
+  `init_done` tinyint(4) NOT NULL DEFAULT '0',
+  PRIMARY KEY (`owner_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+/*!40101 SET character_set_client = @saved_cs_client */;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
 CREATE TABLE `vk_activity_stat_progress` (
   `group_id` int(11) NOT NULL,
   `offset` int(10) unsigned DEFAULT '0',
@@ -98,8 +153,19 @@ CREATE TABLE `vk_callbacks` (
 CREATE TABLE `vk_comm_users` (
   `cid` int(10) unsigned NOT NULL,
   `uid` int(10) unsigned NOT NULL,
+  `last_seen` datetime DEFAULT NULL,
+  `deactivated` tinyint(4) NOT NULL DEFAULT '0',
+  `first_name` varchar(32) NOT NULL DEFAULT '',
+  `last_name` varchar(32) NOT NULL DEFAULT '',
   PRIMARY KEY (`cid`,`uid`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+/*!40101 SET character_set_client = @saved_cs_client */;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `vk_comm_users_deleted` (
+  `user_id` int(10) unsigned NOT NULL,
+  PRIMARY KEY (`user_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 /*!40101 SET character_set_client = @saved_cs_client */;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
 /*!40101 SET character_set_client = utf8 */;
@@ -253,14 +319,25 @@ CREATE TABLE `vk_oauth` (
 /*!40101 SET character_set_client = @saved_cs_client */;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
 /*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `vk_posts_comments` (
+  `id` int(10) unsigned NOT NULL,
+  `group_id` int(11) NOT NULL,
+  `text` text NOT NULL,
+  PRIMARY KEY (`group_id`,`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+/*!40101 SET character_set_client = @saved_cs_client */;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
 CREATE TABLE `vk_posts_queue` (
   `nid` int(10) unsigned NOT NULL AUTO_INCREMENT,
   `id` int(10) unsigned NOT NULL,
   `group_id` int(11) NOT NULL,
   `fake_date` int(10) unsigned NOT NULL DEFAULT '0',
+  `real_date` int(10) unsigned NOT NULL DEFAULT '0',
   PRIMARY KEY (`nid`),
   UNIQUE KEY `group_id-id` (`group_id`,`id`) USING BTREE,
-  KEY `group_id-position` (`group_id`) USING BTREE
+  KEY `group_id-position` (`group_id`) USING BTREE,
+  KEY `real_date` (`real_date`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 /*!40101 SET character_set_client = @saved_cs_client */;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
