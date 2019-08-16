@@ -76,6 +76,8 @@ class LogMembers extends \Z\Task {
 			
 			echo date("H:i:s d/m/Y")." #".$group['id'].": fetch all members\n";
 			while (true) {
+				$offset = max(0, $offset - 20);
+				
 				$result = $vk->exec("groups.getMembers", [
 					"group_id"		=> $group['id'], 
 					"count"			=> 1000, 
@@ -83,7 +85,7 @@ class LogMembers extends \Z\Task {
 					"offset"		=> $offset
 				]);
 				
-				// echo "$offset...\n";
+				echo "$offset...\n";
 				
 				if ($result->success()) {
 					$users_cnt = $result->response->count;
@@ -145,14 +147,18 @@ class LogMembers extends \Z\Task {
 			
 			DB::begin();
 			
+			echo "Clean old users...\n";
+			
 			DB::delete('vk_comm_users')
 				->where('cid', '=', $group['id'])
 				->execute();
 			
+			echo "Insert new users...\n";
+			
 			$offset = 0;
 			$chunk_size = 4000;
 			while (($chunk = array_slice($new_users, $offset, $chunk_size, true))) {
-				$insert = DB::insert('vk_comm_users', ['cid', 'uid', 'first_name', 'last_name', 'last_seen', 'deactivated']);
+				$insert = DB::insert('vk_comm_users', ['cid', 'uid', 'first_name', 'last_name', 'last_seen', 'deactivated', 'last_activity', 'join_date']);
 				foreach ($chunk as $uid => $_) {
 					$last_seen = false;
 					
@@ -168,15 +174,47 @@ class LogMembers extends \Z\Task {
 							->get('last_seen', NULL);
 					}
 					
+					$last_like_date = DB::select(['MAX(date)', 'date'])
+						->from('vk_activity_likes')
+						->where('owner_id', '=', -$group['id'])
+						->where('user_id', '=', $uid)
+						->execute()
+						->get('date', NULL);
+					
+					$last_comment_date = DB::select(['MAX(date)', 'date'])
+						->from('vk_activity_comments')
+						->where('owner_id', '=', -$group['id'])
+						->where('user_id', '=', $uid)
+						->execute()
+						->get('date', NULL);
+					
+					if (isset($diff[$uid]) && $diff[$uid]) {
+						$join_date = $time;
+					} else {
+						$join_date = DB::select(['MAX(time)', 'time'])
+							->from('vk_join_stat')
+							->where('cid', '=', $group['id'])
+							->where('uid', '=', $uid)
+							->where('type', '=', 1)
+							->execute()
+							->get('time', NULL);
+					}
+					
+					$last_activity = $last_like_date;
+					if (!$last_activity || ($last_like_date && strtotime($last_comment_date) > strtotime($last_activity)))
+						$last_activity = $last_comment_date;
+					
 					$deactivated = $deactivated_array[$uid] ?? 0;
 					
 					list ($first_name, $last_name) = explode("\0", $real_name_array[$uid] ?? "\0");
 					
-					$insert->values([$group['id'], $uid, $first_name, $last_name, $last_seen, $deactivated]);
+					$insert->values([$group['id'], $uid, $first_name, $last_name, $last_seen, $deactivated, $last_activity, date("Y-m-d H:i:s", $join_date)]);
 				}
 				$insert->execute();
 				$offset += $chunk_size;
 			}
+			
+			echo "Insert stat...\n";
 			
 			if ($old_users) {
 				$offset = 0;

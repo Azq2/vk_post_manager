@@ -22,23 +22,38 @@ class DeleteDeadMembers extends \Z\Task {
 		
 		$for_delete = [];
 		
-		$for_delete = DB::select()
-			->from('vk_comm_users')
+		switch ($args['type']) {
+			case "dead":
+				$for_delete = DB::select()
+					->from('vk_comm_users')
+					
+					->orOpenGroup()
+						->where('deactivated', 'IN', [1, 3])
+						->where('cid', '=', $args['group_id'])
+					->orCloseGroup()
+					
+					->orOpenGroup()
+						->where('last_seen', '<=', date("Y-m-d H:i:s", time() - 3600 * 24 * 30 * 6))
+						->where('last_seen', '>', "2000-01-01 00:00:00")
+						->where('deactivated', '=', 0)
+						->where('cid', '=', $args['group_id'])
+					->orCloseGroup()
+					
+					->execute()
+					->asArray();
+			break;
 			
-			->orOpenGroup()
-				->where('deactivated', 'IN', [1, 3])
-				->where('cid', '=', $args['group_id'])
-			->orCloseGroup()
-			
-			->orOpenGroup()
-				->where('last_seen', '<=', date("Y-m-d H:i:s", time() - 3600 * 24 * 30 * 6))
-				->where('last_seen', '>', "2000-01-01 00:00:00")
-				->where('deactivated', '=', 0)
-				->where('cid', '=', $args['group_id'])
-			->orCloseGroup()
-			
-			->execute()
-			->asArray();
+			case "passive":
+				$for_delete = DB::select()
+					->from('vk_comm_users')
+					->where('last_activity', '=', NULL)
+					->where('join_date', '<=', date('Y-m-d H:i:s', time() - 3600 * 24 * 30 * 3))
+					->where('cid', '=', $args['group_id'])
+					->order('join_date', 'ASC')
+					->execute()
+					->asArray();
+			break;
+		}
 		
 		$api = new \Z\Net\VkApi(\Smm\Oauth::getAccessToken('VK'));
 		//$api->setLimit(3, 1.1);

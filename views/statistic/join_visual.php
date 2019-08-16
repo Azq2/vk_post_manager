@@ -44,7 +44,7 @@
 	&nbsp;&nbsp;&nbsp; + &nbsp;&nbsp;&nbsp;
 	
 	<span class="">
-		Не заходили (пол года): <?= number_format($inactive_6m_cnt, 0, ',', ' ') ?>
+		Не заходили (3 мес): <?= number_format($inactive_6m_cnt, 0, ',', ' ') ?>
 		(<?= round(($inactive_6m_cnt / $total_cnt) * 100, 1) ?>%)
 	</span>
 	&nbsp;&nbsp;&nbsp; = &nbsp;&nbsp;&nbsp;
