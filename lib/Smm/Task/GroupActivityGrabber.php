@@ -15,6 +15,8 @@ class GroupActivityGrabber extends \Z\Task {
 	protected $last_update_changed = 0;
 	
 	public function run($args) {
+		ini_set('memory_limit', '1G');
+		
 		$this->api = new VkApi(\Smm\Oauth::getAccessToken('VK_STAT'));
 		$this->api->setLimit(3, 1.2);
 		
@@ -50,7 +52,6 @@ class GroupActivityGrabber extends \Z\Task {
 				if (time() - $last_full_check >= 3600) {
 					$this->checkPosts($group, true);
 					$cache->set("vk_activity_last_full_check:".$group['id'], time());
-					
 					$this->updateChangedPosts($group, 2000);
 				} else {
 					$this->checkPosts($group, false);
@@ -231,7 +232,11 @@ class GroupActivityGrabber extends \Z\Task {
 			foreach ($exec_result->response->result_likes as $chunk) {
 				list ($post_id, $likes) = $chunk;
 				
-				$likes_count[$post_id] = $likes->count;
+				if (!in_array($post_id, $fetch_likes))
+					$likes_count[$post_id] = $likes->count;
+				
+				if (!isset($posts[$post_id]['date']))
+					throw \Exception("$post_id not found!!!");
 				
 				foreach ($likes->items as $like) {
 					$query->values([

@@ -78,7 +78,8 @@ CREATE TABLE `vk_activity_comments` (
   `stickers_cnt` int(10) unsigned NOT NULL DEFAULT '0',
   PRIMARY KEY (`owner_id`,`post_id`,`comment_id`),
   KEY `date` (`date`,`owner_id`,`user_id`),
-  KEY `post_id` (`post_id`)
+  KEY `post_id` (`post_id`),
+  KEY `owner_id-user_id-date` (`owner_id`,`user_id`,`date`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 /*!40101 SET character_set_client = @saved_cs_client */;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
@@ -90,7 +91,8 @@ CREATE TABLE `vk_activity_likes` (
   `date` datetime NOT NULL,
   PRIMARY KEY (`owner_id`,`post_id`,`user_id`),
   KEY `date` (`date`,`owner_id`,`user_id`),
-  KEY `post_id` (`post_id`)
+  KEY `post_id` (`post_id`),
+  KEY `owner_id-user_id-date` (`owner_id`,`user_id`,`date`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 /*!40101 SET character_set_client = @saved_cs_client */;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
@@ -157,6 +159,8 @@ CREATE TABLE `vk_comm_users` (
   `deactivated` tinyint(4) NOT NULL DEFAULT '0',
   `first_name` varchar(32) NOT NULL DEFAULT '',
   `last_name` varchar(32) NOT NULL DEFAULT '',
+  `last_activity` datetime DEFAULT NULL,
+  `join_date` datetime DEFAULT NULL,
   PRIMARY KEY (`cid`,`uid`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 /*!40101 SET character_set_client = @saved_cs_client */;
