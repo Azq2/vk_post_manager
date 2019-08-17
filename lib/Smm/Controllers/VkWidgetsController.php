@@ -200,7 +200,6 @@ class VkWidgetsController extends \Smm\GroupController {
 		// Common settings
 		elseif ($_POST['do_save_settings'] ?? false) {
 			$widget['cost_likes']		= intval($_POST['cost_likes'] ?? 0);
-			$widget['cost_reposts']		= intval($_POST['cost_reposts'] ?? 0);
 			$widget['cost_comments']	= intval($_POST['cost_comments'] ?? 0);
 			$widget['title']			= $_POST['title'] ?? '';
 			$widget['days']				= intval($_POST['days'] ?? 0);
@@ -211,7 +210,6 @@ class VkWidgetsController extends \Smm\GroupController {
 			DB::update('vk_widget_top_users')
 				->set([
 					'cost_likes'			=> $widget['cost_likes'], 
-					'cost_reposts'			=> $widget['cost_reposts'], 
 					'cost_comments'			=> $widget['cost_comments'], 
 					'title'					=> $widget['title'], 
 					'days'					=> $widget['days'], 
@@ -230,7 +228,7 @@ class VkWidgetsController extends \Smm\GroupController {
 		$date_to = time();
 		$date_from = $date_to - 3600 * 24 * ($widget['days'] - 1);
 		
-		$formula = '(SUM(likes) * '.$widget['cost_likes'].' + SUM(reposts) * '.$widget['cost_reposts'].' + SUM(comments_meaningful) * '.$widget['cost_comments'].')';
+		$formula = '(SUM(likes) * '.$widget['cost_likes'].' + SUM(comments_meaningful) * '.$widget['cost_comments'].')';
 		
 		$blacklist = DB::select()
 			->from('vk_widget_top_users_blacklist')
@@ -241,13 +239,12 @@ class VkWidgetsController extends \Smm\GroupController {
 		$users = DB::select(
 			'user_id', 
 			['SUM(likes)', 'likes'], 
-			['SUM(reposts)', 'reposts'], 
 			['SUM(comments_meaningful)', 'comments_meaningful'], 
 			[$formula, 'points']
 		)
-			->from('vk_users_stat')
+			->from('vk_activity_stat')
 			->where('date', 'BETWEEN', [date("Y-m-d", $date_from), date("Y-m-d", $date_to)])
-			->where('group_id', '=', $this->group['id'])
+			->where('owner_id', '=', -$this->group['id'])
 			->where('user_id', '>', 0)
 			->order('points', 'DESC')
 			->group('user_id')
@@ -286,7 +283,6 @@ class VkWidgetsController extends \Smm\GroupController {
 				'url'				=> "https://vk.com/".($vk_user->screen_name ?: "id$id"), 
 				'points'			=> $user['points'], 
 				'likes'				=> $user['likes'], 
-				'reposts'			=> $user['reposts'], 
 				'comments'			=> $user['comments_meaningful'], 
 				'blacklisted'		=> in_array($id, $blacklist), 
 				'blacklist_url'		=> $base_url->copy()
@@ -324,7 +320,6 @@ class VkWidgetsController extends \Smm\GroupController {
 			'error_settings'	=> $error_settings, 
 			'error_upload'		=> $error_upload, 
 			'cost_likes'		=> $widget['cost_likes'], 
-			'cost_reposts'		=> $widget['cost_reposts'], 
 			'cost_comments'		=> $widget['cost_comments'], 
 			'images'			=> $images, 
 			'title'				=> htmlspecialchars($widget['title']), 

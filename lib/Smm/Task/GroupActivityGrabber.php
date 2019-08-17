@@ -225,7 +225,7 @@ class GroupActivityGrabber extends \Z\Task {
 			$fetch_likes_offset = $exec_result->response->fetch_likes_offset;
 			$fetch_comments_offset = $exec_result->response->fetch_comments_offset;
 			
-			$query = DB::insert('vk_activity_likes', ['owner_id', 'post_id', 'user_id', 'date'])
+			$query = DB::insert('vk_activity_likes', ['owner_id', 'post_id', 'user_id', 'date', 'dt'])
 				->ignore();
 			
 			$likes_count = [];
@@ -243,7 +243,8 @@ class GroupActivityGrabber extends \Z\Task {
 						-$group['id'], 
 						$post_id, 
 						$like, 
-						$posts[$post_id]['last_likes_check'] ? date("Y-m-d H:i:s", time()) : date("Y-m-d H:i:s", $posts[$post_id]['date'])
+						$posts[$post_id]['last_likes_check'] ? date("Y-m-d H:i:s", time())	: date("Y-m-d H:i:s", $posts[$post_id]['date']), 
+						$posts[$post_id]['last_likes_check'] ? date("Y-m-d", time())		: date("Y-m-d", $posts[$post_id]['date'])
 					]);
 				}
 			}
@@ -263,7 +264,7 @@ class GroupActivityGrabber extends \Z\Task {
 					->execute();
 			}
 			
-			$query = DB::insert('vk_activity_comments', ['owner_id', 'post_id', 'comment_id', 'user_id', 'date', 'text_length', 'attaches_cnt', 'images_cnt', 'stickers_cnt'])
+			$query = DB::insert('vk_activity_comments', ['owner_id', 'post_id', 'comment_id', 'user_id', 'date', 'dt', 'text_length', 'attaches_cnt', 'images_cnt', 'stickers_cnt'])
 				->ignore();
 			
 			$comments_count = [];
@@ -303,6 +304,7 @@ class GroupActivityGrabber extends \Z\Task {
 						$comment->id, 
 						$comment->from_id, 
 						date("Y-m-d H:i:s", $comment->date), 
+						date("Y-m-d", $comment->date), 
 						$meta['text_length'], 
 						$meta['attaches_cnt'], 
 						$meta['images_cnt'], 

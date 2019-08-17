@@ -72,6 +72,7 @@ CREATE TABLE `vk_activity_comments` (
   `comment_id` int(11) NOT NULL,
   `user_id` int(11) NOT NULL,
   `date` datetime NOT NULL,
+  `dt` date DEFAULT NULL,
   `text_length` int(10) unsigned NOT NULL DEFAULT '0',
   `images_cnt` int(10) unsigned NOT NULL DEFAULT '0',
   `attaches_cnt` int(10) unsigned NOT NULL DEFAULT '0',
@@ -79,7 +80,8 @@ CREATE TABLE `vk_activity_comments` (
   PRIMARY KEY (`owner_id`,`post_id`,`comment_id`),
   KEY `date` (`date`,`owner_id`,`user_id`),
   KEY `post_id` (`post_id`),
-  KEY `owner_id-user_id-date` (`owner_id`,`user_id`,`date`)
+  KEY `owner_id-user_id-date` (`owner_id`,`user_id`,`date`),
+  KEY `dt-owner_id-user_id` (`dt`,`owner_id`,`user_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 /*!40101 SET character_set_client = @saved_cs_client */;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
@@ -89,10 +91,12 @@ CREATE TABLE `vk_activity_likes` (
   `post_id` int(11) NOT NULL,
   `user_id` int(11) NOT NULL,
   `date` datetime NOT NULL,
+  `dt` date DEFAULT NULL,
   PRIMARY KEY (`owner_id`,`post_id`,`user_id`),
   KEY `date` (`date`,`owner_id`,`user_id`),
   KEY `post_id` (`post_id`),
-  KEY `owner_id-user_id-date` (`owner_id`,`user_id`,`date`)
+  KEY `owner_id-user_id-date` (`owner_id`,`user_id`,`date`),
+  KEY `dt-owner_id-user_id` (`dt`,`owner_id`,`user_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 /*!40101 SET character_set_client = @saved_cs_client */;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
@@ -119,6 +123,18 @@ CREATE TABLE `vk_activity_sources` (
   `count` int(10) unsigned NOT NULL DEFAULT '0',
   `init_done` tinyint(4) NOT NULL DEFAULT '0',
   PRIMARY KEY (`owner_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+/*!40101 SET character_set_client = @saved_cs_client */;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `vk_activity_stat` (
+  `date` date NOT NULL,
+  `owner_id` int(11) NOT NULL,
+  `user_id` int(11) NOT NULL,
+  `likes` int(10) unsigned NOT NULL DEFAULT '0',
+  `comments` int(10) unsigned NOT NULL DEFAULT '0',
+  `comments_meaningful` int(10) unsigned NOT NULL DEFAULT '0',
+  PRIMARY KEY (`date`,`owner_id`,`user_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 /*!40101 SET character_set_client = @saved_cs_client */;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
@@ -308,7 +324,8 @@ CREATE TABLE `vk_join_stat` (
   `type` tinyint(4) NOT NULL,
   `time` int(10) unsigned NOT NULL,
   `users_cnt` int(10) unsigned NOT NULL,
-  PRIMARY KEY (`id`)
+  PRIMARY KEY (`id`),
+  KEY `cid-uid` (`cid`,`uid`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 /*!40101 SET character_set_client = @saved_cs_client */;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
@@ -365,44 +382,6 @@ CREATE TABLE `vk_smm_money_out` (
 /*!40101 SET character_set_client = @saved_cs_client */;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
 /*!40101 SET character_set_client = utf8 */;
-CREATE TABLE `vk_user_comments` (
-  `group_id` int(11) NOT NULL,
-  `post_id` int(11) NOT NULL,
-  `comment_id` int(11) NOT NULL,
-  `user_id` int(11) NOT NULL,
-  `date` datetime NOT NULL,
-  `text_length` int(10) unsigned NOT NULL DEFAULT '0',
-  `images_cnt` int(10) unsigned NOT NULL DEFAULT '0',
-  `attaches_cnt` int(10) unsigned NOT NULL DEFAULT '0',
-  `stickers_cnt` int(10) unsigned NOT NULL DEFAULT '0',
-  PRIMARY KEY (`group_id`,`post_id`,`comment_id`),
-  KEY `date` (`date`,`group_id`,`user_id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
-/*!40101 SET character_set_client = @saved_cs_client */;
-/*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!40101 SET character_set_client = utf8 */;
-CREATE TABLE `vk_user_likes` (
-  `group_id` int(11) NOT NULL,
-  `post_id` int(11) NOT NULL,
-  `user_id` int(11) NOT NULL,
-  `date` datetime NOT NULL,
-  PRIMARY KEY (`group_id`,`post_id`,`user_id`),
-  KEY `date` (`date`,`group_id`,`user_id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
-/*!40101 SET character_set_client = @saved_cs_client */;
-/*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!40101 SET character_set_client = utf8 */;
-CREATE TABLE `vk_user_reposts` (
-  `group_id` int(11) NOT NULL,
-  `post_id` int(11) NOT NULL,
-  `user_id` int(11) NOT NULL,
-  `date` datetime NOT NULL,
-  PRIMARY KEY (`group_id`,`post_id`,`user_id`),
-  KEY `date` (`date`,`group_id`,`user_id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
-/*!40101 SET character_set_client = @saved_cs_client */;
-/*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!40101 SET character_set_client = utf8 */;
 CREATE TABLE `vk_users_posts` (
   `post_id` int(10) unsigned NOT NULL,
   `group_id` int(10) unsigned NOT NULL,
@@ -410,29 +389,6 @@ CREATE TABLE `vk_users_posts` (
   `reposts` int(10) unsigned NOT NULL DEFAULT '0',
   `comments` int(10) unsigned NOT NULL DEFAULT '0',
   PRIMARY KEY (`post_id`,`group_id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
-/*!40101 SET character_set_client = @saved_cs_client */;
-/*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!40101 SET character_set_client = utf8 */;
-CREATE TABLE `vk_users_stat` (
-  `date` date NOT NULL,
-  `group_id` int(11) NOT NULL,
-  `user_id` int(11) NOT NULL,
-  `likes` int(10) unsigned NOT NULL DEFAULT '0',
-  `reposts` int(10) unsigned NOT NULL DEFAULT '0',
-  `comments` int(10) unsigned NOT NULL DEFAULT '0',
-  `comments_meaningful` int(10) unsigned NOT NULL DEFAULT '0',
-  PRIMARY KEY (`date`,`group_id`,`user_id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
-/*!40101 SET character_set_client = @saved_cs_client */;
-/*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!40101 SET character_set_client = utf8 */;
-CREATE TABLE `vk_users_stat_progress` (
-  `group_id` int(11) NOT NULL,
-  `offset` int(10) unsigned DEFAULT '0',
-  `done` tinyint(4) NOT NULL DEFAULT '0',
-  `stat_done` tinyint(4) NOT NULL DEFAULT '0',
-  PRIMARY KEY (`group_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 /*!40101 SET character_set_client = @saved_cs_client */;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;

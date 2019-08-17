@@ -46,7 +46,7 @@ class VkWidgets extends \Z\Task {
 		$date_to = time();
 		$date_from = $date_to - 3600 * 24 * ($widget['days'] - 1);
 		
-		$formula = '(SUM(likes) * '.$widget['cost_likes'].' + SUM(reposts) * '.$widget['cost_reposts'].' + SUM(comments_meaningful) * '.$widget['cost_comments'].')';
+		$formula = '(SUM(likes) * '.$widget['cost_likes'].' + SUM(comments_meaningful) * '.$widget['cost_comments'].')';
 		
 		$ALLOWED_SIZES = ['480.480', '480.720'];
 		
@@ -91,13 +91,12 @@ class VkWidgets extends \Z\Task {
 		$users = DB::select(
 			'user_id', 
 			['SUM(likes)', 'likes'], 
-			['SUM(reposts)', 'reposts'], 
 			['SUM(comments_meaningful)', 'comments_meaningful'], 
 			[$formula, 'points']
 		)
-			->from('vk_users_stat')
+			->from('vk_activity_stat')
 			->where('date', 'BETWEEN', [date("Y-m-d", $date_from), date("Y-m-d", $date_to)])
-			->where('group_id', '=', $group['id'])
+			->where('owner_id', '=', -$group['id'])
 			->where('user_id', '>', 0)
 			->order('points', 'DESC')
 			->group('user_id')
@@ -154,7 +153,6 @@ class VkWidgets extends \Z\Task {
 				'name'			=> $vk_users[$id]->first_name, 
 				'surname'		=> $vk_users[$id]->last_name, 
 				'likes'			=> $user['likes'], 
-				'reposts'		=> $user['reposts'], 
 				'comments'		=> $user['comments_meaningful'], 
 				'points'		=> $user['points'], 
 			];
@@ -294,7 +292,6 @@ class VkWidgets extends \Z\Task {
 				'surname'		=> $tile['surname'], 
 				'likes'			=> $tile['likes'], 
 				'comments'		=> $tile['comments'], 
-				'reposts'		=> $tile['reposts'], 
 				'balls'			=> $tile['points'], 
 			];
 			

@@ -17,11 +17,6 @@
 					<label class="lbl">Баллов за лайк:</label><br />
 					<input type="text" name="cost_likes" autocomplete="off" value="<?= $cost_likes ?>" placeholder="0" required="required" size="3" />
 				</div>
-				
-				<div class="row">
-					<label class="lbl">Баллов за репост:</label><br />
-					<input type="text" name="cost_reposts" autocomplete="off" value="<?= $cost_reposts ?>" placeholder="0" required="required" size="3" />
-				</div>
 			</div>
 			
 			<div style="display: inline-block; width: 345px">
@@ -29,7 +24,9 @@
 					<label class="lbl">Баллов за коммент:</label><br />
 					<input type="text" name="cost_comments" autocomplete="off" value="<?= $cost_comments ?>" placeholder="0" required="required" size="3" />
 				</div>
-				
+			</div>
+			
+			<div style="display: inline-block; width: 345px">
 				<div class="row">
 					<label class="lbl">Статистика за период (дней):</label><br />
 					<input type="text" name="days" autocomplete="off" value="<?= $days ?>" placeholder="0" required="required" size="3" />
@@ -74,10 +71,6 @@
 				<tr>
 					<td class="row grey">{comments}</td>
 					<td class="row">- кол-во комментов</td>
-				</tr>
-				<tr>
-					<td class="row grey">{reposts}</td>
-					<td class="row">- кол-во репостов</td>
 				</tr>
 				<tr>
 					<td class="row grey">{balls}</td>
@@ -158,11 +151,6 @@
 					
 					<img src="/i/img/comment.svg" class="m" width="16" height="16">
 					<span class="darkblue m"><?= $u['comments'] ?></span>
-					
-					&nbsp;&nbsp;&nbsp;
-					
-					<img src="/i/img/repost.svg" class="m" width="16" height="16">
-					<span class="darkblue m"><?= $u['reposts'] ?></span>
 					
 					<?php if ($u['blacklisted']): ?>
 						<a href="<?= $u['unblacklist_url'] ?>">
