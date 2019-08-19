@@ -157,13 +157,16 @@ class SettingsController extends \Smm\GroupController {
 	public function oauthAction() {
 		$this->title = 'Настройки : oauth';
 		
-		$ok					= $_GET['ok'] ?? 0;
-		$type				= $_GET['type'] ?? '';
-		$access_token		= $_GET['access_token'] ?? '';
-		$refresh_token		= $_GET['refresh_token'] ?? '';
-		$expires			= $_GET['expires'] ?? '';
-		$code				= $_GET['code'] ?? '';
-		$state				= $_GET['state'] ?? '';
+		$ok					= $_REQUEST['ok'] ?? 0;
+		$type				= $_REQUEST['type'] ?? '';
+		$access_token		= $_REQUEST['access_token'] ?? '';
+		$refresh_token		= $_REQUEST['refresh_token'] ?? '';
+		$expires			= $_REQUEST['expires'] ?? '';
+		$code				= $_REQUEST['code'] ?? '';
+		$state				= $_REQUEST['state'] ?? '';
+		$login				= $_REQUEST['login'] ?? '';
+		$password			= $_REQUEST['password'] ?? '';
+		$direct				= $_REQUEST['direct'] ?? 0;
 		
 		$base_url = Url::mk('/')->set('gid', $this->group['id']);
 		
@@ -179,7 +182,48 @@ class SettingsController extends \Smm\GroupController {
 		
 		$redirect_url = $_SERVER['REQUEST_SCHEME'].'://'.$_SERVER['HTTP_HOST'].'/auth.php';
 		
-		if (isset($types[$type]) && $access_token) {
+		if (isset($types[$type]) && $direct) {
+			$ch = curl_init();
+			curl_setopt_array($ch, [
+				CURLOPT_POST				=> false, 
+				CURLOPT_RETURNTRANSFER		=> true, 
+				CURLOPT_SSL_VERIFYPEER		=> true, 
+				CURLOPT_CONNECTTIMEOUT		=> 10, 
+				CURLOPT_TIMEOUT				=> 30
+			]);
+			
+			$client_secret = \Z\Config::get('oauth.VK_OFFICIAL_APP.secret');
+			$client_id = \Z\Config::get('oauth.VK_OFFICIAL_APP.id');
+			
+			curl_setopt($ch, CURLOPT_URL, "https://oauth.vk.com/token?".http_build_query([
+				'grant_type'		=> 'password', 
+				'client_id'			=> $client_id, 
+				'client_secret'		=> $client_secret, 
+				'username'			=> $login, 
+				'password'			=> $password, 
+				'v'					=> '5.101', 
+				'2fa_supported'		=> 1
+			], '', '&'));
+			
+			$raw = curl_exec($ch);
+			$res = @json_decode($raw);
+			
+			if ($res && isset($res->access_token)) {
+				$redirect = $base_url
+					->copy()
+					->set([
+						'a'					=> 'settings/oauth', 
+						'type'				=> $type, 
+						'access_token'		=> $res->access_token, 
+						'refresh_token'		=> isset($res->refresh_token) ? $res->refresh_token : '', 
+						'expires'			=> isset($res->expires_in) && $res->expires_in ? time() + $res->expires_in : 0
+					])
+					->url();
+				return $this->redirect($redirect);
+			} else {
+				$error = 'Ошибка получения access_token';
+			}
+		} elseif (isset($types[$type]) && $access_token) {
 			DB::insert('vk_oauth')
 				->set([
 					'type'			=> $type, 
@@ -332,6 +376,7 @@ class SettingsController extends \Smm\GroupController {
 						'type'				=> $type, 
 						'title'				=> $title, 
 						'oauth_url'			=> $oauth_url, 
+						'oauth_direct'		=> true, 
 						'user'				=> isset($res->response) && $res->response ? $res->response[0]->first_name.' '.$res->response[0]->last_name : '- не установлено -', 
 						'help'				=> [
 							'1. Переходим по ссылке и соглашаемся дать авторизацию.', 

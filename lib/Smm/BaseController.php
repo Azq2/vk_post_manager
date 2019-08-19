@@ -124,7 +124,7 @@ class BaseController extends \Z\Controller {
 						'param'		=> 'a', 
 						'items'		=> [
 							'index'						=> 'Предложки', 
-							'index/multipicpost'		=> 'Мультипикчепостинг', 
+							'tools/index'				=> 'Тулзы', 
 							'grabber'					=> 'Граббер', 
 							'statistic/join_visual'		=> 'Вступления', 
 							'vk_widgets/index'			=> 'Apps', 

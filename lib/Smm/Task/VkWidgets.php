@@ -283,7 +283,8 @@ class VkWidgets extends \Z\Task {
 		
 		$cache = \Z\Cache::instance();
 		
-		$widget_tiles_items = [];
+		$widget_tiles_items_member = [];
+		$widget_tiles_items_guest = [];
 		
 		// Upload images and generate "Tile" widget
 		foreach ($tiles_data as $n => $tile) {
@@ -360,7 +361,7 @@ class VkWidgets extends \Z\Task {
 			
 			$cache->set("top_users_widget:$md5", $image_id, 3600 * 24 * 7);
 			
-			$widget_tiles_items[] = [
+			$widget_tiles_items_member[] = [
 				'title'			=> \Smm\Utils\Text::prepareMacroses($widget['tile_title'], $macroses), 
 				'descr'			=> \Smm\Utils\Text::prepareMacroses($widget['tile_descr'], $macroses), 
 				'link'			=> \Smm\Utils\Text::prepareMacroses($widget['tile_link'], $macroses), 
@@ -368,16 +369,39 @@ class VkWidgets extends \Z\Task {
 				'link_url'		=> 'https://vk.com/public'.$group['id'], 
 				'url'			=> 'https://vk.com/public'.$group['id'], 
 			];
+			
+			$widget_tiles_items_guest[] = [
+				'title'			=> \Smm\Utils\Text::prepareMacroses($widget['tile_title'], $macroses), 
+				'descr'			=> \Smm\Utils\Text::prepareMacroses($widget['tile_descr'], $macroses), 
+				'link'			=> \Smm\Utils\Text::prepareMacroses($widget['tile_link'], $macroses), 
+				'icon_id'		=> $image_id, 
+				'link_url'		=> 'https://vk.com/widget_community.php?act=a_subscribe_box&oid=-'.$group['id'].'&state=1', 
+				'url'			=> 'https://vk.com/widget_community.php?act=a_subscribe_box&oid=-'.$group['id'].'&state=1', 
+			];
 		}
 		
 		// Try save
 		for ($i = 0; $i < 3; ++$i) {
 			$update_widget = $api->exec("appWidgets.update", [
 				'type'			=> 'tiles', 
-				'code'			=> 'return '.json_encode([
-					'title'		=> $widget['title'], 
-					'tiles'		=> $widget_tiles_items
-				], JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE).';'
+				'code'			=> '
+					var is_member = API.groups.isMember({
+						group_id:		'.$group['id'].', 
+						user_id:		Args.uid
+					});
+					
+					if (is_member) {
+						return '.json_encode([
+							'title'		=> $widget['title'], 
+							'tiles'		=> $widget_tiles_items_member
+						], JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE).';
+					} else {
+						return '.json_encode([
+							'title'		=> $widget['title'], 
+							'tiles'		=> $widget_tiles_items_guest
+						], JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE).';
+					}
+				'
 			]);
 			
 			if ($update_widget->success()) {

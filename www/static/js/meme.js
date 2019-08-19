@@ -984,7 +984,7 @@ function MemeEditor(el, options) {
 	}
 	
 	function serialize() {
-		var save = ['text', 'textColor', 'bgColor', 'strokeColor', 'font', 'fontSize', 'fontAlpha', 'bold', 'uc'];
+		var save = ['text', 'textColor', 'bgColor', 'strokeColor', 'font', 'fontSize', 'fontStroke', 'fontAlpha', 'bold', 'uc'];
 		var settings = {textboxes: {}};
 		$.each(textboxes, function (k, tb) {
 			var tmp = {};

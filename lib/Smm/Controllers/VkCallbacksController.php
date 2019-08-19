@@ -62,49 +62,6 @@ class VkCallbacksController extends \Z\Controller {
 	
 	public function activity_statAction() {
 		switch ($this->input->type) {
-			case "wall_repost":
-				DB::insert('vk_user_reposts')
-					->ignore()
-					->set([
-						'group_id'		=> $this->group['id'], 
-						'post_id'		=> $this->input->object->id, 
-						'user_id'		=> $this->input->object->from_id, 
-						'date'			=> date("Y-m-d H:i:s", $this->input->object->date)
-					])
-					->execute();
-			break;
-			
-			case "wall_reply_new":
-			case "wall_reply_edit":
-			case "wall_reply_restore":
-				$meta = \Smm\VK\Posts::analyzeComment($this->input->object);
-				DB::insert('vk_user_comments')
-					->set([
-						'group_id'		=> $this->group['id'], 
-						'comment_id'	=> $this->input->object->id, 
-						'post_id'		=> $this->input->object->post_id, 
-						'user_id'		=> $this->input->object->from_id, 
-						'date'			=> date("Y-m-d H:i:s", $this->input->object->date), 
-						'images_cnt'	=> $meta['images_cnt'], 
-						'stickers_cnt'	=> $meta['stickers_cnt'], 
-						'attaches_cnt'	=> $meta['attaches_cnt'], 
-						'text_length'	=> $meta['text_length'], 
-					])
-					->onDuplicateSetValues('date')
-					->onDuplicateSetValues('images_cnt')
-					->onDuplicateSetValues('stickers_cnt')
-					->onDuplicateSetValues('attaches_cnt')
-					->onDuplicateSetValues('text_length')
-					->execute();
-			break;
-			
-			case "wall_reply_delete":
-				DB::delete('vk_user_comments')
-					->where('group_id', '=', $this->group['id'])
-					->where('comment_id', '=', $this->input->object->id)
-					->execute();
-			break;
-			
 			case "message_new":
 			case "message_allow":
 			case "message_deny":

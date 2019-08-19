@@ -46,8 +46,11 @@ class DeleteDeadMembers extends \Z\Task {
 			case "passive":
 				$for_delete = DB::select()
 					->from('vk_comm_users')
-					->where('last_activity', '=', NULL)
-					->where('join_date', '<=', date('Y-m-d H:i:s', time() - 3600 * 24 * 30 * 3))
+					->andOpenGroup()
+						->orWhere('last_activity', '=', NULL)
+						->orWhere('last_activity', '<', date('Y-m-d H:i:s', time() - 3600 * 24 * 30 * 12))
+					->andCloseGroup()
+					->where('join_date', '<=', date('Y-m-d H:i:s', time() - 3600 * 24 * 30 * 2))
 					->where('cid', '=', $args['group_id'])
 					->order('join_date', 'ASC')
 					->execute()

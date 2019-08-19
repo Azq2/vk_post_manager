@@ -39,6 +39,15 @@
 				<?php endforeach; ?>
 			</div>
 			
+			<div class="row grey">
+				Типы событий:<br />
+				<?php foreach ($callback['enable'] as $help): ?>
+					<div class="pad_t">
+						<?= $help ?>
+					</div>
+				<?php endforeach; ?>
+			</div>
+			
 			<div class="row">
 				<input type="submit" class="btn" value="Сохранить" name="do_save" />
 			</div>

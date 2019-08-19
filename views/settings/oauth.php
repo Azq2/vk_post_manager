@@ -98,6 +98,28 @@
 					<?= $help ?>
 				</div>
 			<?php endforeach; ?>
+			
+			<div class="pad_t grey">
+				Или использовать вход из офф. приложения:
+			</div>
+			
+			<?php if ($oauth['oauth_direct'] ?? false): ?>
+				<form action="?a=settings/oauth" method="POST">
+					<div class="pad_t">
+						<input type="text" name="login" value="" placeholder="Логин" size="32" />
+					</div>
+					
+					<div class="pad_t">
+						<input type="password" name="password" value="" placeholder="Пароль" size="32" />
+					</div>
+					
+					<div class="pad_t">
+						<input type="hidden" name="type" value="<?= $oauth['type'] ?>" />
+						<input type="hidden" name="direct" value="1" />
+						<input type="submit" class="btn" value="Direct auth" />
+					</div>
+				</form>
+			<?php endif; ?>
 		</div>
 	</div>
 <?php endforeach; ?>
