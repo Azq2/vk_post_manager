@@ -219,6 +219,8 @@ class IndexController extends \Smm\GroupController {
 			
 			$this->content['success'] = false;
 			
+			$from_web = intval($_REQUEST['from_web'] ?? 0);
+		
 			if (!$this->user->can('user')) {
 				$this->content['error'] = 'Гостевой доступ!';
 			} elseif ($_FILES['file']['error']) {
@@ -237,13 +239,69 @@ class IndexController extends \Smm\GroupController {
 				]]);
 				
 				if ($result->success) {
-					$queue_result = \Smm\VK\Posts::queueWallPost($this->group['id'], array_keys($result->attachments), $_POST['message'] ?? "");
-					if ($queue_result->success) {
-						$this->content['success'] = true;
-						$this->content['link'] = 'https://vk.com/wall-'.$this->group['id'].'_'.$queue_result->post->post_id;
-						$this->content['post_id'] = $queue_result->post->post_id;
+					// Фейковая дата поста
+					$fake_date = DB::select(['MAX(`fake_date`)', 'fake_date'])
+						->from('vk_posts_queue')
+						->execute()
+						->get('fake_date', 0);
+					$fake_date = max(time() + 3600 * 24 * 60, $fake_date) + 3600;
+					
+					$api_data = [
+						'owner_id'		=> -$this->group['id'], 
+						'signed'		=> 0, 
+						'message'		=> $_POST['message'] ?? "", 
+						'attachments'	=> implode(",", array_keys($result->attachments)), 
+						'publish_date'	=> $fake_date
+					];
+					
+					if (($captcha_code = \Smm\VK\Captcha::getCode())) {
+						$api_data['captcha_key'] = $captcha_code['key'];
+						$api_data['captcha_sid'] = $captcha_code['sid'];
+					}
+					
+					$post_type = 'new';
+					$id = 0;
+					
+					if ($from_web) {
+						$vk_web = \Smm\VK\Web::instance();
+						$result = $vk_web->wallEdit($id, $api_data);
+						if (!$result['success']) {
+							$this->content['error'] = $result['error']." (Для исправления можно снять галочку с [x] Убрать шестернь)";
+							return;
+						}
+						
+						// And also edit post with api, for reduce errors
+						$post_type = 'post';
+						$id = $result['post_id'];
+						$api_data['post_id'] = $id;
+					}
+					
+					$res = $api->exec($post_type == 'new' ? "wall.post" : "wall.edit", $api_data);
+					if ($res->success()) {
+						$vk_post_id = $res->response->post_id ?? $id;
+						
+						DB::insert('vk_posts_queue')
+							->set([
+								'fake_date'		=> $fake_date, 
+								'group_id'		=> $this->group['id'], 
+								'id'			=> $vk_post_id
+							])
+							->onDuplicateSetValues('fake_date')
+							->execute();
+						
+						$this->content['success']	= true;
+						$this->content['link']		= 'https://m.vk.com/wall-'.$this->group['id'].'_'.$vk_post_id;
+						$this->content['post_id']	= $vk_post_id;
+						
+						$result = \Smm\VK\Posts::getAll($api, $this->group['id']);
+						if ($result->success) {
+							foreach ($result->postponed as $post) {
+								if ($post->id == $vk_post_id)
+									$this->content['date'] = $post->date;
+							}
+						}
 					} else {
-						$this->content['error'] = $queue_result->error;
+						$this->content['error'] = $res->error();
 					}
 				} else {
 					$this->content['error'] = $result->error;

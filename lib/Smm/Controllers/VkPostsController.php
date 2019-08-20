@@ -177,6 +177,7 @@ class VkPostsController extends \Smm\GroupController {
 		$attachments	= $_REQUEST['attachments'] ?? '';
 		$post_type		= $_REQUEST['type'] ?? '';
 		$comment		= trim($_REQUEST['comment'] ?? '');
+		$from_web		= intval($_REQUEST['from_web'] ?? 0);
 		
 		$this->content['success'] = false;
 		$this->content['post_type'] = $post_type;
@@ -266,6 +267,7 @@ class VkPostsController extends \Smm\GroupController {
 		$attachments	= $_REQUEST['attachments'] ?? '';
 		$post_type		= $_REQUEST['type'] ?? '';
 		$comment		= trim($_REQUEST['comment'] ?? '');
+		$from_web		= intval($_REQUEST['from_web'] ?? 0);
 		
 		$this->content['success'] = false;
 		$this->content['post_type'] = $post_type;
@@ -283,6 +285,7 @@ class VkPostsController extends \Smm\GroupController {
 		// Фейковая дата поста
 		$fake_date = DB::select(['MAX(`fake_date`)', 'fake_date'])
 			->from('vk_posts_queue')
+			->where('group_id', '=', $this->group['id'])
 			->execute()
 			->get('fake_date', 0);
 		$fake_date = max(time() + 3600 * 24 * 60, $fake_date) + 3600;
@@ -305,6 +308,24 @@ class VkPostsController extends \Smm\GroupController {
 		if ($id)
 			$api_data['post_id'] = $id;
 		
+		$save_in_db = function () {
+			
+		};
+		
+		if ($from_web && ($post_type == 'suggest' || $post_type == 'new')) {
+			$vk_web = \Smm\VK\Web::instance();
+			$result = $vk_web->wallEdit($id, $api_data);
+			if (!$result['success']) {
+				$this->content['error'] = $result['error']." (Для исправления можно снять галочку с [x] Убрать шестернь)";
+				return;
+			}
+			
+			// And also edit post with api, for reduce errors
+			$post_type = 'post';
+			$id = $result['post_id'];
+			$api_data['post_id'] = $id;
+		}
+		
 		$res = $api->exec(($post_type == 'suggest' || $post_type == 'new') ? "wall.post" : "wall.edit", $api_data);
 		if ($res->success()) {
 			$vk_post_id = $res->response->post_id ?? $id;
@@ -313,7 +334,7 @@ class VkPostsController extends \Smm\GroupController {
 				->set([
 					'fake_date'		=> $fake_date, 
 					'group_id'		=> $this->group['id'], 
-					'id'			=> $res->response->post_id
+					'id'			=> $vk_post_id
 				])
 				->onDuplicateSetValues('fake_date')
 				->execute();
@@ -323,7 +344,7 @@ class VkPostsController extends \Smm\GroupController {
 					->set([
 						'text'			=> $comment, 
 						'group_id'		=> $this->group['id'], 
-						'id'			=> $res->response->post_id
+						'id'			=> $vk_post_id
 					])
 					->onDuplicateSetValues('text')
 					->execute();

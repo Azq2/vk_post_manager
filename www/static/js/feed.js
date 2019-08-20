@@ -239,6 +239,10 @@ var tpl = {
 							'</div>' + 
 						'</div>' + 
 						
+						'<div class="pad_b pad_t oh red">' + 
+							'<label><input type="checkbox" name="from_web" value="1" class="js-post_web_enable" /> Убрать шестернь</label>' + 
+						'</div>' + 
+						
 						'<div class="js-upload_form pad_t" data-action="/?a=vk_posts/upload&amp;gid=' + custom.gid + '" data-id="vk_upload">' + 
 							'<div class="js-upload_input"></div>' + 
 							'<div class="js-upload_files pad_t hide"></div>' + 
@@ -401,6 +405,8 @@ var VkFeed = Class({
 					img.replaceWith(img.clone(true).prop("src", gif));
 				}
 			}
+		}).on('change', '.js-post_web_enable', function (e) {
+			window.localStorage["post_web_enable"] = $(this).prop("checked") ? 1 : "";
 		}).on('click', '.js-post_action', function (e) {
 			if ($(this).prop("type") != "checkbox" && $(this).prop("type") != "radio")
 				e.preventDefault();
@@ -519,6 +525,8 @@ var VkFeed = Class({
 						}
 					}
 				});
+			
+			wrap.find('.js-post_web_enable').prop("checked", !!window.localStorage["post_web_enable"]);
 			
 			wrap.find('.js-post_comment_textarea')
 				.val(e.post.comment_text)

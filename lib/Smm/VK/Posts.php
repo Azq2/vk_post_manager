@@ -59,53 +59,6 @@ class Posts {
 		return max(time() + 3600 * 24 * 60, $fake_date) + 3600;
 	}
 	
-	public static function queueWallPost(VkApi $api, $gid, $attachments, $text) {
-		$result = (object) [
-			'success'		=> false, 
-			'captcha'		=> false, 
-			'error'			=> false
-		];
-		
-		// Фейковая дата поста
-		$fake_date = self::getFakeDate($gid);
-		
-		$data = [
-			'owner_id'		=> -$gid, 
-			'signed'		=> 0, 
-			'message'		=> $text, 
-			'attachments'	=> implode(",", $attachments), 
-			'publish_date'	=> $fake_date
-		];
-		
-		if (($captcha_code = Captcha::getCode())) {
-			$data['captcha_key'] = $captcha_code['key'];
-			$data['captcha_sid'] = $captcha_code['sid'];
-		}
-		
-		$res = $api->exec("wall.post", $data);
-		if ($res->success()) {
-			$result->success = true;
-			$result->post = $res->response;
-			
-			DB::insert('vk_posts_queue')
-				->set([
-					'fake_date'		=> $fake_date, 
-					'group_id'		=> $gid, 
-					'id'			=> $res->response->post_id
-				])
-				->onDuplicateSetValues('fake_date')
-				->execute();
-			
-			return $result;
-		} else {
-			$result->error = $res->error();
-			$result->captcha = $res->captcha();
-			Captcha::set($result->captcha());
-		}
-		
-		return $out;
-	}
-	
 	public static function uploadPics(VkApi $api, $gid, $images, $progress = false) {
 		$result = (object) [
 			'success'		=> false, 
@@ -480,6 +433,13 @@ class Posts {
 		$postponed = $new_postponed;
 		
 		usort($suggests, function ($a, $b) {
+			if ($a->post_type != $b->post_type) {
+				if ($a->post_type == 'postpone')
+					return -1;
+				if ($b->post_type == 'postpone')
+					return 1;
+			}
+			
 			return $a->date <=> $b->date;
 		});
 		

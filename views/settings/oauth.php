@@ -23,6 +23,54 @@
 
 <div class="wrapper bord">
 	<div class="row header cursor">
+		WEB auth для отбеливания
+	</div>
+	
+	<form action="" method="POST">
+		<div class="row grey">
+			Аккаунт:
+			<?php if ($web_auth): ?>
+				<a href="https://vk.com/<?= htmlspecialchars($web_auth['screen_name']) ?>" target="_blank">
+					<?= htmlspecialchars($web_auth['real_name']) ?>
+				</a>
+			<?php else: ?>
+				<span class="red">Не авторизирован</span>
+			<?php endif; ?>
+		</div>
+		
+		<div class="row">
+			<label class="lbl">Логин:</label><br />
+			<input type="text" name="login" autocomplete="off" value="<?= htmlspecialchars($login) ?>" placeholder="" required="required" size="32" />
+		</div>
+		
+		<div class="row">
+			<label class="lbl">Пароль:</label><br />
+			<input type="password" name="password" autocomplete="off" value="<?= htmlspecialchars($password) ?>" placeholder="" required="required" size="32" />
+		</div>
+		
+		<?php if ($web_captcha_url): ?>
+			<div class="row">
+				<div class="pad_b">
+					<img src="<?= $web_captcha_url ?>" alt="" />
+				</div>
+				<input type="text" name="captcha" autocomplete="off" value="" placeholder="" size="4" />
+			</div>
+		<?php endif; ?>
+		
+		<input type="hidden" name="auth_state" value="<?= htmlspecialchars($web_auth_state) ?>" />
+		
+		<div class="row red">
+			Вход только по номеру!!!
+		</div>
+		
+		<div class="row">
+			<input type="submit" class="btn" value="Авторизировать" name="do_web_auth" />
+		</div>
+	</form>
+</div>
+
+<div class="wrapper bord">
+	<div class="row header cursor">
 		OAuth приложения сообщества
 	</div>
 	

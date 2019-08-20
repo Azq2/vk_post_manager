@@ -48,7 +48,7 @@ class DeleteDeadMembers extends \Z\Task {
 					->from('vk_comm_users')
 					->andOpenGroup()
 						->orWhere('last_activity', '=', NULL)
-						->orWhere('last_activity', '<', date('Y-m-d H:i:s', time() - 3600 * 24 * 30 * 12))
+						->orWhere('last_activity', '<', date('Y-m-d H:i:s', time() - 3600 * 24 * 30 * 6))
 					->andCloseGroup()
 					->where('join_date', '<=', date('Y-m-d H:i:s', time() - 3600 * 24 * 30 * 2))
 					->where('cid', '=', $args['group_id'])

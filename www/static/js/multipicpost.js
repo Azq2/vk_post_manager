@@ -24,10 +24,16 @@ var tpl = {
 							'<div class="pad_t">' + 
 								'<textarea name="pizda" id="file_descr_' + data.id + '" rows="3" style="width: 100%; box-sizing: border-box; margin-top: 3px" placeholder="Напиши тут чёто интересное"></textarea>' + 
 							'</div>' + 
+							
 							'<div class="pad_t">' + 
 								'<textarea name="pizda" id="file_caption_' + data.id + '" rows="1" style="width: 100%; box-sizing: border-box; margin-top: 3px" placeholder="Тут описание внутри фоточки"></textarea>' + 
 							'</div>' + 
-							'<div style="margin-top: 3px">' + 
+							
+							'<div class="pad_t red">' + 
+								'<label><input type="checkbox" name="from_web" value="1" id="from_web_' + data.id + '" /> Убрать шестернь</label>' + 
+							'</div>' + 
+							
+							'<div class="pad_t">' + 
 								'<input type="submit" class="btn js-file_delete" value="Удалить" />' + 
 							'</div>' + 
 						'</div>' + 
@@ -94,6 +100,12 @@ $(function () {
 				}, 0);
 				files.push(file);
 			}
+			
+			$('#from_web_' + file.id)
+				.prop("checked", !!window.localStorage["post_web_enable"])
+				.on('change', function (e) {
+					window.localStorage["post_web_enable"] = $(this).prop("checked") ? 1 : "";
+				});
 		});
 		checkButtons();
 		
@@ -152,6 +164,7 @@ function uploadNextFile() {
 	form.append('file', cur_file.blob);
 	form.append('message', $('#file_descr_' + cur_file.id).prop("emojioneArea").getText());
 	form.append('caption', $('#file_caption_' + cur_file.id).prop("emojioneArea").getText());
+	form.append('from_web', $('#from_web_' + cur_file.id).prop("checked") ? 1 : 0);
 	
 	var xhr = new XMLHttpRequest();
 	xhr.onreadystatechange = function () {

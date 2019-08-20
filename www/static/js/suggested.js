@@ -179,6 +179,7 @@ function init() {
 			emojiarea = textarea.data('emojioneArea'), 
 			text_enable_cb = wrap.find('.js-post_textarea_enable'), 
 			text_enable = !text_enable_cb.length || text_enable_cb.prop("checked"), 
+			from_web = wrap.find('.js-post_web_enable').prop("checked"), 
 			
 			comment_textarea = wrap.find('.js-post_comment_textarea'), 
 			comment_emojiarea = comment_textarea.data('emojioneArea'), 
@@ -191,6 +192,7 @@ function init() {
 			gid:		options.gid, 
 			id:			e.post.id, 
 			signed:		e.post.anon ? 0 : 1, 
+			from_web:	from_web ? 1 : 0, 
 			type:		post.type, 
 			message:	text_enable ? $.trim(emojiarea ? emojiarea.getText() : post.text) : "", 
 			comment:	comment_enable ? $.trim(comment_emojiarea ? comment_emojiarea.getText() : post.comment_text) : "", 
@@ -375,10 +377,12 @@ function recalcFreqSettings() {
 	if (to < from)
 		to += 24 * 3600;
 	
+	var round = 300 > interval ? interval : 300;
+	
 	var count = 0;
 	while (from <= to) {
 		from += interval;
-		from = Math.round(from / 300) * 300;
+		from = Math.round(from / round) * round;
 		++count;
 	}
 	

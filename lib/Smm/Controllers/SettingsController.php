@@ -182,7 +182,30 @@ class SettingsController extends \Smm\GroupController {
 		
 		$redirect_url = $_SERVER['REQUEST_SCHEME'].'://'.$_SERVER['HTTP_HOST'].'/auth.php';
 		
-		if (isset($types[$type]) && $direct) {
+		$vk_web = \Smm\VK\Web::instance();
+		
+		$web_captcha_url = false;
+		$web_auth_state = false;
+		
+		if ($_REQUEST['do_web_auth'] ?? false) {
+			$auth_state = [];
+			parse_str($_REQUEST['auth_state'] ?? '', $auth_state);
+			
+			if (isset($_REQUEST['captcha']))
+				$auth_state['fields']['captcha_key'] = $_REQUEST['captcha'];
+			
+			$result = $vk_web->auth($login, $password, $auth_state);
+			if ($result['success']) {
+				$redirect = $base_url->copy()->set('a', 'settings/oauth')->set('ok', '1')->url();
+				return $this->redirect($redirect);
+			} else if (isset($result['captcha'])) {
+				$error = 'Нужно ввести капчу!';
+				$web_captcha_url = $result['captcha'];
+				$web_auth_state = http_build_query($result['state'] ?? [], '', '&');
+			} else {
+				$error = 'Ошибка WEB auth: '.$result['error'];
+			}
+		} elseif (isset($types[$type]) && $direct) {
 			$ch = curl_init();
 			curl_setopt_array($ch, [
 				CURLOPT_POST				=> false, 
@@ -396,7 +419,12 @@ class SettingsController extends \Smm\GroupController {
 			'error'				=> $error, 
 			'oauth_list'		=> $oauth_list, 
 			'oauth_groups_list'	=> $oauth_groups_list, 
-			'groups_app_id'		=> $VK_COMM_MINI_APP['id']
+			'groups_app_id'		=> $VK_COMM_MINI_APP['id'], 
+			'web_auth'			=> $vk_web->checkAuth(), 
+			'web_captcha_url'	=> $web_captcha_url, 
+			'web_auth_state'	=> $web_auth_state, 
+			'login'				=> $login, 
+			'password'			=> $password
 		]);
 	}
 	
