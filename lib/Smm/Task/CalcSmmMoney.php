@@ -4,7 +4,6 @@ namespace Smm\Task;
 use \Z\DB;
 use \Z\Config;
 use \Z\Util\Url;
-use \Z\Net\VkApi;
 
 use \Smm\VK\Captcha;
 
@@ -19,7 +18,7 @@ class CalcSmmMoney extends \Z\Task {
 		
 		echo date("Y-m-d H:i:s")."\n";
 		
-		$vk = new VkApi(\Smm\Oauth::getAccessToken('VK'));
+		$vk = new \Smm\VK\API(\Smm\Oauth::getAccessToken('VK'));
 		
 		$groups = DB::select()
 			->from('vk_groups')

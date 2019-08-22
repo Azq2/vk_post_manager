@@ -4,7 +4,6 @@ namespace Smm\Task;
 use \Z\DB;
 use \Z\Config;
 use \Z\Util\Url;
-use \Z\Net\VkApi;
 
 use \Smm\VK\Captcha;
 
@@ -35,8 +34,7 @@ class Downloader extends \Z\Task {
 		
 		Captcha::setMode($args['anticaptcha'] ? 'anticaptcha' : 'cli');
 		
-		$this->api = new \Z\Net\VkApi(\Smm\Oauth::getAccessToken('VK'));
-		$this->api->setLimit(3, 1.1);
+		$this->api = new \Smm\VK\API(\Smm\Oauth::getAccessToken('VK'));
 		$this->processQueue();
 	}
 	

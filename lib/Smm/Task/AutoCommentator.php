@@ -5,7 +5,6 @@ use \Z\DB;
 use \Z\View;
 use \Z\Date;
 use \Z\Util\Url;
-use \Z\Net\VkApi;
 use \Z\Net\Anticaptcha;
 
 use \Smm\VK\Captcha;
@@ -41,7 +40,7 @@ class AutoCommentator extends \Z\Task {
 		Captcha::setMode($args['anticaptcha'] ? 'anticaptcha' : 'cli');
 		
 		$sched_config = \Z\Config::get('scheduler');
-		$api = new VkApi(\Smm\Oauth::getAccessToken('VK_SCHED'));
+		$api = new \Smm\VK\API(\Smm\Oauth::getAccessToken('VK_SCHED'));
 		
 		$waits = 0;
 		

@@ -5,7 +5,6 @@ use \Z\DB;
 use \Z\View;
 use \Z\Date;
 use \Z\Util\Url;
-use \Z\Net\VkApi;
 
 use \Smm\View\Widgets;
 
@@ -28,7 +27,7 @@ class SettingsController extends \Smm\GroupController {
 			}
 			
 			if ($id) {
-				$api = new VkApi(\Smm\Oauth::getAccessToken('VK'));
+				$api = new \Smm\VK\API(\Smm\Oauth::getAccessToken('VK'));
 				$res = $api->exec("groups.getById", [
 					"group_ids"		=> $id
 				]);
@@ -151,6 +150,330 @@ class SettingsController extends \Smm\GroupController {
 			'groups_list'			=> $groups_list, 
 			'error'					=> $error, 
 			'url'					=> htmlspecialchars($url)
+		]);
+	}
+	
+	public function auth_saveAction() {
+		$this->mode('json');
+		
+		$key				= $_REQUEST['type'] ?? '';
+		$code				= $_REQUEST['code'] ?? '';
+		$code_2fa			= $_REQUEST['code_2fa'] ?? '';
+		$login				= $_REQUEST['login'] ?? '';
+		$password			= $_REQUEST['password'] ?? '';
+		$captcha_key		= $_REQUEST['captcha_key'] ?? '';
+		$captcha_sid		= $_REQUEST['captcha_sid'] ?? '';
+		$force_sms			= $_REQUEST['force_sms'] ?? '';
+		
+		$oauth_users = \Z\Config::get('oauth_users');
+		
+		$this->content['success'] = false;
+		
+		if (!isset($oauth_users[$key])) {
+			$this->content['error'] = 'Неизвестный тип авторизации.';
+			return;
+		}
+		
+		$oauth = $oauth_users[$key];
+		
+		switch ($oauth['type']) {
+			case "VK":
+				$api = new \Smm\VK\API([
+					'client'		=> $oauth['client']
+				]);
+				
+				$params = [];
+				
+				if ($captcha_sid) {
+					$params['captcha_key'] = $captcha_key;
+					$params['captcha_sid'] = $captcha_sid;
+				}
+				
+				if ($code_2fa)
+					$params['code'] = $code_2fa;
+				
+				if ($force_sms)
+					$params['force_sms'] = $force_sms;
+				
+				$device_id = substr(md5("vk_client:$login:$password"), 0, 16);
+				
+				if ($oauth['auth'] == 'code') {
+					$result = $api->loginOauthCode($code, $params);
+				} else {
+					$params['device_id'] = $device_id;
+					$result = $api->loginOauthDirect($login, $password, $params);
+				}
+				
+				if ($result->success()) {
+					$user_api = new \Smm\VK\API([
+						'client'			=> $oauth['client'], 
+						'access_token'		=> $result->access_token, 
+						'secret'			=> $result->secret ?? ''
+					]);
+					
+					switch ($oauth['client']) {
+						case "vk_admin":
+							// Simulate some api requests
+							$api_result = $user_api->exec('execute.getUserLogin', [
+								'user_ids'			=> $result->user_id, 
+								'fields'			=> 'uid, nickname, screen_name, sex, bdate, city, country,photo, photo_medium_rec, timezone, photo_50, photo_100, photo_200_orig, photo_max, has_mobile, contacts, education, online, counters, relation, last_seen, status, can_write_private_message, can_see_all_posts, can_post, universities, activities, interests, music, movies, tv, books, games, about, quotes', 
+							]);
+							
+							if (isset($api_result->response->admin_groups->items)) {
+								foreach ($api_result->response->admin_groups->items as $g) {
+									$user_api->exec('execute.getMainUserData', [
+										'group_id'			=> $g->id, 
+										'fields'			=> 'uid, nickname, screen_name, sex, bdate, city, country,photo, photo_medium_rec, timezone, photo_50, photo_100, photo_200_orig, photo_max, has_mobile, contacts, education, online, counters, relation, last_seen, status, can_write_private_message, can_see_all_posts, can_post, universities, activities, interests, music, movies, tv, books, games, about, quotes', 
+									]);
+									$user_api->exec('execute.getGroupNew', [
+										'group_id'			=> $g->id, 
+										'filter'			=> 'all', 
+										'fields'			=> 'uid, nickname, screen_name, sex, bdate, city, country,photo, photo_medium_rec, timezone, photo_50, photo_100, photo_200_orig, photo_max, has_mobile, contacts, education, online, counters, relation, last_seen, status, can_write_private_message, can_see_all_posts, can_post, universities, activities, interests, music, movies, tv, books, games, about, quotes', 
+									]);
+								}
+							}
+							
+							DB::insert('vk_oauth')
+								->set([
+									'type'			=> $key, 
+									'access_token'	=> $result->access_token, 
+									'secret'		=> $result->secret ?? '', 
+									'refresh_token'	=> $result->refresh_token ?? '', 
+									'expires'		=> $result->expires_in ?? 0, 
+								])
+								->onDuplicateSetValues('access_token')
+								->onDuplicateSetValues('refresh_token')
+								->onDuplicateSetValues('secret')
+								->onDuplicateSetValues('expires')
+								->execute();
+							
+							$this->content['success'] = true;
+						break;
+						
+						case "vk_android":
+							// Simulate some api requests
+							$user_api->exec('execute.getUserInfo', [
+								'fields'				=> 'photo_100,photo_50,exports,country,sex,status,bdate,first_name_gen,last_name_gen,verified', 
+								'info_fields'			=> 'audio_ads,audio_background_limit,country,debug_available,gif_autoplay,https_required,intro,lang,money_clubs_p2p,money_p2p,money_p2p_params,music_intro,audio_restrictions,profiler_settings,raise_to_record_enabled,stories,masks,subscriptions,support_url,video_autoplay,video_player,vklive_app,community_comments', 
+								'androidVersion'		=> 17, 
+								'androidManufacturer'	=> 'LENOVO', 
+								'androidModel'			=> 'Lenovo A850', 
+								'func_v'				=> 9
+							]);
+							
+							$user_api->exec('internal.getNotifications', [
+								'device'				=> 'Lenovo A850', 
+								'vendor'				=> 'LENOVO', 
+								'system'				=> 0, 
+								'os'					=> '17,4.2.2', 
+								'app_version'			=> '1193', 
+								'locale'				=> 'ru', 
+								'ads_device_id'			=> -1
+							]);
+							
+							$user_api->exec('internal.getUserNotifications', [
+								'device'				=> 'Lenovo A850', 
+								'vendor'				=> 'LENOVO', 
+								'system'				=> 0, 
+								'os'					=> '17,4.2.2', 
+								'app_version'			=> '1193', 
+								'locale'				=> 'ru', 
+								'ads_device_id'			=> -1, 
+								'fields'				=> 'photo_100,photo_50', 
+								'extended'				=> 1, 
+								'photo_sizes'			=> 1, 
+								'connection_type'		=> 'wifi', 
+								'connection_subtype'	=> 'unknown', 
+								'user_options'			=> '{"autoplay_video":{"value":"always"},"autoplay_gif":{"value":"always"}}'
+							]);
+							
+							$user_api->exec('execute.getNewsfeedSmart', [
+								'func_v'				=> 2, 
+								'connection_type'		=> 'wifi', 
+								'connection_subtype'	=> 'unknown', 
+								'user_options'			=> '{"autoplay_video":{"value":"always"},"autoplay_gif":{"value":"always"}}', 
+								'start_from'			=> 0, 
+								'count'					=> 20, 
+								'fields'				=> 'id,first_name,first_name_dat,last_name,last_name_dat,sex,screen_name,photo_50,photo_100,online,video_files', 
+								'forced_notifications'	=> 1, 
+								'filters'				=> 'post,photo,photo_tag,friends_recomm,app_widget,ads_app,ads_site,ads_post,ads_app_slider,ads_app_video,ads_post_pretty_cards', 
+								'photo_sizes'			=> 1, 
+								'device_info'			=> '{"device_model":"Lenovo A850","app_version":"4.13.1","manufacturer":"LENOVO","system_version":"4.2.2","system_name":"Android"}', 
+								'app_package_id'		=> ' com.vkontakte.android'
+							]);
+							
+							$user_api->exec('execute', [
+								'code'					=> 'API.account.setOnline({push_count: 0});API.stats.trackEvents({events:"[{\"lon\":\"35.4297\",\"cell_type\":\"gsm\",\"e\":\"geo_data\",\"cell_id\":4341,\"ts\":'.time().',\"accuracy\":'.mt_rand(2790, 4000).',\"lat\":\"46.5686\"}]"});'
+							]);
+							
+							// Upgrade access token
+							$refresh_result = $user_api->exec('auth.refreshToken', [
+								'receipt'				=> '', 
+								'receipt2'				=> '', 
+								'nonce'					=> '', 
+								'timestamp'				=> '', 
+								'device_id'				=> $device_id, 
+								'access_token'			=> $result->access_token
+							]);
+							
+							if ($refresh_result->success()) {
+								DB::insert('vk_oauth')
+									->set([
+										'type'			=> $key, 
+										'access_token'	=> $refresh_result->response->token, 
+										'secret'		=> $refresh_result->response->secret ?? $result->secret ?? '', 
+										'refresh_token'	=> '', 
+										'expires'		=> 0, 
+									])
+									->onDuplicateSetValues('access_token')
+									->onDuplicateSetValues('refresh_token')
+									->onDuplicateSetValues('secret')
+									->onDuplicateSetValues('expires')
+									->execute();
+								
+								$this->content['success'] = true;
+							} else {
+								$this->content['error'] = 'Ошибка обновления токена: '.$refresh_result->error();
+							}
+						break;
+						
+						default:
+							DB::insert('vk_oauth')
+								->set([
+									'type'			=> $key, 
+									'access_token'	=> $result->access_token, 
+									'secret'		=> $result->secret ?? '', 
+									'refresh_token'	=> $result->refresh_token ?? '', 
+									'expires'		=> $result->expires_in ?? 0, 
+								])
+								->onDuplicateSetValues('access_token')
+								->onDuplicateSetValues('refresh_token')
+								->onDuplicateSetValues('secret')
+								->onDuplicateSetValues('expires')
+								->execute();
+							
+							$this->content['success'] = true;
+						break;
+					}
+				} else {
+					if ($result->captcha()) {
+						$this->content['captcha'] = $result->captcha();
+						$this->content['error'] = 'Введите код с картинки.';
+					} else if ($result->errorCode() == 'need_validation') {
+						if ($result->validation_type ?? false) {
+							if ($result->validation_type == '2fa_sms') {
+								$this->content['error'] = 'Подтвердите 2fa авторизацию по SMS! ('.$result->phone_mask.')';
+								$this->content['sms_2fa'] = true;
+							} else if ($result->validation_type == '2fa_app') {
+								$this->content['error'] = 'Подтвердите 2fa авторизацию через приложение! ('.$result->phone_mask.')';
+								$this->content['code_2fa'] = true;
+							}
+						} else {
+							$this->content['error'] = 'Необходимо подтверждение!<br />'.
+								$result->error_description.'<br />'.
+								'<a href="'.$result->redirect_uri.'" rel="noopener noreferrer" target="_blank">'.$result->redirect_uri.'</a><br />'.
+								'Затем нужно повторить вход.';
+						}
+					} else {
+						$this->content['error'] = $result->error();
+					}
+				}
+			break;
+			
+			case "VK_WEB":
+				$auth_state = [];
+				parse_str($_REQUEST['captcha_sid'] ?? '', $auth_state);
+				
+				if ($captcha_key)
+					$auth_state['fields']['captcha_key'] = $captcha_key;
+				
+				$vk_web = \Smm\VK\Web::instance();
+				$result = $vk_web->auth($login, $password, $auth_state);
+				
+				if ($result['success']) {
+					$this->content['success'] = true;
+				} else if (isset($result['captcha'])) {
+					$this->content['error'] = 'Введите код с картинки.';
+					$this->content['captcha'] = [
+						'url'			=> $result['captcha'], 
+						'sid'			=> http_build_query($result['state'] ?? [], '', '&')
+					];
+				} else {
+					$this->content['error'] = 'Ошибка WEB auth: '.$result['error'];
+				}
+			break;
+		}
+	}
+	
+	public function authAction() {
+		$this->title = 'Настройки : Авторизация';
+		
+		// Авторизация аккаунтов
+		$oauth_list = [];
+		foreach (\Z\Config::get('oauth_users') as $key => $oauth) {
+			switch ($oauth['type']) {
+				case "VK":
+					$api = new \Smm\VK\API([
+						'client'		=> $oauth['client']
+					]);
+					
+					if ($oauth['auth'] == 'code') {
+						$oauth_list[] = [
+							'type'				=> $key, 
+							'required'			=> $oauth['required'], 
+							'form'				=> 'CODE', 
+							'title'				=> $oauth['title'], 
+							'oauth_url'			=> $api->getOauthUrl([
+								'scope'		=> 'offline wall groups photos docs'
+							]), 
+							'user'				=> false, 
+							'help'				=> [
+								'1. Переходим по <b>Запросить доступ</b> и соглашаемся.', 
+								'2. Попадаем на белый экран, копируем значение из <b>#code=</b> в адресной строке.', 
+								'3. Возвращаемся и вводим его в поле <b>code</b>, жмём кнопку <b>GO</b>.', 
+								'4. Готово!'
+							]
+						];
+					} else {
+						$oauth_list[] = [
+							'type'				=> $key, 
+							'required'			=> $oauth['required'], 
+							'form'				=> 'DIRECT', 
+							'title'				=> $oauth['title'], 
+							'user'				=> false, 
+							'help'				=> [
+								'1. Вводим телефон (не e-mail) и пароль, жмём <b>Войти</b>.', 
+								'2. Готово!'
+							]
+						];
+					}
+				break;
+				
+				case "VK_WEB":
+					$vk_web = \Smm\VK\Web::instance();
+					
+					$auth = $vk_web->checkAuth();
+					
+					$oauth_list[] = [
+						'type'				=> $key, 
+						'required'			=> $oauth['required'], 
+						'form'				=> 'DIRECT', 
+						'title'				=> $oauth['title'], 
+						'user'				=> $auth['real_name'] ?? false, 
+						'help'				=> [
+							'1. Вводим телефон (не e-mail) и пароль, жмём <b>Войти</b>.', 
+							'2. Готово!'
+						]
+					];
+				break;
+			}
+		}
+		
+		$base_url = Url::mk('/')->set('gid', $this->group['id']);
+		
+		$this->content = View::factory('settings/auth', [
+			'oauth_list'		=> $oauth_list, 
+			'oauth_action'		=> $base_url->copy()->set('a', 'settings/auth_save')->href()
 		]);
 	}
 	
@@ -332,7 +655,7 @@ class SettingsController extends \Smm\GroupController {
 			if (!$access_token) {
 				$status = 'not_set';
 			} else {
-				$api = new VkApi($access_token);
+				$api = new \Smm\VK\API($access_token);
 				$res = $api->exec("groups.getTokenPermissions");
 				
 				if ($res->success()) {
@@ -383,7 +706,7 @@ class SettingsController extends \Smm\GroupController {
 				case "VK_SCHED":
 				case "VK_GRABBER":
 				case "VK_STAT":
-					$api = new VkApi(\Smm\Oauth::getAccessToken($type));
+					$api = new \Smm\VK\API(\Smm\Oauth::getAccessToken($type));
 					$res = $api->exec("users.get");
 					
 					$oauth_url = 'https://oauth.vk.com/authorize?'.http_build_query([

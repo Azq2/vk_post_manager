@@ -43,7 +43,7 @@ class VkMiniAppsController extends \Smm\VkAppController {
 		$access_token = \Smm\Oauth::getGroupAccessToken($group_id);
 		
 		if ($access_token) {
-			$api = new \Z\Net\VkApi($access_token);
+			$api = new \Smm\VK\API($access_token);
 			$res = $api->exec("groups.getTokenPermissions");
 			
 			if ($res->success()) {
@@ -88,7 +88,7 @@ class VkMiniAppsController extends \Smm\VkAppController {
 		$this->content['error'] = false;
 		
 		if ($user_id_sign_real === $user_id_sign) {
-			$api = new \Z\Net\VkApi($access_token);
+			$api = new \Smm\VK\API($access_token);
 			$res = $api->exec("groups.getMembers", [
 				'filter'	=> 'managers', 
 				'group_id'	=> $group_id, 

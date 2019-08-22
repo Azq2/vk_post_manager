@@ -5,7 +5,6 @@ use \Z\DB;
 use \Z\View;
 use \Z\Date;
 use \Z\Util\Url;
-use \Z\Net\VkApi;
 
 use \Smm\View\Widgets;
 

@@ -5,7 +5,6 @@ use \Z\DB;
 use \Z\View;
 use \Z\Date;
 use \Z\Util\Url;
-use \Z\Net\VkApi;
 use \Z\Net\Anticaptcha;
 
 use \Smm\VK\Captcha;
@@ -90,7 +89,7 @@ class Grabber extends \Z\Task {
 	}
 	
 	public function grabVK($sources) {
-		$api = new VkApi(\Smm\Oauth::getAccessToken('VK_GRABBER'));
+		$api = new \Smm\VK\API(\Smm\Oauth::getAccessToken('VK_GRABBER'));
 		
 		$max_api_calls = 5;
 		$execute_api_limit = 25;

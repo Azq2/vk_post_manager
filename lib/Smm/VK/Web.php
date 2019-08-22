@@ -5,7 +5,6 @@ use \Z\DB;
 use \Z\View;
 use \Z\Date;
 use \Z\Util\Url;
-use \Z\Net\VkApi;
 
 class Web {
 	use \Z\Traits\Singleton;
@@ -52,7 +51,7 @@ class Web {
 				'mark_as_ads'			=> 0, 
 				'act'					=> 'post', 
 				'suggest'				=> $data['owner_id'].'_'.$suggest_id, 
-				'signed'				=> (($data['signed'] ?? false) ? 1 : ''), 
+				'signed'				=> (($data['signed'] ?? false) ? 1 : 0), 
 				'close_comments'		=> 0, 
 				'mute_notifications'	=> 0, 
 				'hash'					=> $post_hash, 
@@ -68,12 +67,12 @@ class Web {
 				'type'					=> 'own', 
 				'friends_only'			=> '', 
 				'status_export'			=> '', 
-				'close_comments'		=> '', 
-				'mute_notifications'	=> '', 
+				'close_comments'		=> 0, 
+				'mute_notifications'	=> 0, 
 				'mark_as_ads'			=> 0, 
 				'official'				=> 1, 
 				'signed'				=> (($data['signed'] ?? false) ? 1 : ''), 
-				'anonymous'				=> (($data['signed'] ?? false) ? 1 : ''), 
+				'anonymous'				=> '', 
 				'hash'					=> $post_hash, 
 				'from'					=> '', 
 				'fixed'					=> '', 

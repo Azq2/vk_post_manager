@@ -4,7 +4,6 @@ namespace Smm\Task;
 use \Z\DB;
 use \Z\Config;
 use \Z\Util\Url;
-use \Z\Net\VkApi;
 
 use \Smm\VK\Captcha;
 
@@ -48,7 +47,7 @@ class DeleteDeadMembers extends \Z\Task {
 					->from('vk_comm_users')
 					->andOpenGroup()
 						->orWhere('last_activity', '=', NULL)
-						->orWhere('last_activity', '<', date('Y-m-d H:i:s', time() - 3600 * 24 * 30 * 6))
+						->orWhere('last_activity', '<', date('Y-m-d H:i:s', time() - 3600 * 24 * 30 * 5))
 					->andCloseGroup()
 					->where('join_date', '<=', date('Y-m-d H:i:s', time() - 3600 * 24 * 30 * 2))
 					->where('cid', '=', $args['group_id'])
@@ -58,8 +57,7 @@ class DeleteDeadMembers extends \Z\Task {
 			break;
 		}
 		
-		$api = new \Z\Net\VkApi(\Smm\Oauth::getAccessToken('VK'));
-		//$api->setLimit(3, 1.1);
+		$api = new \Smm\VK\API(\Smm\Oauth::getAccessToken('VK'));
 		
 		echo "For delete: ".count($for_delete)."\n";
 		

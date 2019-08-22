@@ -1,5 +1,5 @@
 <?php
-namespace Z\Net\VkApi;
+namespace Smm\VK\API;
 
 class Response {
 	const VK_ERR_TOO_FAST		= 6;
@@ -68,5 +68,9 @@ class Response {
 	
 	public function __unset($k) {
 		throw new \Exception("Readonly!");
+	}
+	
+	public function asObject() {
+		return $this->data;
 	}
 }

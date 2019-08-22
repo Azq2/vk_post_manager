@@ -5,7 +5,6 @@ use \Z\DB;
 use \Z\View;
 use \Z\Date;
 use \Z\Util\Url;
-use \Z\Net\VkApi;
 
 class Posts {
 	public static function getWallPostMeta($post) {
@@ -59,7 +58,7 @@ class Posts {
 		return max(time() + 3600 * 24 * 60, $fake_date) + 3600;
 	}
 	
-	public static function uploadPics(VkApi $api, $gid, $images, $progress = false) {
+	public static function uploadPics(\Smm\VK\API $api, $gid, $images, $progress = false) {
 		$result = (object) [
 			'success'		=> false, 
 			'captcha'		=> false, 
@@ -191,7 +190,7 @@ class Posts {
 					$result->captcha = $file->captcha();
 					Captcha::set($file->captcha());
 					
-					if ($file->errorCode() == VkApi\Response::VK_ERR_TOO_FAST)
+					if ($file->errorCode() == \Smm\VK\API\Response::VK_ERR_TOO_FAST)
 						sleep(3);
 				}
 			}
@@ -206,7 +205,7 @@ class Posts {
 		return $result;
 	}
 	
-	public static function getAll(VkApi $api, $group_id) {
+	public static function getAll(\Smm\VK\API $api, $group_id) {
 		$settings = DB::select()
 			->from('vk_groups')
 			->where('id', '=', $group_id)

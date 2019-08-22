@@ -5,7 +5,6 @@ use \Z\DB;
 use \Z\View;
 use \Z\Date;
 use \Z\Util\Url;
-use \Z\Net\VkApi;
 
 use \Smm\View\Widgets;
 
@@ -321,7 +320,7 @@ class GrabberController extends \Smm\GroupController {
 			} elseif (isset($parts['host']) && isset($parts['path'])) {
 				$type = '';
 				if (preg_match("/vk.com|vkontakte.ru|vk.me/i", $parts['host'])) {
-					$api = new VkApi(\Smm\Oauth::getAccessToken('VK'));
+					$api = new \Smm\VK\API(\Smm\Oauth::getAccessToken('VK'));
 					
 					$group_id = substr($parts['path'], 1);
 					if (preg_match("/^(public|club)(\d+)$/i", $group_id, $m))

@@ -5,7 +5,6 @@ use \Z\DB;
 use \Z\View;
 use \Z\Date;
 use \Z\Util\Url;
-use \Z\Net\VkApi;
 use \Z\Net\Anticaptcha;
 
 use \Smm\VK\Captcha;

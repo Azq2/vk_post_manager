@@ -22,18 +22,45 @@ class Oauth {
 		self::VK_ACCESS_WALL;
 	
 	public static function getAccessToken($type) {
-		return DB::select('access_token')
+		$oauth_users = \Z\Config::get('oauth_users');
+		
+		if (!isset($oauth_users[$type]))
+			throw new \Exception("Unknown oauth type!");
+		
+		$token = DB::select()
 			->from('vk_oauth')
 			->where('type', '=', $type)
 			->execute()
-			->get('access_token', '');
+			->current();
+		
+		if ($token) {
+			return [
+				'access_token'			=> $token['access_token'], 
+				'secret'				=> $token['secret'], 
+				'access_token_type'		=> 'user', 
+				'client'				=> $oauth_users[$type]['client']
+			];
+		}
+		
+		return false;
 	}
 	
 	public static function getGroupAccessToken($id) {
-		return DB::select('access_token')
+		$token = DB::select()
 			->from('vk_groups_oauth')
 			->where('group_id', '=', $id)
 			->execute()
-			->get('access_token', '');
+			->current();
+		
+		if ($token) {
+			return [
+				'access_token'			=> $token['access_token'], 
+				'secret'				=> '', 
+				'access_token_type'		=> 'community', 
+				'client'				=> 'standalone'
+			];
+		}
+		
+		return false;
 	}
 }

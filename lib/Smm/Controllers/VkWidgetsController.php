@@ -257,7 +257,7 @@ class VkWidgetsController extends \Smm\GroupController {
 		
 		$users = $users->execute()->asArray('user_id');
 	
-		$api = new \Z\Net\VkApi(\Smm\Oauth::getAccessToken('VK'));
+		$api = new \Smm\VK\API(\Smm\Oauth::getAccessToken('VK'));
 		
 		$res = $api->exec("users.get", [
 			"user_ids"		=> implode(",", array_keys($users)), 

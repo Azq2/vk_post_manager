@@ -4,7 +4,6 @@ namespace Smm\Task;
 use \Z\DB;
 use \Z\Config;
 use \Z\Util\Url;
-use \Z\Net\VkApi;
 
 use \Smm\VK\Captcha;
 

@@ -4,7 +4,6 @@ namespace Smm\Task;
 use \Z\DB;
 use \Z\Config;
 use \Z\Util\Url;
-use \Z\Net\VkApi;
 
 use \Smm\VK\Captcha;
 
@@ -87,7 +86,7 @@ class CatificatorBot extends \Z\Task {
 			return;
 		}
 		
-		$this->api = new \Z\Net\VkApi($access_token);
+		$this->api = new \Smm\VK\API($access_token);
 		
 		switch ($msg->type) {
 			case "message_new":

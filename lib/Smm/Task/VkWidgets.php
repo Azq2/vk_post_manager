@@ -5,7 +5,6 @@ use \Z\DB;
 use \Z\View;
 use \Z\Date;
 use \Z\Util\Url;
-use \Z\Net\VkApi;
 use \Z\Net\Anticaptcha;
 
 use \Smm\VK\Captcha;
@@ -50,7 +49,7 @@ class VkWidgets extends \Z\Task {
 		
 		$ALLOWED_SIZES = ['480.480', '480.720'];
 		
-		$api = new VkApi(\Smm\Oauth::getGroupAccessToken($group['id']));
+		$api = new \Smm\VK\API(\Smm\Oauth::getGroupAccessToken($group['id']));
 		$api->setLimit(3, 1.1);
 		
 		// Get community managers
@@ -344,7 +343,7 @@ class VkWidgets extends \Z\Task {
 					} else {
 						$error = $file->error();
 						
-						if ($file->errorCode() == VkApi\Response::VK_ERR_TOO_FAST)
+						if ($file->errorCode() == \Smm\VK\API\Response::VK_ERR_TOO_FAST)
 							sleep(3);
 					}
 				}
@@ -411,7 +410,7 @@ class VkWidgets extends \Z\Task {
 			} else {
 				$error = $update_widget->error();
 				
-				if ($update_widget->errorCode() == VkApi\Response::VK_ERR_TOO_FAST)
+				if ($update_widget->errorCode() == \Smm\VK\API\Response::VK_ERR_TOO_FAST)
 					sleep(3);
 			}
 		}

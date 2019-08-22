@@ -5,7 +5,6 @@ use \Z\DB;
 use \Z\View;
 use \Z\Date;
 use \Z\Util\Url;
-use \Z\Net\VkApi;
 
 use \Smm\View\Widgets;
 
@@ -40,7 +39,7 @@ class VkPostsController extends \Smm\GroupController {
 	}
 	
 	public function moveAction() {
-		$api = new \Z\Net\VkApi(\Smm\Oauth::getAccessToken('VK'));
+		$api = new \Smm\VK\API(\Smm\Oauth::getAccessToken('VK'));
 		
 		$id = intval($_REQUEST['id'] ?? 0);
 		$dir = $_REQUEST['dir'] ?? 'up';
@@ -165,7 +164,7 @@ class VkPostsController extends \Smm\GroupController {
 	}
 	
 	public function editAction() {
-		$api = new \Z\Net\VkApi(\Smm\Oauth::getAccessToken('VK'));
+		$api = new \Smm\VK\API(\Smm\Oauth::getAccessToken('VK'));
 		
 		$this->mode('json');
 		
@@ -255,7 +254,7 @@ class VkPostsController extends \Smm\GroupController {
 	}
 	
 	public function queueAction() {
-		$api = new \Z\Net\VkApi(\Smm\Oauth::getAccessToken('VK'));
+		$api = new \Smm\VK\API(\Smm\Oauth::getAccessToken('VK'));
 		
 		$this->mode('json');
 		
@@ -308,10 +307,6 @@ class VkPostsController extends \Smm\GroupController {
 		if ($id)
 			$api_data['post_id'] = $id;
 		
-		$save_in_db = function () {
-			
-		};
-		
 		if ($from_web && ($post_type == 'suggest' || $post_type == 'new')) {
 			$vk_web = \Smm\VK\Web::instance();
 			$result = $vk_web->wallEdit($id, $api_data);
@@ -324,6 +319,43 @@ class VkPostsController extends \Smm\GroupController {
 			$post_type = 'post';
 			$id = $result['post_id'];
 			$api_data['post_id'] = $id;
+			
+			$vk_post_id = $id;
+			
+			///////////// TEST
+			DB::insert('vk_posts_queue')
+				->set([
+					'fake_date'		=> $fake_date, 
+					'group_id'		=> $this->group['id'], 
+					'id'			=> $vk_post_id
+				])
+				->onDuplicateSetValues('fake_date')
+				->execute();
+			
+			if (strlen($comment) > 0) {
+				DB::insert('vk_posts_comments')
+					->set([
+						'text'			=> $comment, 
+						'group_id'		=> $this->group['id'], 
+						'id'			=> $vk_post_id
+					])
+					->onDuplicateSetValues('text')
+					->execute();
+			}
+			
+			$this->content['success'] = true;
+			$this->content['link'] = 'https://m.vk.com/wall-'.$this->group['id'].'_'.$vk_post_id;
+			
+			$result = \Smm\VK\Posts::getAll($api, $this->group['id']);
+			if ($result->success) {
+				foreach ($result->postponed as $post) {
+					if ($post->id == $vk_post_id)
+						$this->content['date'] = $post->date;
+				}
+			}
+			
+			return;
+			///////////// TEST
 		}
 		
 		$res = $api->exec(($post_type == 'suggest' || $post_type == 'new') ? "wall.post" : "wall.edit", $api_data);
@@ -367,7 +399,7 @@ class VkPostsController extends \Smm\GroupController {
 	}
 	
 	public function deleteAction() {
-		$api = new \Z\Net\VkApi(\Smm\Oauth::getAccessToken('VK'));
+		$api = new \Smm\VK\API(\Smm\Oauth::getAccessToken('VK'));
 		
 		$this->mode('json');
 		
@@ -398,7 +430,7 @@ class VkPostsController extends \Smm\GroupController {
 		
 		$next_post_date = \Smm\Globals::get($this->group['id'], "next_post_date");
 		if (!$next_post_date) {
-			$api = new \Z\Net\VkApi(\Smm\Oauth::getAccessToken('VK'));
+			$api = new \Smm\VK\API(\Smm\Oauth::getAccessToken('VK'));
 			$result = \Smm\VK\Posts::getAll($api, $this->group['id']);
 			if (!$result->success) {
 				$this->content['success'] = false;
@@ -420,7 +452,7 @@ class VkPostsController extends \Smm\GroupController {
 			return;
 		}
 		
-		$api = new \Z\Net\VkApi(\Smm\Oauth::getAccessToken('VK'));
+		$api = new \Smm\VK\API(\Smm\Oauth::getAccessToken('VK'));
 		
 		switch ($_POST['type'] ?? '') {
 			// Загрузка по URL

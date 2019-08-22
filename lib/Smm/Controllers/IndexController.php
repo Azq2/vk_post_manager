@@ -73,7 +73,7 @@ class IndexController extends \Smm\GroupController {
 	}
 	
 	public function suggestedAction() {
-		$api = new \Z\Net\VkApi(\Smm\Oauth::getAccessToken('VK'));
+		$api = new \Smm\VK\API(\Smm\Oauth::getAccessToken('VK'));
 		
 		$filter = $_REQUEST['filter'] ?? '';
 		
@@ -212,7 +212,7 @@ class IndexController extends \Smm\GroupController {
 	}
 	
 	public function multipicpostAction() {
-		$api = new \Z\Net\VkApi(\Smm\Oauth::getAccessToken('VK'));
+		$api = new \Smm\VK\API(\Smm\Oauth::getAccessToken('VK'));
 		
 		if ($_FILES && isset($_FILES['file'])) {
 			$this->mode('json');

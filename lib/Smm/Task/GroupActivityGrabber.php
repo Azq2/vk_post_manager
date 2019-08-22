@@ -5,7 +5,6 @@ use \Z\DB;
 use \Z\View;
 use \Z\Date;
 use \Z\Util\Url;
-use \Z\Net\VkApi;
 use \Z\Net\Anticaptcha;
 
 use \Smm\VK\Captcha;
@@ -17,8 +16,7 @@ class GroupActivityGrabber extends \Z\Task {
 	public function run($args) {
 		ini_set('memory_limit', '1G');
 		
-		$this->api = new VkApi(\Smm\Oauth::getAccessToken('VK_STAT'));
-		$this->api->setLimit(3, 1.2);
+		$this->api = new \Smm\VK\API(\Smm\Oauth::getAccessToken('VK_STAT'));
 		
 		foreach (DB::select()->from('vk_groups')->where('deleted', '=', 0)->execute() as $group) {
 			$this->last_check_old_data = 0;
@@ -194,17 +192,17 @@ class GroupActivityGrabber extends \Z\Task {
 					$flood = false;
 					$sleep = false;
 					
-					if ($exec_result->errorCode() == \Z\Net\VkApi\Response::VK_ERR_FLOOD)
+					if ($exec_result->errorCode() == \Smm\VK\API\Response::VK_ERR_FLOOD)
 						$flood = true;
-					if ($exec_result->errorCode() == \Z\Net\VkApi\Response::VK_ERR_TOO_FAST)
+					if ($exec_result->errorCode() == \Smm\VK\API\Response::VK_ERR_TOO_FAST)
 						$sleep = true;
 					
 					if (isset($exec_result->execute_errors)) {
 						foreach ($exec_result->execute_errors as $err) {
 							echo "=> fetch metadata error: ".$err->method.": #".$err->error_code." ".$err->error_msg."\n";
-							if ($err->error_code == \Z\Net\VkApi\Response::VK_ERR_FLOOD)
+							if ($err->error_code == \Smm\VK\API\Response::VK_ERR_FLOOD)
 								$flood = true;
-							if ($err->error_code == \Z\Net\VkApi\Response::VK_ERR_TOO_FAST)
+							if ($err->error_code == \Smm\VK\API\Response::VK_ERR_TOO_FAST)
 								$sleep = true;
 						}
 					}
@@ -413,17 +411,17 @@ class GroupActivityGrabber extends \Z\Task {
 					$flood = false;
 					$sleep = false;
 					
-					if ($exec_result->errorCode() == \Z\Net\VkApi\Response::VK_ERR_FLOOD)
+					if ($exec_result->errorCode() == \Smm\VK\API\Response::VK_ERR_FLOOD)
 						$flood = true;
-					if ($exec_result->errorCode() == \Z\Net\VkApi\Response::VK_ERR_TOO_FAST)
+					if ($exec_result->errorCode() == \Smm\VK\API\Response::VK_ERR_TOO_FAST)
 						$sleep = true;
 					
 					if (isset($exec_result->execute_errors)) {
 						foreach ($exec_result->execute_errors as $err) {
 							echo "=> fetch metadata error: ".$err->method.": #".$err->error_code." ".$err->error_msg."\n";
-							if ($err->error_code == \Z\Net\VkApi\Response::VK_ERR_FLOOD)
+							if ($err->error_code == \Smm\VK\API\Response::VK_ERR_FLOOD)
 								$flood = true;
-							if ($err->error_code == \Z\Net\VkApi\Response::VK_ERR_TOO_FAST)
+							if ($err->error_code == \Smm\VK\API\Response::VK_ERR_TOO_FAST)
 								$sleep = true;
 						}
 					}
@@ -538,17 +536,17 @@ class GroupActivityGrabber extends \Z\Task {
 					$flood = false;
 					$sleep = false;
 					
-					if ($exec_result->errorCode() == \Z\Net\VkApi\Response::VK_ERR_FLOOD)
+					if ($exec_result->errorCode() == \Smm\VK\API\Response::VK_ERR_FLOOD)
 						$flood = true;
-					if ($exec_result->errorCode() == \Z\Net\VkApi\Response::VK_ERR_TOO_FAST)
+					if ($exec_result->errorCode() == \Smm\VK\API\Response::VK_ERR_TOO_FAST)
 						$sleep = true;
 					
 					if (isset($exec_result->execute_errors)) {
 						foreach ($exec_result->execute_errors as $err) {
 							echo "=> fetch metadata error: ".$err->method.": #".$err->error_code." ".$err->error_msg."\n";
-							if ($err->error_code == \Z\Net\VkApi\Response::VK_ERR_FLOOD)
+							if ($err->error_code == \Smm\VK\API\Response::VK_ERR_FLOOD)
 								$flood = true;
-							if ($err->error_code == \Z\Net\VkApi\Response::VK_ERR_TOO_FAST)
+							if ($err->error_code == \Smm\VK\API\Response::VK_ERR_TOO_FAST)
 								$sleep = true;
 						}
 					}

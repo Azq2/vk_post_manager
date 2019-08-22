@@ -4,7 +4,6 @@ namespace Smm\Task;
 use \Z\DB;
 use \Z\Config;
 use \Z\Util\Url;
-use \Z\Net\VkApi;
 
 use \Smm\VK\Captcha;
 
@@ -17,8 +16,7 @@ class DuplicateFinder extends \Z\Task {
 		if (!\Smm\Utils\Lock::lock(__CLASS__))
 			return;
 		
-		$this->api = new \Z\Net\VkApi(\Smm\Oauth::getAccessToken('VK'));
-		$this->api->setLimit(3, 1.1);
+		$this->api = new \Smm\VK\API(\Smm\Oauth::getAccessToken('VK'));
 		
 		echo date("Y-m-d H:i:s")." - start\n";
 		
@@ -93,9 +91,9 @@ class DuplicateFinder extends \Z\Task {
 					$flood = false;
 					$sleep = false;
 					
-					if ($exec_result->errorCode() == \Z\Net\VkApi\Response::VK_ERR_FLOOD)
+					if ($exec_result->errorCode() == \Smm\VK\API\Response::VK_ERR_FLOOD)
 						$flood = true;
-					if ($exec_result->errorCode() == \Z\Net\VkApi\Response::VK_ERR_TOO_FAST)
+					if ($exec_result->errorCode() == \Smm\VK\API\Response::VK_ERR_TOO_FAST)
 						$sleep = true;
 					
 					if ($flood)

@@ -6,7 +6,6 @@ use \Z\View;
 use \Z\Date;
 use \Z\Config;
 use \Z\Util\Url;
-use \Z\Net\VkApi;
 use \Z\Net\Anticaptcha;
 
 use \Smm\VK\Captcha;
@@ -18,7 +17,7 @@ class VkToTelegram extends \Z\Task {
 			return;
 		}
 		
-		$vk = new VkApi(\Smm\Oauth::getAccessToken('VK'));
+		$vk = new \Smm\VK\API(\Smm\Oauth::getAccessToken('VK'));
 		
 		$telegram_bot_token = Config::get('oauth.TELEGRAM.secret');
 		if (!$telegram_bot_token)

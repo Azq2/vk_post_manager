@@ -4,7 +4,6 @@ namespace Smm\Task;
 use \Z\DB;
 use \Z\Config;
 use \Z\Util\Url;
-use \Z\Net\VkApi;
 
 use \Smm\VK\Captcha;
 
@@ -29,11 +28,11 @@ class LogMembers extends \Z\Task {
 			
 			$cache = \Z\Cache::instance();
 			
-			$vk = new VkApi(\Smm\Oauth::getAccessToken('VK'));
+			$vk = new \Smm\VK\API(\Smm\Oauth::getAccessToken('VK'));
 			
 			$group_access_token = \Smm\Oauth::getGroupAccessToken($group['id']);
 			if ($group_access_token) {
-				$group_vk = new VkApi($group_access_token);
+				$group_vk = new \Smm\VK\API($group_access_token);
 				
 				for ($i = 0; $i < 3; ++$i) {
 					$res = $group_vk->exec("groups.getOnlineStatus", [

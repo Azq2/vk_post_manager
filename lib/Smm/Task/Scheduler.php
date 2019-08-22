@@ -5,7 +5,6 @@ use \Z\DB;
 use \Z\View;
 use \Z\Date;
 use \Z\Util\Url;
-use \Z\Net\VkApi;
 use \Z\Net\Anticaptcha;
 
 use \Smm\VK\Captcha;
@@ -44,7 +43,7 @@ class Scheduler extends \Z\Task {
 		do {
 			$need_rerun = false;
 			
-			$api = new VkApi(\Smm\Oauth::getAccessToken('VK_SCHED'));
+			$api = new \Smm\VK\API(\Smm\Oauth::getAccessToken('VK_SCHED'));
 			
 			$groups_with_queue = DB::select('group_id')
 				->from('vk_posts_queue')
@@ -163,6 +162,8 @@ class Scheduler extends \Z\Task {
 							continue;
 						}
 						
+							var_dump($post_meta);
+							
 						for ($i = 0; $i < $sched_config['max_api_fails']; ++$i) {
 							$api_data = [
 								'post_id'		=> $item->id, 
