@@ -285,25 +285,7 @@ class Posts {
 			
 			results.push(last_comments);
 			
-			var user_ids = [];
-			
-			var items = results@.items;
-			var i = items.length;
 			var load_user_ids = [];
-			
-			while (i >= 1) {
-				i = i - 1;
-				
-				var from_ids = items[i]@.created_by;
-				
-				var j = from_ids.length;
-				while (j >= 1) {
-					j = j - 1;
-					
-					if (from_ids[j] != null && from_ids[j] > 0 && load_user_ids.indexOf(from_ids[j]) < 0)
-						load_user_ids.push(from_ids[j]);
-				}
-			}
 			
 			return {
 				results:	results, 

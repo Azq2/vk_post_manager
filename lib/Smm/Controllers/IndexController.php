@@ -103,7 +103,7 @@ class IndexController extends \Smm\GroupController {
 		if ($res->success) {
 			$i = 0;
 			foreach ($res->{$list} as $item) {
-				$from_id = (isset($item->created_by) && $item->created_by ? $item->created_by : (isset($item->from_id) ? $item->from_id : $item->owner_id));
+				$from_id = $item->owner_id;
 				
 				$date = Date::display($item->date, false, false);
 				

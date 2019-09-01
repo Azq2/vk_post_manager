@@ -16,7 +16,7 @@ class DuplicateFinder extends \Z\Task {
 		if (!\Smm\Utils\Lock::lock(__CLASS__))
 			return;
 		
-		$this->api = new \Smm\VK\API(\Smm\Oauth::getAccessToken('VK'));
+		$this->api = new \Smm\VK\API(\Smm\Oauth::getServiceToken('VK'));
 		
 		echo date("Y-m-d H:i:s")." - start\n";
 		
@@ -77,8 +77,7 @@ class DuplicateFinder extends \Z\Task {
 				$exec_result = $this->api->exec("photos.search", [
 					'q'				=> "copy:".$queue->photo, 
 					'sort'			=> 0, 
-					'count'			=> 10, 
-					'radius'		=> 50000
+					'count'			=> 10
 				]);
 				if ($exec_result->success()) {
 					$ok = true;
@@ -112,7 +111,6 @@ class DuplicateFinder extends \Z\Task {
 			}
 			
 			$results = [];
-			
 			foreach ($exec_result->response->items as $photo) {
 				echo "=> https://vk.com/photo".$photo->owner_id."_".$photo->id." [".date("Y-m-d H:i:s", $photo->date)."]\n";
 				
@@ -121,31 +119,41 @@ class DuplicateFinder extends \Z\Task {
 					'wall'		=> false
 				];
 				
+				$try_dates = [date("dmY", $photo->date), date("dmY", $photo->date + 3600 * 24)];
+				
 				$ok = false;
-				for ($i = 0; $i < 50; $i += 40) {
-					$url = "https://vk.com/wall".$photo->owner_id."?day=".date("dmY", $photo->date)."&offset=$i";
+				$date_index = 0;
+				
+				do {
+					$try_date = $try_dates[$date_index];
 					
-					$res = "";
-					
-					for ($j = 0; $j < 3; ++$j) {
-						curl_setopt($curl, CURLOPT_URL, $url);
-						$res = curl_exec($curl);
-						$status = curl_getinfo($curl, CURLINFO_HTTP_CODE);
+					for ($i = 0; $i < 50; $i += 40) {
+						$url = "https://vk.com/wall".$photo->owner_id."?day=".$try_date."&offset=$i";
 						
-						if ($status >= 200 && $status <= 299)
+						$res = "";
+						
+						for ($j = 0; $j < 3; ++$j) {
+							curl_setopt($curl, CURLOPT_URL, $url);
+							$res = curl_exec($curl);
+							$status = curl_getinfo($curl, CURLINFO_HTTP_CODE);
+							
+							if ($status >= 200 && $status <= 299)
+								break;
+							sleep(1);
+						}
+						
+						if (preg_match("/'".preg_quote($photo->owner_id."_".$photo->id)."'\s*,\s*'(wall[\d+-]+_\d+)'/", $res, $m)) {
+							echo "==> https://vk.com/".$m[1]."\n";
+							$result['wall'] = $m[1];
+							$ok = true;
 							break;
-						sleep(1);
+						}
+						
+						usleep(100000);
 					}
 					
-					if (preg_match("/'".preg_quote($photo->owner_id."_".$photo->id)."'\s*,\s*'(wall[\d+-]+_\d+)'/", $res, $m)) {
-						echo "==> https://vk.com/".$m[1]."\n";
-						$result['wall'] = $m[1];
-						$ok = true;
-						break;
-					}
-					
-					usleep(100000);
-				}
+					++$date_index;
+				} while (!$ok && $date_index < count($try_dates));
 				
 				if (!$ok)
 					echo "==> posts not found\n";

@@ -38,6 +38,9 @@ var tpl = {
 								' '
 							) + 
 							'style="padding: 10px 0;margin: 0 2px;display: inline-block;max-width: ' + max_width + 'px; width: ' + tile + ';" data-id="' + att_id + '">' + 
+						'<div class="pad_b" style="font-size: 13px">' + 
+							att.w + ' x ' + att.h + 
+						'</div>' + 
 						'<a href="' + src + '" target="_blank" class="aspect" style="padding-top: ' + (aspect * 100) + '%">' + 
 							(att.mp4 ? 
 								'<video poster="' + thumb.src + '" src="' + att.mp4 + '" class="preview" preload="none" />' : 

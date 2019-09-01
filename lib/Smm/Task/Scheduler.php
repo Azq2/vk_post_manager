@@ -162,8 +162,6 @@ class Scheduler extends \Z\Task {
 							continue;
 						}
 						
-							var_dump($post_meta);
-							
 						for ($i = 0; $i < $sched_config['max_api_fails']; ++$i) {
 							$api_data = [
 								'post_id'		=> $item->id, 
@@ -175,6 +173,8 @@ class Scheduler extends \Z\Task {
 								'attachments'	=> implode(",", $post_meta['attachments']), 
 								'publish_date'	=> $item->date <= time() + 60 ? time() + 60 : $item->date
 							];
+							
+							var_dump($post_meta, $api_data);
 							
 							$deadline = round($this->getNextRun() + $sched_config['interval'] / 2);
 							

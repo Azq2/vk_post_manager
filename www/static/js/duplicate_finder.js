@@ -78,10 +78,15 @@ $('body').on('click', '#do_search', function (e) {
 							html += '<div class="pad_b">Посты не найдены!!!</div>';
 						}
 						
+						var deadline = ((Date.now() / 1000) - 90 * 3600 * 24);
+						
 						html += 
 							'<div>' + 
 								'<div class="pad_b grey">' +
-									utils.getHumanDate(res.photo.date, "date") + 
+									utils.getHumanDate(res.photo.date, "time") + 
+								'</div>' + 
+								'<div class="pad_b grey">' +
+									(deadline >= res.photo.date ? '<span class="red">Пост старше 3 мес.</span>' : '<span class="green">Пост младше 3 мес, можно жаловаться</span>') + 
 								'</div>' + 
 								'<div style="padding: 10px 0;margin: 0 2px;display: inline-block;max-width: ' + max_width + 'px; width: 100%;">' + 
 									'<a href="https://vk.com/photo' + res.photo.owner_id + '_' + res.photo.id + '" target="_blank" class="aspect oh" style="padding-top: ' + (aspect * 100) + '%">' + 

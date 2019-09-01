@@ -1,3 +1,49 @@
+<div class="wrapper">
+	<div class="row row-yellow bord">
+		Внимание! Настройки общие для всех сообществ.
+	</div>
+</div>
+
+<div class="wrapper bord">
+	<div class="row header cursor">
+		OAuth приложения сообщества
+	</div>
+	
+	<?php foreach ($oauth_groups_list as $oauth): ?>
+		<div class="row oh">
+			<a href="<?= $oauth['oauth_url'] ?>" rel="noopener noreferrer" target="_blank">
+				<span <?php if ($oauth['status'] != 'success'): ?>class="deleted"<?php endif; ?>>
+					<img src="https://vk.com/favicon.ico" width="16" height="16" alt="VK" class="m" />
+					<span class="m"><?= $oauth['title'] ?></span>
+				</span>
+				
+				<?php if ($oauth['status'] == 'not_set'): ?>
+					<span class="right red m">Не установлен</span>
+				<?php elseif ($oauth['status'] == 'error'): ?>
+					<span class="right red m">Ошибка</span>
+				<?php elseif ($oauth['status'] == 'expired'): ?>
+					<span class="right red m">Нужно обновить</span>
+				<?php elseif ($oauth['status'] == 'success'): ?>
+					<span class="right green m">OK</span>
+				<?php endif; ?>
+			</a>
+		</div>
+	<?php endforeach; ?>
+	
+	<div class="row">
+		<div class="pad_t grey">
+			1. <a href="https://vk.com/add_community_app?aid=<?= $groups_app_id ?>" rel="noopener noreferrer" target="_blank">Добавляем приложение</a> в нужное сообщество.
+		</div>
+		
+		<div class="pad_t grey">
+			2. Переходим по ссылкам выше и соглашаемся дать авторизацию.
+		</div>
+		
+		<div class="pad_t grey">
+			3. Готово!
+		</div>
+	</div>
+</div>
 
 <?php foreach ($oauth_list as $oauth): ?>
 	<div class="wrapper bord">
@@ -18,13 +64,11 @@
 				<a href="<?= $oauth['oauth_url'] ?>" rel="noopener noreferrer" target="_blank">Запросить доступ</a>
 				
 				<?php if ($oauth['user']): ?>
-					<span class="green">(<?= $oauth['user'] ?>)</span>
+					<a href="<?= $oauth['user']['link'] ?>" rel="noopener noreferrer" target="_blank">
+						<span class="green">(<?= $oauth['user']['name'] ?>)</span>
+					</a>
 				<?php else: ?>
 					<span class="red">(Не авторизирован)</span>
-				<?php endif; ?>
-				
-				<?php if ($oauth['user']): ?>
-					(<?= $oauth['user'] ?>)
 				<?php endif; ?>
 				
 				<form action="<?= $oauth_action ?>" class="js-oauth_form">
@@ -48,9 +92,11 @@
 				<span class="grey">Аккаунт:</span>
 				
 				<?php if ($oauth['user']): ?>
-					<span class="green"><?= $oauth['user'] ?></span>
+					<a href="<?= $oauth['user']['link'] ?>" rel="noopener noreferrer" target="_blank">
+						<span class="green">(<?= $oauth['user']['name'] ?>)</span>
+					</a>
 				<?php else: ?>
-					<span class="red">Не авторизирован</span>
+					<span class="red">(Не авторизирован)</span>
 				<?php endif; ?>
 				
 				<form action="<?= $oauth_action ?>" class="js-oauth_form">

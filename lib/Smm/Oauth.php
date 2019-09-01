@@ -63,4 +63,22 @@ class Oauth {
 		
 		return false;
 	}
+	
+	public static function getServiceToken($type) {
+		$oauth = \Z\Config::get("oauth");
+		
+		if (!isset($oauth[$type]))
+			throw new \Exception("Unknown oauth app!");
+		
+		if ($oauth[$type]['service_key']) {
+			return [
+				'access_token'			=> $oauth[$type]['service_key'], 
+				'secret'				=> '', 
+				'access_token_type'		=> 'user', 
+				'client'				=> 'standalone'
+			];
+		}
+		
+		return false;
+	}
 }
