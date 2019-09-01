@@ -16,6 +16,8 @@ class GroupActivityAggregator extends \Z\Task {
 			return;
 		}
 		
+		ini_set('memory_limit', '1G');
+		
 		echo date("Y-m-d H:i:s")." - start\n";
 		$start = microtime(true);
 		
@@ -35,7 +37,7 @@ class GroupActivityAggregator extends \Z\Task {
 			->get('date', NULL);
 		
 		$has_dirty_stat = ($last_dirty_date && strtotime(date("Y-m-d 00:00:00")) > strtotime("$last_dirty_date 00:00:00"));
-		if ($has_dirty_stat)
+		if ($has_dirty_stat || 1)
 			$cache->set("group_activity_check_time", 0);
 		
 		$last_full_check_time = $cache->get("group_activity_check_time") ?: 0;
@@ -58,12 +60,14 @@ class GroupActivityAggregator extends \Z\Task {
 			$cursor = strtotime($dates['min']." 00:00:00");
 			$end = strtotime($dates['max']." 00:00:00");
 			
-			$insert_likes = DB::insert('vk_activity_stat', ['date', 'owner_id', 'user_id', 'likes'])
-				->onDuplicateSetValues('likes');
+			$insert_likes = DB::insert('vk_activity_stat', ['date', 'owner_id', 'user_id', 'likes', 'is_active'])
+				->onDuplicateSetValues('likes')
+				->onDuplicateSet('is_active', DB::expr('GREATEST(`is_active`, VALUES(`is_active`))'));
 			
-			$insert_comments = DB::insert('vk_activity_stat', ['date', 'owner_id', 'user_id', 'comments', 'comments_meaningful'])
+			$insert_comments = DB::insert('vk_activity_stat', ['date', 'owner_id', 'user_id', 'comments', 'comments_meaningful', 'is_active'])
 				->onDuplicateSetValues('comments')
-				->onDuplicateSetValues('comments_meaningful');
+				->onDuplicateSetValues('comments_meaningful')
+				->onDuplicateSet('is_active', DB::expr('GREATEST(`is_active`, VALUES(`is_active`))'));
 			
 			while ($cursor <= $end) {
 				echo date("Y-m-d", $cursor)." - ".date("Y-m-t", $cursor)."\n";
@@ -76,8 +80,8 @@ class GroupActivityAggregator extends \Z\Task {
 					->group('user_id');
 				
 				foreach ($likers->execute() as $row) {
-					$insert_likes->values([$row['dt'], $row['owner_id'], $row['user_id'], $row['cnt']]);
-					if ($insert_likes->countValues() >= 10000) {
+					$insert_likes->values([$row['dt'], $row['owner_id'], $row['user_id'], $row['cnt'], $row['cnt'] > 0 ? 1 : 0]);
+					if ($insert_likes->countValues() >= 5000) {
 						$insert_likes->execute();
 						$insert_likes->setValues([]);
 					}
@@ -96,8 +100,8 @@ class GroupActivityAggregator extends \Z\Task {
 				
 				
 				foreach ($commentators->execute() as $row) {
-					$insert_comments->values([$row['dt'], $row['owner_id'], $row['user_id'], $row['comments'], $row['comments_meaningful']]);
-					if ($insert_comments->countValues() >= 10000) {
+					$insert_comments->values([$row['dt'], $row['owner_id'], $row['user_id'], $row['comments'], $row['comments_meaningful'], $row['comments'] > 0 ? 1 : 0]);
+					if ($insert_comments->countValues() >= 5000) {
 						$insert_comments->execute();
 						$insert_comments->setValues([]);
 					}

@@ -13,6 +13,12 @@ class GroupActivityGrabber extends \Z\Task {
 	protected $last_check_old_data = 0;
 	protected $last_update_changed = 0;
 	
+	public function options() {
+		return [
+			'fast_update_group_id' => 0
+		];
+	}
+	
 	public function run($args) {
 		ini_set('memory_limit', '1G');
 		
@@ -43,17 +49,29 @@ class GroupActivityGrabber extends \Z\Task {
 			if ($source['init_done']) {
 				$cache = \Z\Cache::instance();
 				
-				$last_full_check = $cache->get("vk_activity_last_full_check:".$group['id']) ?: 0;
-				
-				$this->grabPosts($group, 0, false);
-				
-				if (time() - $last_full_check >= 3600) {
+				if ($group['id'] == $args['fast_update_group_id']) {
+					echo "Fast update!\n";
+					
 					$this->checkPosts($group, true);
-					$cache->set("vk_activity_last_full_check:".$group['id'], time());
-					$this->updateChangedPosts($group, 2000);
+					
+					for  ($i = 0; $i < 50; ++$i) {
+						$this->last_check_old_data = 0;
+						$this->last_update_changed = 0;
+						$this->updateChangedPosts($group, 2000);
+					}
 				} else {
-					$this->checkPosts($group, false);
-					$this->updateChangedPosts($group, 1000);
+					$last_full_check = $cache->get("vk_activity_last_full_check:".$group['id']) ?: 0;
+					
+					$this->grabPosts($group, 0, false);
+					
+					if (time() - $last_full_check >= 3600) {
+						$this->checkPosts($group, true);
+						$cache->set("vk_activity_last_full_check:".$group['id'], time());
+						$this->updateChangedPosts($group, 2000);
+					} else {
+						$this->checkPosts($group, false);
+						$this->updateChangedPosts($group, 1000);
+					}
 				}
 			} else {
 				if ($source['offset'] > 0) {
