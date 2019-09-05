@@ -321,41 +321,6 @@ class VkPostsController extends \Smm\GroupController {
 			$api_data['post_id'] = $id;
 			
 			$vk_post_id = $id;
-			
-			///////////// TEST
-			DB::insert('vk_posts_queue')
-				->set([
-					'fake_date'		=> $fake_date, 
-					'group_id'		=> $this->group['id'], 
-					'id'			=> $vk_post_id
-				])
-				->onDuplicateSetValues('fake_date')
-				->execute();
-			
-			if (strlen($comment) > 0) {
-				DB::insert('vk_posts_comments')
-					->set([
-						'text'			=> $comment, 
-						'group_id'		=> $this->group['id'], 
-						'id'			=> $vk_post_id
-					])
-					->onDuplicateSetValues('text')
-					->execute();
-			}
-			
-			$this->content['success'] = true;
-			$this->content['link'] = 'https://m.vk.com/wall-'.$this->group['id'].'_'.$vk_post_id;
-			
-			$result = \Smm\VK\Posts::getAll($api, $this->group['id']);
-			if ($result->success) {
-				foreach ($result->postponed as $post) {
-					if ($post->id == $vk_post_id)
-						$this->content['date'] = $post->date;
-				}
-			}
-			
-			return;
-			///////////// TEST
 		}
 		
 		$res = $api->exec(($post_type == 'suggest' || $post_type == 'new') ? "wall.post" : "wall.edit", $api_data);

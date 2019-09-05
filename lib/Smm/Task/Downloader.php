@@ -140,13 +140,11 @@ class Downloader extends \Z\Task {
 					}
 				}
 				
-				/*
 				if (\Smm\Utils\GD::stripMetadata($file['out'])) {
 					echo "  => strip metadata OK\n";
 				//	if (\Smm\Utils\GD::fakeExif($file['out']))
 				//		echo "  => fake exif OK\n";
 				}
-				*/
 				
 				$upload = [];
 				if ($file['type'] == 'photo') {

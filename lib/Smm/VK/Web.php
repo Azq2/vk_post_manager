@@ -94,7 +94,7 @@ class Web {
 				$att = trim($att);
 				if (substr($att, 0, 4) == 'http') {
 					$post['url'] = $att;
-				} elseif (preg_match("/^([a-z_-]+)(.*?)$/si", $att, $m)) {
+				} elseif (preg_match("/^([a-z_]+)(.*?)$/si", $att, $m)) {
 					$attaches[] = [$m[1], $m[2]];
 				}
 			}
