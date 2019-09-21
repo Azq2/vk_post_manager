@@ -315,51 +315,47 @@ class VkPostsController extends \Smm\GroupController {
 				return;
 			}
 			
-			// And also edit post with api, for reduce errors
-			$post_type = 'post';
-			$id = $result['post_id'];
-			$api_data['post_id'] = $id;
+			$vk_post_id = $result['post_id'];
+		} else {
+			$res = $api->exec(($post_type == 'suggest' || $post_type == 'new') ? "wall.post" : "wall.edit", $api_data);
+			if (!$res->success()) {
+				$this->content['error'] = $res->error();
+				$this->content['captcha'] = $res->captcha();
+				return;
+			}
 			
-			$vk_post_id = $id;
+			$vk_post_id = $res->response->post_id ?? $id;
 		}
 		
-		$res = $api->exec(($post_type == 'suggest' || $post_type == 'new') ? "wall.post" : "wall.edit", $api_data);
-		if ($res->success()) {
-			$vk_post_id = $res->response->post_id ?? $id;
-			
-			DB::insert('vk_posts_queue')
+		DB::insert('vk_posts_queue')
+			->set([
+				'fake_date'		=> $fake_date, 
+				'group_id'		=> $this->group['id'], 
+				'id'			=> $vk_post_id
+			])
+			->onDuplicateSetValues('fake_date')
+			->execute();
+		
+		if (strlen($comment) > 0) {
+			DB::insert('vk_posts_comments')
 				->set([
-					'fake_date'		=> $fake_date, 
+					'text'			=> $comment, 
 					'group_id'		=> $this->group['id'], 
 					'id'			=> $vk_post_id
 				])
-				->onDuplicateSetValues('fake_date')
+				->onDuplicateSetValues('text')
 				->execute();
-			
-			if (strlen($comment) > 0) {
-				DB::insert('vk_posts_comments')
-					->set([
-						'text'			=> $comment, 
-						'group_id'		=> $this->group['id'], 
-						'id'			=> $vk_post_id
-					])
-					->onDuplicateSetValues('text')
-					->execute();
+		}
+		
+		$this->content['success'] = true;
+		$this->content['link'] = 'https://m.vk.com/wall-'.$this->group['id'].'_'.$vk_post_id;
+		
+		$result = \Smm\VK\Posts::getAll($api, $this->group['id']);
+		if ($result->success) {
+			foreach ($result->postponed as $post) {
+				if ($post->id == $vk_post_id)
+					$this->content['date'] = $post->date;
 			}
-			
-			$this->content['success'] = true;
-			$this->content['link'] = 'https://m.vk.com/wall-'.$this->group['id'].'_'.$vk_post_id;
-			
-			$result = \Smm\VK\Posts::getAll($api, $this->group['id']);
-			if ($result->success) {
-				foreach ($result->postponed as $post) {
-					if ($post->id == $vk_post_id)
-						$this->content['date'] = $post->date;
-				}
-			}
-		} else {
-			$this->content['error'] = $res->error();
-			$this->content['captcha'] = $res->captcha();
 		}
 	}
 	

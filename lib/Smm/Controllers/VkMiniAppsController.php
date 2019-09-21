@@ -88,7 +88,12 @@ class VkMiniAppsController extends \Smm\VkAppController {
 		$this->content['error'] = false;
 		
 		if ($user_id_sign_real === $user_id_sign) {
-			$api = new \Smm\VK\API($access_token);
+			$api = new \Smm\VK\API([
+				'access_token'			=> $access_token, 
+				'secret'				=> '', 
+				'access_token_type'		=> 'community', 
+				'client'				=> 'standalone'
+			]);
 			$res = $api->exec("groups.getMembers", [
 				'filter'	=> 'managers', 
 				'group_id'	=> $group_id, 

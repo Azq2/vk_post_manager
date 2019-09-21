@@ -9,6 +9,110 @@ use \Z\Util\Url;
 use \Smm\View\Widgets;
 
 class SettingsController extends \Smm\GroupController {
+	public function proxyAction() {
+		$proxy_types = [
+			'PINTEREST_GRABBER'		=> 'Граббер pinterest.ru'
+		];
+		
+		$base_url = Url::mk('/')->set('gid', $this->group['id']);
+		
+		$type = $_POST['type'] ?? '';
+		$host = $_POST['host'] ?? '';
+		$port = intval($_POST['port'] ?? 0);
+		$login = $_POST['login'] ?? '';
+		$password = $_POST['password'] ?? '';
+		$enabled = intval($_POST['enabled'] ?? 0);
+		
+		if ($_POST['do_save'] ?? false) {
+			DB::insert('vk_proxy')
+				->set([
+					'type'		=> $type, 
+					'host'		=> $host, 
+					'port'		=> $port, 
+					'login'		=> $login, 
+					'password'	=> $password, 
+					'enabled'	=> $enabled
+				])
+				->onDuplicateSetValues('host')
+				->onDuplicateSetValues('port')
+				->onDuplicateSetValues('login')
+				->onDuplicateSetValues('password')
+				->onDuplicateSetValues('enabled')
+				->execute();
+			
+			$redirect = $base_url->copy()->set('a', 'settings/proxy')->url();
+			return $this->redirect($redirect);
+		}
+		
+		$this->title = 'Настройки : Proxy';
+		
+		$old_values = DB::select()
+			->from('vk_proxy')
+			->execute()
+			->asArray('type');
+		
+		$new_values = [
+			$type => [
+				'host'		=> $host, 
+				'port'		=> $port, 
+				'login'		=> $login, 
+				'password'	=> $password, 
+			]
+		];
+		
+		$curl = curl_init();
+		curl_setopt_array($curl, [
+			CURLOPT_URL					=> Url::getCurrentScheme()."://".$_SERVER['HTTP_HOST']."/ip.php", 
+			CURLOPT_RETURNTRANSFER		=> true, 
+			CURLOPT_FOLLOWLOCATION		=> true, 
+			CURLOPT_VERBOSE				=> false, 
+			CURLOPT_USERAGENT			=> "Mozilla/5.0 (Linux; Android 6.0.1; SM-G532G Build/MMB29T) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/63.0.3239.83 Mobile Safari/537.36", 
+			CURLOPT_IPRESOLVE			=> CURL_IPRESOLVE_V4, 
+			CURLOPT_CONNECTTIMEOUT		=> 2, 
+			CURLOPT_TIMEOUT				=> 2
+		]);
+		
+		$list = [];
+		foreach ($proxy_types as $proxy_type => $proxy_name) {
+			$status = 'not_set';
+			$status_text = 'Не заданы параметры прокси';
+			
+			$url = \Smm\Proxy::buildCurlProxy($old_values[$proxy_type] ?? false);
+			
+			if ($url) {
+				curl_setopt_array($curl, [
+					CURLOPT_PROXY		=> $url, 
+				]);
+				$res = curl_exec($curl);
+				$error = curl_error($curl);
+				
+				if (preg_match("/CONNECT_CHECK_OK:([\d\.]+)/", $res, $m) && filter_var($m[1], FILTER_VALIDATE_IP)) {
+					$status = 'ok';
+					$status_text = 'OK, IP: '.$m[1];
+				} else {
+					$status = 'error';
+					$status_text = 'Ошибка ('.htmlspecialchars($error).')';
+				}
+			}
+			
+			$list[] = [
+				'title'			=> $proxy_name, 
+				'type'			=> $proxy_type, 
+				'host'			=> htmlspecialchars($old_values[$proxy_type]['host'] ?? ''), 
+				'port'			=> htmlspecialchars($old_values[$proxy_type]['port'] ?? ''), 
+				'login'			=> htmlspecialchars($old_values[$proxy_type]['login'] ?? ''), 
+				'password'		=> htmlspecialchars($old_values[$proxy_type]['password'] ?? ''), 
+				'enabled'		=> $old_values[$proxy_type]['enabled'] ?? 0, 
+				'status'		=> $status, 
+				'status_text'	=> $status_text
+			];
+		}
+		
+		$this->content = View::factory('settings/proxy', [
+			'list'			=> $list
+		]);
+	}
+	
 	public function groupsAction() {
 		$this->title = 'Настройки : Группы';
 		
@@ -404,6 +508,19 @@ class SettingsController extends \Smm\GroupController {
 					$this->content['error'] = 'Ошибка WEB auth: '.$result['error'];
 				}
 			break;
+			
+			case "PINTEREST_COOKIE":
+				$cookie = trim($_REQUEST['cookie'] ?? '');
+				
+				$pinterest = \Smm\Grabber\Pinterest::instance();
+				$result = $pinterest->auth(['_pinterest_sess' => $cookie]);
+				
+				if ($result['success']) {
+					$this->content['success'] = true;
+				} else {
+					$this->content['error'] = 'Ошибка COOKIE auth: '.$result['error'];
+				}
+			break;
 		}
 	}
 	
@@ -519,6 +636,33 @@ class SettingsController extends \Smm\GroupController {
 						'help'				=> [
 							'1. Вводим телефон (не e-mail) и пароль, жмём <b>Войти</b>.', 
 							'2. Готово!'
+						]
+					];
+				break;
+				
+				case "PINTEREST_COOKIE":
+					$pinterest = \Smm\Grabber\Pinterest::instance();
+					
+					$auth = $pinterest->checkAuth();
+					
+					$oauth_list[] = [
+						'type'				=> $key, 
+						'required'			=> $oauth['required'], 
+						'form'				=> 'COOKIE', 
+						'title'				=> $oauth['title'], 
+						'user'				=> $auth ? [
+							'name'		=> $auth['real_name'], 
+							'link'		=> 'https://pinterest.ru/'.$auth['screen_name']
+						] : false, 
+						'help'				=> [
+							'1. Устанавливаем '.
+								'<a href="https://chrome.google.com/webstore/detail/editthiscookie/fngmhnnpilhplaeedifhccceomclgfbg?hl=ru" target="_blank" rel="noreferer noopener">'.
+									'Edit This Cookie'.
+								'</a>.', 
+							'2. Заходим на <a href="https://pinterest.ru" target="_blank" rel="noreferer noopener">pinterest</a>', 
+							'3. Копируем в Edit This Cookie значение куки <b>_pinterest_sess</b>', 
+							'4. Вставляем его сюда', 
+							'5. Готово!'
 						]
 					];
 				break;
@@ -640,6 +784,7 @@ class SettingsController extends \Smm\GroupController {
 			'oauth_url'			=> $base_url->copy()->set('a', 'settings/auth')->href(), 
 			'groups_url'		=> $base_url->copy()->set('a', 'settings/groups')->href(), 
 			'callbacks_url'		=> $base_url->copy()->set('a', 'settings/callbacks')->href(), 
+			'proxy_url'			=> $base_url->copy()->set('a', 'settings/proxy')->href(), 
 			'catificator_url'	=> $base_url->copy()->set('a', 'catificator/index')->href(), 
 			'is_admin'			=> $this->user->can('admin'), 
 			'login'				=> $this->user->login

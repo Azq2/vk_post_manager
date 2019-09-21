@@ -359,6 +359,7 @@ function loadPosts() {
 		L: LOAD_CHUNK, 
 		sort: options.sort, 
 		mode: options.mode, 
+		interval: options.interval, 
 		include: options.include, 
 		exclude: options.exclude, 
 		content: options.contentFilter, 

@@ -14,8 +14,18 @@
 		
 		<form action="<?= $form_action ?>" method="POST">
 			<div>
-				<label class="lbl">Адрес корована, который грабить будем:</label><br />
-				<input type="text" name="url" autocomplete="off" value="<?= htmlspecialchars($form_url) ?>" placeholder="https://vk.com/catlist" /><br />
+				<label class="lbl">Корован, который грабить будем:</label><br />
+				<input type="text" name="url" autocomplete="off" value="<?= htmlspecialchars($form_url) ?>" placeholder="" /><br />
+			</div>
+			
+			<div class="pad_t grey">
+				<?php foreach ($sources_types as $type => $data): ?>
+					<label>
+						<input type="radio" name="type" value="<?= $type ?>" <?= $source_type == $type ? ' checked="checked"' : '' ?> />
+						<b><?= $data['title'] ?></b><br />
+						<?= $data['descr'] ?>
+					</label><br />
+				<?php endforeach; ?>
 			</div>
 			
 			<div class="pad_t">

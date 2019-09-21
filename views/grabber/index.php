@@ -10,6 +10,7 @@
 	data-sources="<?= htmlspecialchars(json_encode($sources_ids)) ?>"
 	data-include="<?= htmlspecialchars(json_encode($include)) ?>"
 	data-exclude="<?= htmlspecialchars(json_encode($exclude)) ?>"
+	data-interval="<?= htmlspecialchars($interval) ?>"
 	id="grabber_data"></div>
 
 <div class="wrapper">
@@ -18,6 +19,9 @@
 	</div>
 	<div class="row">
 		Показать посты: <?= $content_tabs ?>
+	</div>
+	<div class="row">
+		Период: <?= $date_tabs ?>
 	</div>
 	
 	<?php if ($mode == 'external'): ?>

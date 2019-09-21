@@ -16,7 +16,9 @@
 */15 * * * * php {project}/www/index.php Smm/Task/VkToTelegram >> {project}/logs/cron_vk_to_telegram.log 2>&1
 
 # Агрегатор контента (из инсты/вк и др.)
-*/15 * * * * php {project}/www/index.php Smm/Task/Grabber >> {project}/logs/cron_grabber.log 2>&1
+*/15 * * * * php {project}/www/index.php Smm/Task/Grabber --type=VK >> {project}/logs/cron_grabber.VK.log 2>&1
+*/15 * * * * php {project}/www/index.php Smm/Task/Grabber --type=INSTAGRAM >> {project}/logs/cron_grabber.INSTAGRAM.log 2>&1
+*/15 * * * * php {project}/www/index.php Smm/Task/Grabber --type=PINTEREST >> {project}/logs/cron_grabber.PINTEREST.log 2>&1
 
 # Подсчёт оплаты за услуги SMM (рудимент)
 # 0 * * * * php {project}/www/index.php Smm/Task/CalcSmmMoney >> {project}/logs/cron_money.log 2>&1
@@ -40,11 +42,3 @@
 * * * * * php {project}/www/index.php Smm/Task/CatificatorVolumeTester >> {project}/logs/catificator_volume_tester.log 2>&1
 * * * * * php {project}/www/index.php Smm/Task/CatificatorBot --instance=0 >> {project}/logs/catificator.0.log 2>&1
 * * * * * php {project}/www/index.php Smm/Task/CatificatorBot --instance=1 >> {project}/logs/catificator.1.log 2>&1
-* * * * * php {project}/www/index.php Smm/Task/CatificatorBot --instance=2 >> {project}/logs/catificator.2.log 2>&1
-* * * * * php {project}/www/index.php Smm/Task/CatificatorBot --instance=3 >> {project}/logs/catificator.3.log 2>&1
-* * * * * php {project}/www/index.php Smm/Task/CatificatorBot --instance=4 >> {project}/logs/catificator.4.log 2>&1
-* * * * * php {project}/www/index.php Smm/Task/CatificatorBot --instance=5 >> {project}/logs/catificator.5.log 2>&1
-* * * * * php {project}/www/index.php Smm/Task/CatificatorBot --instance=6 >> {project}/logs/catificator.6.log 2>&1
-* * * * * php {project}/www/index.php Smm/Task/CatificatorBot --instance=7 >> {project}/logs/catificator.7.log 2>&1
-* * * * * php {project}/www/index.php Smm/Task/CatificatorBot --instance=8 >> {project}/logs/catificator.8.log 2>&1
-* * * * * php {project}/www/index.php Smm/Task/CatificatorBot --instance=9 >> {project}/logs/catificator.9.log 2>&1

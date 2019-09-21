@@ -11,11 +11,13 @@ use \Smm\VK\Captcha;
 
 class Grabber extends \Z\Task {
 	public function options() {
-		return [];
+		return [
+			'type'		=> ''
+		];
 	}
 	
 	public function run($args) {
-		if (!\Smm\Utils\Lock::lock(__CLASS__)) {
+		if (!\Smm\Utils\Lock::lock(__CLASS__.":".$args['type'])) {
 			echo "Already running.\n";
 			return;
 		}
@@ -62,7 +64,8 @@ class Grabber extends \Z\Task {
 		
 		$sort_values = [
 			\Smm\Grabber::SOURCE_INSTAGRAM		=> 0, 
-			\Smm\Grabber::SOURCE_VK				=> 1
+			\Smm\Grabber::SOURCE_PINTEREST		=> 1, 
+			\Smm\Grabber::SOURCE_VK				=> 2, 
 		];
 		
 		uksort($sources, function ($a, $b) use ($sort_values) {
@@ -70,6 +73,9 @@ class Grabber extends \Z\Task {
 		});
 		
 		foreach ($sources as $type => $type_sources) {
+			if ($args['type'] && $args['type'] != \Smm\Grabber::$type2name[$type])
+				continue;
+			
 			echo "======================== ".\Smm\Grabber::$type2name[$type]." ========================\n";
 			
 			switch ($type) {
@@ -79,6 +85,10 @@ class Grabber extends \Z\Task {
 				
 				case \Smm\Grabber::SOURCE_INSTAGRAM:
 					$this->grabInstagram($type_sources);
+				break;
+				
+				case \Smm\Grabber::SOURCE_PINTEREST:
+					$this->grabPinterest($type_sources);
 				break;
 				
 				default:
@@ -364,7 +374,7 @@ class Grabber extends \Z\Task {
 			
 			$json = @json_decode($body);
 			if (!$json) {
-				echo "ERROR: Can't parse JSON ($body)\n$body\n";
+				echo "ERROR: Can't parse JSON ($url)\n$body\n";
 				return false;
 			}
 			
@@ -526,6 +536,219 @@ class Grabber extends \Z\Task {
 			// Временно только одна страница!
 			break;
 		}
+	}
+	
+	public function grabPinterest($sources) {
+		$ch = \Smm\Grabber\Pinterest::instance()->getCurl();
+		
+		\Smm\Grabber\Pinterest::instance()->setRequestMode('desktop_ajax');
+		
+		$fetch_json = function ($ch, $url, $post = []) {
+			$ban_errors = 10;
+			$max_tries = 20;
+			
+			$body = false;
+			
+			while (true) {
+				if ($post) {
+					curl_setopt($ch, CURLOPT_POST, true);
+					curl_setopt($ch, CURLOPT_POSTFIELDS, $post);
+				}
+				
+				curl_setopt($ch, CURLOPT_URL, $url);
+				
+				$body = curl_exec($ch);
+				$code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+				
+				if ($post)
+					curl_setopt($ch, CURLOPT_POST, false);
+				
+				if ($code == 200)
+					break;
+				
+				if ($code == 429) {
+					echo "ERROR: error 429, wait minute... ($url)\n";
+					sleep(60);
+					--$ban_errors;
+				} else if ($code == 404) {
+					echo "ERROR: 404\n";
+					break;
+				} else if ($code == 0) {
+					echo "ERROR: connect error: ".curl_strerror(curl_errno($ch))." ($url)\n";
+				} else {
+					echo "ERROR: unexpected http code ($url): $code\n$body\n";
+				}
+				
+				if (!$ban_errors || !$max_tries)
+					break;
+				--$max_tries;
+			}
+			
+			if (!$ban_errors) {
+				echo "ERROR: Pinterest ban! ($url) :(\n";
+				return false;
+			}
+			
+			if (!$max_tries) {
+				echo "ERROR: Too many errors! ($url)\n";
+				return false;
+			}
+			
+			$json = @json_decode($body);
+			if (!$json) {
+				echo "ERROR: Can't parse JSON ($url)\n$body\n";
+				return false;
+			}
+			
+			return $json;
+		};
+		
+		$next = [];
+		$ended = [];
+		$page = 0;
+		
+		while (true) {
+			++$page;
+			
+			echo "PAGE: $page\n";
+			
+			$good = 0;
+			foreach ($sources as $id => $source) {
+				if (isset($ended[$id]))
+					continue;
+				
+				DB::insert('vk_grabber_data_owners')
+					->set([
+						'id'		=> \Smm\Grabber::SOURCE_PINTEREST."_".$id, 
+						'name'		=> "$id", 
+						'url'		=> "https://www.pinterest.ru/search/pins/?rs=ac&len=2&q=".urlencode($id), 
+						'avatar'	=> "https://s.pinimg.com/webapp/style/images/logo_trans_144x144-642179a1.png"
+					])
+					->onDuplicateSetValues('url')
+					->onDuplicateSetValues('name')
+					->onDuplicateSetValues('avatar')
+					->execute();
+				
+				echo "SEARCH: $id\n";
+				
+				$page_url = "https://www.pinterest.ru/resource/BaseSearchResource/get/?".http_build_query([
+					'source_url'		=> "/search/pins/?rs=ac&len=2&q=".urlencode($id), 
+					'data'				=> json_encode([
+						'options'		=> $next[$id] ?? [
+							'isPrefetch'		=> false, 
+							'query'				=> $id, 
+							'scope'				=> 'pins'
+						], 
+						'context'		=> (object) []
+					]), 
+					'_'					=> round(microtime(true) * 1000)
+				], '', '&');
+				
+				$json = $fetch_json($ch, $page_url);
+				
+				$next[$id] = $json->resource->options ?? false;
+				
+				if (!$next[$id])
+					$ended[$id] = true;
+				
+				if (!$json)
+					continue;
+				
+				if (!isset($json->resource_response, $json->resource_response->data,  $json->resource_response->data->results)) {
+					echo "ERROR: Can't find resource_response->data->results from JSON ($page_url)\n";
+					var_dump($json);
+					break;
+				}
+				
+				$good2 = 0;
+				
+				foreach ($json->resource_response->data->results as $result) {
+					// Получаем ID фотки
+					$topic_id = $result->id;
+					if (!$topic_id) {
+						echo "ERROR: Can't parse topic id ($page_url)\n";
+						continue;
+					}
+					
+					if (!isset($result->created_at) || !$result->created_at) {
+						echo "ERROR: Can't parse result ($page_url)\n";
+						continue;
+					}
+					
+					// Ссылка на фотку
+					$topic_url = "https://www.pinterest.ru/pin/$topic_id";
+					
+					// Дата загрузки фотки
+					$date = strtotime($result->created_at);
+					
+					// Описание фотки
+					$text = trim($result->title."\n".$result->description);
+					
+					// Лайки
+					$likes = 0;
+					
+					// Комменты
+					$comments = 0;
+					
+					$thumbs = [];
+					foreach ($result->images as $i)
+						$thumbs[$i->width] = $i->url;
+					
+					$attaches = [];
+					
+					if ($thumbs) {
+						$attaches[] = [
+							'id'		=> 'photo_'.md5($result->images->orig->url), 
+							'type'		=> 'photo', 
+							'w'			=> $result->images->orig->width, 
+							'h'			=> $result->images->orig->height, 
+							'thumbs'	=> $thumbs
+						];
+					}
+					
+					if (!$attaches) {
+						echo "ERROR: #$topic_id topic without attaches ($topic_url)\n";
+						continue;
+					}
+					
+					$ok = $this->insertToDB((object) [
+						'source_id'			=> $source['id'], 
+						'source_type'		=> \Smm\Grabber::SOURCE_PINTEREST, 
+						'remote_id'			=> $topic_id, 
+						
+						'text'				=> $text, 
+						'owner'				=> $id, 
+						'attaches'			=> $attaches, 
+						
+						'time'				=> $date, 
+						'likes'				=> 0, 
+						'comments'			=> 0, 
+						'reposts'			=> 0, 
+						'images_cnt'		=> 1, 
+						'gifs_cnt'			=> 0
+					]);
+					
+					echo "OK: $topic_url\n";
+					
+					if ($ok) {
+						++$good;
+						++$good2;
+					}
+				}
+				
+				if (!$good2)
+					$ended[$id] = true;
+			}
+			
+			echo "good=$good\n";
+			if (!$good)
+				break;
+			
+			if ($page > 50) {
+				echo "Pages limit.\n";
+				break;
+			}
+		}
 		
 		echo "done.\n";
 	}
@@ -559,7 +782,7 @@ class Grabber extends \Z\Task {
 		do {
 			$rows = DB::select('id', 'data_id')
 				->from('vk_grabber_data_index')
-				->where('source_type', '=', \Smm\Grabber::SOURCE_INSTAGRAM)
+				->where('source_type', 'IN', [\Smm\Grabber::SOURCE_INSTAGRAM, \Smm\Grabber::SOURCE_PINTEREST])
 				->where('grab_time', '<=', time() - 3600 * 24 * 7)
 				->limit(1000)
 				->execute()
@@ -569,7 +792,7 @@ class Grabber extends \Z\Task {
 			$data_ids = array_map(function ($v) { return $v['data_id']; }, $rows);
 			
 			if ($rows) {
-				echo "delete ".count($rows)." old instagram posts...\n";
+				echo "delete ".count($rows)." old posts...\n";
 				DB::delete('vk_grabber_data')
 					->where('id', 'IN', $data_ids)
 					->execute();
@@ -582,7 +805,7 @@ class Grabber extends \Z\Task {
 			$data_ids = array_map(function ($v) { return $v['data_id']; }, $rows);
 			
 			if ($rows) {
-				echo "delete ".count($rows)." old instagram posts...\n";
+				echo "delete ".count($rows)." old posts...\n";
 				DB::delete('vk_grabber_data')
 					->where('id', 'IN', $data_ids)
 					->execute();

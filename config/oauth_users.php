@@ -47,4 +47,10 @@ return [
 		'auth'		=> 'direct', 
 		'required'	=> false
 	], 
+	'PINTEREST_COOKIE'	=> [
+		'title'		=> 'Pinterest (граббер)', 
+		'type'		=> 'PINTEREST_COOKIE', 
+		'auth'		=> 'cookie', 
+		'required'	=> false
+	]
 ];

@@ -93,6 +93,7 @@ class GrabberController extends \Smm\GroupController {
 		$content_filter = $_REQUEST['content'] ?? 'pics';
 		$include = isset($_REQUEST['include']) && is_array($_REQUEST['include']) ? $_REQUEST['include'] : [];
 		$exclude = isset($_REQUEST['exclude']) && is_array($_REQUEST['exclude']) ? $_REQUEST['exclude'] : [];
+		$interval = $_REQUEST['interval'] ?? 'all';
 		
 		$sources = $this->_getSources();
 		
@@ -150,6 +151,24 @@ class GrabberController extends \Smm\GroupController {
 			$grabber_query->order('reposts', 'DESC');
 		} else if ($sort == 'COMMENTS') {
 			$grabber_query->order('comments', 'DESC');
+		}
+		
+		switch ($interval) {
+			case "today":
+				$grabber_query->where('time', '>=', time() - 3600 * 24);
+			break;
+			
+			case "week":
+				$grabber_query->where('time', '>=', time() - 3600 * 24 * 7);
+			break;
+			
+			case "month":
+				$grabber_query->where('time', '>=', time() - 3600 * 24 * 30);
+			break;
+			
+			case "year":
+				$grabber_query->where('time', '>=', time() - 3600 * 24 * 365);
+			break;
 		}
 		
 		if ($mode == 'internal') {
@@ -295,21 +314,28 @@ class GrabberController extends \Smm\GroupController {
 	
 	public function sourcesAction() {
 		$source_url = trim($_POST['url'] ?? '');
+		$source_type_name = $_POST['type'] ?? 'VK';
 		$error = false;
 		$sources = $this->_getSources();
 		
 		$base_url = Url::mk('/')->set('gid', $this->group['id']);
 		
+		$sources_types = [
+			'VK'			=> [
+				'title'			=> 'Паблик VK', 
+				'descr'			=> 'Ссылка вида: https://vk.com/catlist'
+			], 
+			'INSTAGRAM'		=> [
+				'title'			=> 'Instagram', 
+				'descr'			=> 'Тег вида: #cat'
+			], 
+			'PINTEREST'		=> [
+				'title'			=> 'Pinterest', 
+				'descr'			=> 'Строка поиска вида: cute cats'
+			]
+		];
+		
 		if ($_POST) {
-			// Инстаграмм
-			if ($source_url && $source_url[0] == '#')
-				$source_url = "https://www.instagram.com/explore/tags/".urlencode(substr($source_url, 1))."/";
-			
-			if (substr($source_url, 0, 4) != "http")
-				$source_url = "https://$source_url";
-			
-			$parts = parse_url($source_url);
-			
 			$source_id = false;
 			$source_type = false;
 			
@@ -317,43 +343,50 @@ class GrabberController extends \Smm\GroupController {
 				$error = 'Гостевой доступ!';
 			} elseif ($source_url == '') {
 				$error = 'Сейчас бы тыкать на кнопки ничего не введя.';
-			} elseif (isset($parts['host']) && isset($parts['path'])) {
-				$type = '';
-				if (preg_match("/vk.com|vkontakte.ru|vk.me/i", $parts['host'])) {
-					$api = new \Smm\VK\API(\Smm\Oauth::getAccessToken('VK'));
-					
-					$group_id = substr($parts['path'], 1);
-					if (preg_match("/^(public|club)(\d+)$/i", $group_id, $m))
-						$group_id = $m[2];
-					
-					$res = $api->exec("groups.getById", array(
-						'group_ids'	=> $group_id
-					));
-					if ($res->success()) {
-						$source_id = -$res->response[0]->id;
-						$source_type = \Smm\Grabber::SOURCE_VK;
-						$source_name = $res->response[0]->name;
-					} else {
-						$error = $res->error();
-					}
-				} elseif (preg_match("/instagram.com/i", $parts['host'])) {
-					$tag_name = substr($parts['path'], 1);
-					if (preg_match("/tags\/([^\?\/]+)/i", $tag_name, $m))
-						$tag_name = urldecode($m[1]);
-					
-					$data = @file_get_contents("https://www.instagram.com/explore/tags/".urlencode($tag_name)."/?__a=1");
-					if (json_decode($data)) {
-						$source_id = $tag_name;
-						$source_type = \Smm\Grabber::SOURCE_INSTAGRAM;
-						$source_name = "#$tag_name";
-					} else {
-						$error = 'Instagram вернул странную дичь или тег не найден =\\ (тег: '.$tag_name.', ссылка: '.$source_url.')';
-					}
-				} else {
-					$error = '<b>'.$parts['host'].'</b> - чё за сосайт? Не знаю такой!';
-				}
 			} else {
-				$error = 'Чё за дичь!? =\ Не очень похоже на URL.';
+				switch ($source_type_name) {
+					case "VK":
+						$parts = parse_url($source_url);
+						$api = new \Smm\VK\API(\Smm\Oauth::getAccessToken('VK'));
+						
+						$group_id = substr($parts['path'], 1);
+						if (preg_match("/^(public|club)(\d+)$/i", $group_id, $m))
+							$group_id = $m[2];
+						
+						$res = $api->exec("groups.getById", array(
+							'group_ids'	=> $group_id
+						));
+						if ($res->success()) {
+							$source_id = -$res->response[0]->id;
+							$source_type = \Smm\Grabber::SOURCE_VK;
+							$source_name = $res->response[0]->name;
+						} else {
+							$error = $res->error();
+						}
+					break;
+					
+					case "INSTAGRAM":
+						$tag_name = preg_replace("/^#/", "", $source_url);
+						$data = @file_get_contents("https://www.instagram.com/explore/tags/".urlencode($tag_name)."/?__a=1");
+						if (json_decode($data)) {
+							$source_id = $tag_name;
+							$source_type = \Smm\Grabber::SOURCE_INSTAGRAM;
+							$source_name = "#$tag_name";
+						} else {
+							$error = 'Instagram вернул странную дичь или тег не найден =\\ (тег: '.$tag_name.', ссылка: '.$source_url.')';
+						}
+					break;
+					
+					case "PINTEREST":
+						$source_type = \Smm\Grabber::SOURCE_PINTEREST;
+						$source_id = preg_replace("/\s+/", " ", mb_strtolower($source_url));
+						$source_name = $source_id;
+					break;
+					
+					default:
+						$error = 'WTF?';
+					break;
+				}
 			}
 			
 			if (!$error && $source_type !== false) {
@@ -400,6 +433,11 @@ class GrabberController extends \Smm\GroupController {
 					$url = 'https://www.instagram.com/explore/tags/'.urlencode($s['source_our_id']).'/';
 					$icon = 'https://www.instagram.com/static/images/ico/favicon.ico/36b3ee2d91ed.ico';
 				break;
+				
+				case \Smm\Grabber::SOURCE_PINTEREST:
+					$url = 'https://www.pinterest.ru/search/pins/?rs=ac&len=2&q='.urlencode($s['source_our_id']);
+					$icon = 'https://www.pinterest.ru/favicon.ico';
+				break;
 			}
 			
 			$sources_list[] = [
@@ -433,7 +471,9 @@ class GrabberController extends \Smm\GroupController {
 			'form_action'		=> Url::current()->href(), 
 			'form_error'		=> $error, 
 			'form_url'			=> $source_url, 
-			'sources'			=> $sources_list
+			'sources'			=> $sources_list, 
+			'sources_types'		=> $sources_types, 
+			'source_type'		=> $source_type_name
 		]);
 	}
 	
@@ -443,6 +483,7 @@ class GrabberController extends \Smm\GroupController {
 		$content_filter = $_REQUEST['content'] ?? 'pics';
 		$include = isset($_REQUEST['include']) && is_array($_REQUEST['include']) ? $_REQUEST['include'] : [];
 		$exclude = isset($_REQUEST['exclude']) && is_array($_REQUEST['exclude']) ? $_REQUEST['exclude'] : [];
+		$interval = $_REQUEST['interval'] ?? 'all';
 		
 		$sources = $this->_getSources();
 		
@@ -484,6 +525,18 @@ class GrabberController extends \Smm\GroupController {
 			'active'	=> $sort
 		]);
 		
+		$date_tabs = new Widgets\Tabs([
+			'url'		=> Url::current(), 
+			'param'		=> 'interval', 
+			'items'		=> [
+				'all'		=> 'Всё время', 
+				'today'		=> 'Сегодня', 
+				'week'		=> 'Неделя', 
+				'month'		=> 'Месяц'
+			], 
+			'active'	=> $interval
+		]);
+		
 		$sources_ids = [];
 		$sources_list = [];
 		$include_list = [];
@@ -501,6 +554,11 @@ class GrabberController extends \Smm\GroupController {
 				case \Smm\Grabber::SOURCE_INSTAGRAM:
 					$url = 'https://www.instagram.com/explore/tags/'.urlencode($s['source_our_id']).'/';
 					$icon = 'https://www.instagram.com/static/images/ico/favicon.ico/36b3ee2d91ed.ico';
+				break;
+				
+				case \Smm\Grabber::SOURCE_PINTEREST:
+					$url = 'https://www.pinterest.ru/search/pins/?rs=ac&len=2&q='.urlencode($s['source_our_id']);
+					$icon = 'https://www.pinterest.ru/favicon.ico';
 				break;
 			}
 			
@@ -540,11 +598,13 @@ class GrabberController extends \Smm\GroupController {
 			'content_filter'	=> $content_filter, 
 			'include'			=> $include, 
 			'exclude'			=> $exclude, 
+			'interval'			=> $interval, 
 			
 			'gid'				=> $this->group['id'], 
 			'mode_tabs'			=> $mode_tabs->render(), 
 			'content_tabs'		=> $content_tabs->render(), 
-			'sort_tabs'			=> $sort_tabs->render()
+			'sort_tabs'			=> $sort_tabs->render(), 
+			'date_tabs'			=> $date_tabs->render()
 		]);
 	}
 	

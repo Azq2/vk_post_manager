@@ -21,6 +21,12 @@
 				Callbacks API
 			</a>
 		</div>
+		
+		<div class="row">
+			<a href="<?= $proxy_url ?>">
+				Прокси сервера
+			</a>
+		</div>
 	<?php endif; ?>
 	
 	<div class="row">

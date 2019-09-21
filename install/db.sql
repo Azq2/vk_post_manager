@@ -134,7 +134,9 @@ CREATE TABLE `vk_activity_stat` (
   `likes` int(10) unsigned NOT NULL DEFAULT '0',
   `comments` int(10) unsigned NOT NULL DEFAULT '0',
   `comments_meaningful` int(10) unsigned NOT NULL DEFAULT '0',
-  PRIMARY KEY (`date`,`owner_id`,`user_id`)
+  `is_active` tinyint(3) unsigned NOT NULL DEFAULT '0',
+  PRIMARY KEY (`date`,`owner_id`,`user_id`),
+  KEY `owner_id-user_id-is_active-date` (`owner_id`,`user_id`,`is_active`,`date`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 /*!40101 SET character_set_client = @saved_cs_client */;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
@@ -175,7 +177,7 @@ CREATE TABLE `vk_comm_users` (
   `deactivated` tinyint(4) NOT NULL DEFAULT '0',
   `first_name` varchar(32) NOT NULL DEFAULT '',
   `last_name` varchar(32) NOT NULL DEFAULT '',
-  `last_activity` datetime DEFAULT NULL,
+  `last_activity` date DEFAULT NULL,
   `join_date` datetime DEFAULT NULL,
   PRIMARY KEY (`cid`,`uid`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
@@ -335,6 +337,7 @@ CREATE TABLE `vk_oauth` (
   `access_token` varchar(255) NOT NULL,
   `refresh_token` varchar(255) NOT NULL,
   `expires` int(10) unsigned NOT NULL DEFAULT '0',
+  `secret` varchar(255) NOT NULL DEFAULT '',
   PRIMARY KEY (`type`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 /*!40101 SET character_set_client = @saved_cs_client */;
@@ -360,6 +363,18 @@ CREATE TABLE `vk_posts_queue` (
   KEY `group_id-position` (`group_id`) USING BTREE,
   KEY `real_date` (`real_date`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+/*!40101 SET character_set_client = @saved_cs_client */;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `vk_proxy` (
+  `type` varchar(64) NOT NULL,
+  `host` varchar(128) NOT NULL DEFAULT '',
+  `port` int(10) unsigned NOT NULL DEFAULT '0',
+  `login` varchar(128) NOT NULL DEFAULT '',
+  `password` varchar(128) NOT NULL DEFAULT '',
+  `enabled` tinyint(4) NOT NULL DEFAULT '0',
+  PRIMARY KEY (`type`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 /*!40101 SET character_set_client = @saved_cs_client */;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
 /*!40101 SET character_set_client = utf8 */;

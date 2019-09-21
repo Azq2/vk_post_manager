@@ -174,6 +174,9 @@ var tpl = {
 		} else if (data.source_type == 'INSTAGRAM') {
 			url = 'https://www.instagram.com/p/' + data.remote_id;
 			owner_url = data.owner_url;
+		} else if (data.source_type == 'PINTEREST') {
+			url = 'https://www.pinterest.ru/pin/' + data.remote_id;
+			owner_url = data.owner_url;
 		}
 		
 		var post_class = '';
@@ -224,7 +227,7 @@ var tpl = {
 						'<div class="js-post_textarea_wrap">' + 
 							'<div class="pad_b oh">' + 
 								'<label><input type="checkbox" name="text_add" value="1" class="js-post_textarea_enable" ' + 
-									(data.source_type == 'INSTAGRAM' ? '' : ' checked="checked"') + ' /> Использовать текст</label>' + 
+									((data.source_type == 'INSTAGRAM' || data.source_type == 'PINTEREST') ? '' : ' checked="checked"') + ' /> Использовать текст</label>' + 
 								'<a href="#" class="right js-post_action" data-action="spellcheck">Проверить текст</a>' + 
 							'</div>' + 
 							'<div class="js-post_spell_result"></div>' + 

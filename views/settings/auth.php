@@ -153,6 +153,67 @@
 						</button>
 					</div>
 				</form>
+			<?php elseif ($oauth['form'] == 'COOKIE'): ?>
+				<span class="grey">Аккаунт:</span>
+				
+				<?php if ($oauth['user']): ?>
+					<a href="<?= $oauth['user']['link'] ?>" rel="noopener noreferrer" target="_blank">
+						<span class="green">(<?= $oauth['user']['name'] ?>)</span>
+					</a>
+				<?php else: ?>
+					<span class="red">(Не авторизирован)</span>
+				<?php endif; ?>
+				
+				<form action="<?= $oauth_action ?>" class="js-oauth_form">
+					<div class="js-status_text grey hide pad_t">
+						
+					</div>
+					
+					<div class="pad_t">
+						<input type="text" name="cookie" value="" placeholder="Значение cookie" size="32" />
+					</div>
+					
+					<div class="js-captcha_form hide">
+						<div class="pad_t">
+							<img src="/i/img/transparent.gif" alt="" width="196" height="81" class="bord js-captcha_img" />
+						</div>
+						
+						<div class="pad_t">
+							<label class="lbl">Код с картинки:</label><br />
+							<input type="text" name="captcha_key" value="" placeholder="Капча" size="8" />
+							<input type="hidden" name="captcha_sid" value="" class="js-captcha_sid" />
+						</div>
+					</div>
+					
+					<div class="js-sms-2fa_form hide">
+						<div class="pad_t">
+							<label class="lbl">Код из SMS:</label><br />
+							<input type="text" name="2fa_code" value="" placeholder="Код" size="16" />
+						</div>
+					</div>
+					
+					<div class="js-code-2fa_form hide">
+						<div class="pad_t">
+							<label class="lbl">Код из приложения:</label><br />
+							<input type="text" name="2fa_code" value="" placeholder="Код" size="16" />
+						</div>
+						
+						<div class="pad_t">
+							<label>
+								<input type="checkbox" name="force_sms" value="1" />
+								Отправить код в SMS
+							</label>
+						</div>
+					</div>
+					
+					<div class="pad_t">
+						<input type="hidden" name="type" value="<?= $oauth['type'] ?>" />
+						<button class="btn js-oauth_form_submit">
+							<img src="i/img/spinner.gif" alt="" class="m js-spinner hide" />
+							<span class="m">Войти</span>
+						</button>
+					</div>
+				</form>
 			<?php endif; ?>
 			
 			<?php foreach ($oauth['help'] as $help): ?>
