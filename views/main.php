@@ -20,7 +20,7 @@
 	</head>
 	
 	<body>
-		<div class="main">
+		<div class="main" style="background:#fff" id="main">
 			<div class="overlay hide" id="modal_overlay">
 				<div class="modal" id="modal_content">
 					
@@ -49,5 +49,77 @@
 				<?= $content ?>
 			</div>
 		</div>
+		
+		<?php if ($logged): ?>
+		<script>
+			var hearts = [];
+			
+			var next_frame = function () {
+				if (navigator.userAgent.indexOf('Android') >= 0)
+					return;
+				
+				setTimeout(function () {
+					flying_hearts();
+					window.requestAnimationFrame(next_frame);
+				}, 1000 / 30);
+			};
+			next_frame();
+			
+			function rand(min, max) {
+				return Math.floor(Math.random() * (max - min + 1)) + min;
+			}
+			
+			function flying_hearts() { // Алгоритм: http://peters1.dk/tools/snow.php
+				var main = document.getElementById('main'), 
+					rect = main.getBoundingClientRect();
+				
+				var width = rect.left, height = window.innerHeight;
+				if (!hearts.length) {
+					var n = 40;
+					for (var i = 0; i < n; ++i) {
+						var el = new Image();
+						el.src = 'https://emojipedia-us.s3.dualstack.us-west-1.amazonaws.com/thumbs/120/emojione/211/purple-heart_1f49c.png';
+						el.style.position = 'fixed';
+						el.style.zIndex = 99999999;
+						el.style.width = rand(16, 32) + "px";
+						el.style.opacity = '1';
+						
+						document.body.appendChild(el);
+						
+						hearts.push({
+							dx: 0, 
+							x: Math.random() * (width - 50), 
+							y: Math.random() * height, 
+							am: Math.random() * 20, 
+							stepX: 0.02 + Math.random() / 10, 
+							stepY: 0.7 + Math.random(), 
+							rotate: rand(-30, 30), 
+							el: el
+						});
+					}
+			   
+				}
+				
+				var delta = (hearts.length / 2);
+				for (var i = 0; i < delta; ++i) {
+					hearts[i].y += hearts[i].stepY;
+					if (hearts[i].y > height - 50) {
+						hearts[i].x = Math.random() * (width - hearts[i].am - 50);
+						hearts[i].y = 0;
+						hearts[i].stepX = 0.02 + Math.random() / 10;
+						hearts[i].stty = 0.7 + Math.random();
+					}
+					hearts[i].dx += hearts[i].stepX;
+					hearts[i].el.style.top = hearts[i].y + "px";
+					hearts[i].el.style.left = (hearts[i].x + hearts[i].am * Math.sin(hearts[i].dx)) + "px";
+					hearts[i].el.style.transform = 'rotate(' + (hearts[i].rotate + 30 * Math.sin(hearts[i].dx)) + 'deg)';
+					
+					hearts[i+delta].el.style.top = hearts[i].y + "px";
+					hearts[i+delta].el.style.left = rect.left + rect.width + (hearts[i].x + hearts[i].am * Math.sin(hearts[i].dx)) + "px";
+					hearts[i+delta].el.style.transform = 'rotate(' + (hearts[i].rotate + 30 * Math.sin(hearts[i].dx)) + 'deg)';
+				}
+			}
+		</script>
+		<?php endif; ?>
 	</body>
 </html>

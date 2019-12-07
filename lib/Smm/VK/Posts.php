@@ -159,7 +159,7 @@ class Posts {
 					$method = "photos.saveWallPhoto";
 					$data = [
 						'group_id'		=> $gid, 
-						'photo'			=> stripcslashes($upload->photo), 
+						'photo'			=> $upload->photo, 
 						'server'		=> $upload->server, 
 						'hash'			=> $upload->hash, 
 						'caption'		=> isset($img['caption']) ? $img['caption'] : ""
