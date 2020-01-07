@@ -267,6 +267,7 @@ class VkPostsController extends \Smm\GroupController {
 		$post_type		= $_REQUEST['type'] ?? '';
 		$comment		= trim($_REQUEST['comment'] ?? '');
 		$from_web		= intval($_REQUEST['from_web'] ?? 0);
+		$topic_id		= intval($_REQUEST['topic_id'] ?? 0);
 		
 		$this->content['success'] = false;
 		$this->content['post_type'] = $post_type;
@@ -296,7 +297,8 @@ class VkPostsController extends \Smm\GroupController {
 			'lat'			=> $lat, 
 			'long'			=> $long, 
 			'attachments'	=> $attachments, 
-			'publish_date'	=> $fake_date
+			'publish_date'	=> $fake_date, 
+			'topic_id'		=> $topic_id
 		];
 		
 		if (($captcha_code = \Smm\VK\Captcha::getCode())) {

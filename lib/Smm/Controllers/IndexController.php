@@ -220,6 +220,7 @@ class IndexController extends \Smm\GroupController {
 			$this->content['success'] = false;
 			
 			$from_web = intval($_REQUEST['from_web'] ?? 0);
+			$topic_id = intval($_REQUEST['topic_id'] ?? 0);
 		
 			if (!$this->user->can('user')) {
 				$this->content['error'] = 'Гостевой доступ!';
@@ -251,7 +252,8 @@ class IndexController extends \Smm\GroupController {
 						'signed'		=> 0, 
 						'message'		=> $_POST['message'] ?? "", 
 						'attachments'	=> implode(",", array_keys($result->attachments)), 
-						'publish_date'	=> $fake_date
+						'publish_date'	=> $fake_date, 
+						'topic_id'		=> $topic_id
 					];
 					
 					if (($captcha_code = \Smm\VK\Captcha::getCode())) {

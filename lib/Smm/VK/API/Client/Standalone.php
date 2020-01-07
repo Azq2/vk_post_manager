@@ -2,9 +2,6 @@
 namespace Smm\VK\API\Client;
 
 class Standalone extends \Smm\VK\API\Client {
-	const API_VERSION		= '5.101';
-	const API_LANG			= 'ru';
-	
 	protected $params;
 	
 	public function __construct($params) {

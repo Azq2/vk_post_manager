@@ -58,7 +58,8 @@ class Web {
 				'to_id'					=> $data['owner_id'], 
 				'Message'				=> $data['message'] ?? '', 
 				'al'					=> 1, 
-				'_ads_group_id'			=> -$data['owner_id']
+				'_ads_group_id'			=> -$data['owner_id'], 
+				'topic_id'				=> $data['topic_id'] ?? 0
 			];
 		} else {
 			$post = [
@@ -80,7 +81,8 @@ class Web {
 				'update_admin_tips'		=> 0, 
 				'Message'				=> $data['message'] ?? '', 
 				'al'					=> 1, 
-				'_ads_group_id'			=> -$data['owner_id']
+				'_ads_group_id'			=> -$data['owner_id'], 
+				'topic_id'				=> $data['topic_id'] ?? 0
 			];
 		}
 		

@@ -1,5 +1,20 @@
 define(['jquery', 'upload', 'emojionearea', 'functions'], function ($) {
 //
+var TOPICS = [
+	[-1, 'Не выбрано'], 
+	[1, 'Арт'], 
+	[7, 'IT'], 
+	[12, 'Игры'], 
+	[16, 'Музыка'], 
+	[19, 'Фото'], 
+	[21, 'Наука'], 
+	[23, 'Спорт'], 
+	[25, 'Туризм'], 
+	[26, 'Кино'], 
+	[32, 'Юмор'], 
+	[43, 'Стиль'], 
+];
+
 var tpl = {
 	file: function (data) {
 		if (data.errors.length)
@@ -10,6 +25,11 @@ var tpl = {
 						'<input type="submit" class="btn js-file_delete" value="Ой всё" />' + 
 					'</div>' + 
 				'</div>';
+		
+		var topics_html = '';
+		$.each(TOPICS, function () {
+			topics_html += '<option value="' + this[0] + '">' + this[1] + '</option>';
+		});
 		
 		var html = 
 			'<div class="row js-file" id="' + data.id + '">' + 
@@ -33,6 +53,13 @@ var tpl = {
 								'<label><input type="checkbox" name="from_web" value="1" id="from_web_' + data.id + '" /> Убрать шестернь</label>' + 
 							'</div>' + 
 							
+							'<div class="pad_t">' + 
+								'<label class="lbl">Тематика:</label><br />' + 
+								'<select id="topic_id_' + data.id + '">' + 
+									topics_html + 
+								'</select>' + 
+							'</div>' + 
+						
 							'<div class="pad_t">' + 
 								'<input type="submit" class="btn js-file_delete" value="Удалить" />' + 
 							'</div>' + 
@@ -106,6 +133,12 @@ $(function () {
 				.on('change', function (e) {
 					window.localStorage["post_web_enable"] = $(this).prop("checked") ? 1 : "";
 				});
+			
+			$('#topic_id_' + file.id)
+				.val(window.localStorage["post_topic_id"] || -1)
+				.on('change', function (e) {
+					window.localStorage["post_topic_id"] = $(this).val();
+				});
 		});
 		checkButtons();
 		
@@ -165,6 +198,7 @@ function uploadNextFile() {
 	form.append('message', $('#file_descr_' + cur_file.id).prop("emojioneArea").getText());
 	form.append('caption', $('#file_caption_' + cur_file.id).prop("emojioneArea").getText());
 	form.append('from_web', $('#from_web_' + cur_file.id).prop("checked") ? 1 : 0);
+	form.append('topic_id', $('#topic_id' + cur_file.id).val());
 	
 	var xhr = new XMLHttpRequest();
 	xhr.onreadystatechange = function () {

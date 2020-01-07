@@ -1,5 +1,20 @@
 define(['jquery', 'class', 'utils', 'emojione', 'upload', 'meme'], function ($, Class, utils, emojione) {
 //
+var TOPICS = [
+	[-1, 'Не выбрано'], 
+	[1, 'Арт'], 
+	[7, 'IT'], 
+	[12, 'Игры'], 
+	[16, 'Музыка'], 
+	[19, 'Фото'], 
+	[21, 'Наука'], 
+	[23, 'Спорт'], 
+	[25, 'Туризм'], 
+	[26, 'Кино'], 
+	[32, 'Юмор'], 
+	[43, 'Стиль'], 
+];
+
 var tpl = {
 	attaches: function (data, custom) {
 		var attaches = [];
@@ -188,6 +203,11 @@ var tpl = {
 		
 		var attaches = tpl.attaches(data.attaches || [], custom);
 		
+		var topics_html = '';
+		$.each(TOPICS, function () {
+			topics_html += '<option value="' + this[0] + '">' + this[1] + '</option>';
+		});
+		
 		var html =
 			'<div class="row js-post wrapper' + post_class + '" data-id="' + data.remote_id + '" data-type="' + data.source_type + '" data-gid="' + data.source_id + '"' + 
 					' data-post_type="'+ data.type +'">' + 
@@ -247,6 +267,13 @@ var tpl = {
 						
 						'<div class="pad_b pad_t oh red">' + 
 							'<label><input type="checkbox" name="from_web" value="1" class="js-post_web_enable" /> Убрать шестернь</label>' + 
+						'</div>' + 
+						
+						'<div class="pad_b pad_t">' + 
+							'<label class="lbl">Тематика:</label><br />' + 
+							'<select class="js-post_topic_id">' + 
+								topics_html + 
+							'</select>' + 
 						'</div>' + 
 						
 						'<div class="js-upload_form pad_t" data-action="/?a=vk_posts/upload&amp;gid=' + custom.gid + '" data-id="vk_upload">' + 
@@ -413,6 +440,8 @@ var VkFeed = Class({
 			}
 		}).on('change', '.js-post_web_enable', function (e) {
 			window.localStorage["post_web_enable"] = $(this).prop("checked") ? 1 : "";
+		}).on('change', '.js-post_topic_id', function (e) {
+			window.localStorage["post_topic_id"] = $(this).val();
 		}).on('click', '.js-post_action', function (e) {
 			if ($(this).prop("type") != "checkbox" && $(this).prop("type") != "radio")
 				e.preventDefault();
@@ -532,7 +561,10 @@ var VkFeed = Class({
 					}
 				});
 			
-			wrap.find('.js-post_web_enable').prop("checked", !!window.localStorage["post_web_enable"]);
+			try {
+				wrap.find('.js-post_web_enable').prop("checked", !!window.localStorage["post_web_enable"]);
+				wrap.find('.js-post_topic_id').val(window.localStorage["post_topic_id"] || -1);
+			} catch (e) { }
 			
 			wrap.find('.js-post_comment_textarea')
 				.val(e.post.comment_text)
