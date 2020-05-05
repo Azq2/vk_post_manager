@@ -78,11 +78,11 @@ class Web {
 				'from'					=> '', 
 				'fixed'					=> '', 
 				'postpone'				=> $data['publish_date'] ?? '', 
+				'topic_id'				=> $data['topic_id'] ?? 0, 
 				'update_admin_tips'		=> 0, 
 				'Message'				=> $data['message'] ?? '', 
 				'al'					=> 1, 
 				'_ads_group_id'			=> -$data['owner_id'], 
-				'topic_id'				=> $data['topic_id'] ?? 0
 			];
 		}
 		

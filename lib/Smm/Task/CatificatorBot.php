@@ -108,11 +108,12 @@ class CatificatorBot extends \Z\Task {
 		
 		$messages = new \Smm\Bot\Messages('catificator');
 		$messages->setGlobals([
-			'first_name'	=> $this->vk_user->first_name, 
-			'last_name'		=> $this->vk_user->last_name, 
-			'sex'			=> $this->vk_user->sex == 1, 
-			'is_member'		=> $this->vk_user->is_member, 
-			'is_guest'		=> !$this->vk_user->is_member, 
+			'first_name'		=> $this->vk_user->first_name, 
+			'last_name'			=> $this->vk_user->last_name, 
+			'sex'				=> $this->vk_user->sex == 1, 
+			'is_member'			=> $this->vk_user->is_member, 
+			'is_guest'			=> !$this->vk_user->is_member, 
+			'current_group'		=> 'public'.$this->group['id']
 		]);
 		
 		$need_show_motivator = false;
@@ -151,15 +152,24 @@ class CatificatorBot extends \Z\Task {
 					[
 						'action'	=> [
 							'type'		=> 'text', 
+							'label'		=> 'Написать админу', 
+							'payload'	=> '{"command": "write_admin"}'
+						], 
+						'color'		=> 'primary'
+					]/*, 
+					[
+						'action'	=> [
+							'type'		=> 'text', 
 							'label'		=> 'Список дел', 
 							'payload'	=> '{"command": "repost_random_list"}'
 						], 
 						'color'		=> 'primary'
-					]
+					]*/
 				]
 			]
 		], JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE);
 		
+		/*
 		if (count($words) == 2 && in_array("список", $words) && in_array("дел", $words)) {
 			$source_id = DB::select('id')
 				->from('vk_grabber_sources')
@@ -232,6 +242,38 @@ class CatificatorBot extends \Z\Task {
 			}
 			return;
 		}
+		*/
+		
+		if (count($words) == 2 && in_array("написать", $words) && in_array("админу", $words)) {
+			$keyboard = json_encode([
+				'one_time'		=> false, 
+				'buttons'		=> [
+					[
+						[
+							'action'	=> [
+								'type'		=> 'text', 
+								'label'		=> 'Начать', 
+								'payload'	=> '{"command": "start"}'
+							], 
+							'color'		=> 'positive'
+						], 
+					], 
+				]
+			], JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE);
+			
+			$this->sendMessage([
+				'user_id'		=> $msg->object->from_id, 
+				'message'		=> $messages->L("pm_admin"), 
+				'random_id'		=> microtime(true) * 1000, 
+				'keyboard'		=> $keyboard, 
+			]);
+			
+			echo "=> bot disabled\n";
+			
+			$cache->set("catificator_disable:".$this->group['id'].":".$msg->object->from_id, time(), 3600 * 24 * 7);
+			
+			return;
+		}
 		
 		if (count($words) == 1 && ($words[0] == "помощь" || $words[0] == "начать")) {
 			$this->sendMessage([
@@ -240,8 +282,16 @@ class CatificatorBot extends \Z\Task {
 				'random_id'		=> microtime(true) * 1000, 
 				'keyboard'		=> $keyboard, 
 			]);
+			
+			$cache->delete("catificator_disable:".$this->group['id'].":".$msg->object->from_id);
+			
 			return;
 		}
+		
+		// Бот временно отключен юзером
+		$catificator_disable = $cache->get("catificator_disable:".$this->group['id'].":".$msg->object->from_id);
+		if ($catificator_disable)
+			return;
 		
 		if ($words) {
 			$duration = mb_strlen(implode(" ", $words)) * 0.1;
