@@ -263,7 +263,7 @@ class CatificatorBot extends \Z\Task {
 			
 			$this->sendMessage([
 				'user_id'		=> $msg->object->from_id, 
-				'message'		=> $messages->L("pm_admin"), 
+				'message'		=> $messages->L("write_admin"), 
 				'random_id'		=> microtime(true) * 1000, 
 				'keyboard'		=> $keyboard, 
 			]);
@@ -440,7 +440,7 @@ class CatificatorBot extends \Z\Task {
 				
 				$ok = $this->sendMessage([
 					'user_id'		=> $msg->object->from_id, 
-					'message'		=> $need_show_motivator ? $messages->L("result_motivator") : $messages->L("result"), 
+					'message'		=> $messages->L($need_show_motivator ? "result_motivator" : "result", ['phrase' => $msg->object->text]), 
 					'random_id'		=> microtime(true) * 1000, 
 					'attachment'	=> $attach_id, 
 					'keyboard'		=> $keyboard, 

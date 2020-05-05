@@ -31,7 +31,7 @@ class Messages {
 		if (!isset($this->messages[$id])) {
 			$tmp = [];
 			foreach (array_keys($args) as $k)
-				$tmp[] = "$k:{$k}";
+				$tmp[] = "$k:\{$k\}";
 			
 			$this->messages[$id] = $tmp ? "$id: ".implode(", ", $tmp) : "$id";
 			
@@ -45,6 +45,6 @@ class Messages {
 				->execute();
 		}
 		
-		return \Smm\Utils\Text::prepareMacroses($this->messages[$id], array_merge([], $this->vars, $args));
+		return trim(\Smm\Utils\Text::prepareMacroses($this->messages[$id], array_merge([], $this->vars, $args)));
 	}
 }
