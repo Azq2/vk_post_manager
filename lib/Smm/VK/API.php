@@ -28,20 +28,13 @@ class API {
 			CURLOPT_CONNECTTIMEOUT		=> 60, 
 			CURLOPT_ENCODING			=> "gzip,deflate", 
 			CURLOPT_HTTPHEADER			=> $this->client->getHeaders(), 
-			CURLOPT_IPRESOLVE			=> CURL_IPRESOLVE_V4
+			CURLOPT_IPRESOLVE			=> CURL_IPRESOLVE_V4, 
+			CURLOPT_HTTP_VERSION		=> CURL_HTTP_VERSION_1_1 // 2.0 зависает в oauth.vk.com
 		]);
 	}
 	
 	public function setProxy($url) {
 		curl_setopt($this->ch, CURLOPT_PROXY, $url);
-		return $this;
-	}
-	
-	public function setLimit($requests_cnt, $period) {
-		$this->max_requests_cnt = $requests_cnt;
-		$this->max_requests_period = $period;
-		$this->last_request_time = 0;
-		$this->requests_cnt = 0;
 		return $this;
 	}
 	
@@ -174,7 +167,7 @@ class API {
 	protected function _sendRequest($url, $post) {
 		curl_setopt_array($this->ch, [
 			CURLOPT_URL				=> $url, 
-			CURLOPT_POST			=> count($post) > 0, 
+			CURLOPT_POST			=> !empty($post), 
 			CURLOPT_POSTFIELDS		=> $post
 		]);
 		$res = curl_exec($this->ch);

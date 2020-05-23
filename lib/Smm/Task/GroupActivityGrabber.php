@@ -13,6 +13,8 @@ class GroupActivityGrabber extends \Z\Task {
 	protected $last_check_old_data = 0;
 	protected $last_update_changed = 0;
 	
+	protected $api, $api_index = 0, $has_free_api = true;
+	
 	public function options() {
 		return [
 			'fast_update_group_id' => 0
@@ -20,15 +22,62 @@ class GroupActivityGrabber extends \Z\Task {
 	}
 	
 	public function run($args) {
+		if (!\Smm\Utils\Lock::lock(__CLASS__)) {
+			echo "Already running.\n";
+			return;
+		}
+		
 		ini_set('memory_limit', '1G');
 		
-		$this->api = new \Smm\VK\API(\Smm\Oauth::getAccessToken('VK_STAT'));
+		$this->api = [
+			new \Smm\VK\API(\Smm\Oauth::getAccessToken('VK_STAT')), 
+			new \Smm\VK\API(\Smm\Oauth::getAccessToken('VK_STAT_2')), 
+			new \Smm\VK\API(\Smm\Oauth::getAccessToken('VK')), 
+		];
+		
+		$groups_with_access = false;
+		
+		foreach ($this->api as $api) {
+			$tmp_groups_with_access = [];
+			
+			for ($i = 0; $i < 3; ++$i) {
+				// Обрабатываем только те соо, к которым у нас есть доступ
+				$query = $api->exec("groups.get", [
+					'filter'		=> 'admin,moder,editor', 
+					'offset'		=> 0, 
+					'limit'			=> 1000
+				]);
+				
+				if ($query->success()) {
+					$tmp_groups_with_access = $query->response->items;
+					break;
+				} else {
+					$this->printExecuteErrors($query);
+					sleep(1);
+				}
+			}
+			
+			if ($groups_with_access === false)
+				$groups_with_access = $tmp_groups_with_access;
+			
+			$groups_with_access = array_intersect($tmp_groups_with_access, $groups_with_access);
+		}
+		
+		if (!$groups_with_access) {
+			echo "No groups with rights.\n";
+			return;
+		}
 		
 		foreach (DB::select()->from('vk_groups')->where('deleted', '=', 0)->execute() as $group) {
+			echo "**** ".$group['id']." ***\n";
+			
+			if (!in_array($group['id'], $groups_with_access)) {
+				echo "SKIP: no rights in this group.\n";
+				continue;
+			}
+			
 			$this->last_check_old_data = 0;
 			$this->last_update_changed = 0;
-			
-			echo "**** ".$group['id']." ***\n";
 			
 			DB::insert('vk_activity_sources')
 				->ignore()
@@ -49,7 +98,7 @@ class GroupActivityGrabber extends \Z\Task {
 			if ($source['init_done']) {
 				$cache = \Z\Cache::instance();
 				
-				if ($group['id'] == $args['fast_update_group_id']) {
+				if ($group['id'] == $args['fast_update_group_id'] || $args['fast_update_group_id'] == -1) {
 					echo "Fast update!\n";
 					
 					$this->checkPosts($group, true);
@@ -134,6 +183,8 @@ class GroupActivityGrabber extends \Z\Task {
 				
 				var api_calls = 0;
 				
+				var success = false;
+				
 				while (api_calls < MAX_API_CNT && (fetch_likes.length > 0 || fetch_comments.length > 0)) {
 					if (fetch_likes.length > 0 && api_calls < MAX_API_CNT) {
 						var result = API.likes.getList({
@@ -152,6 +203,8 @@ class GroupActivityGrabber extends \Z\Task {
 								fetch_likes.shift();
 								fetch_likes_offset = 0;
 							}
+							
+							success = true;
 						}
 						
 						api_calls = api_calls + 1;
@@ -176,6 +229,8 @@ class GroupActivityGrabber extends \Z\Task {
 								fetch_comments.shift();
 								fetch_comments_offset = fetch_comments[0][1] ? 10 : 0;
 							}
+							
+							success = true;
 						}
 						
 						api_calls = api_calls + 1;
@@ -190,45 +245,40 @@ class GroupActivityGrabber extends \Z\Task {
 					fetch_comments_offset:	fetch_comments_offset, 
 					
 					result_likes:			result_likes, 
-					result_comments:		result_comments
+					result_comments:		result_comments, 
+					
+					success:				success
 				};
 			';
 			
 			$ok = false;
 			for ($i = 0; $i < 10; ++$i) {
-				$exec_result = $this->api->exec("execute", [
+				$exec_result = $this->getApi()->exec("execute", [
 					'code'		=> $js_code
 				]);
-				if ($exec_result->success()) {
+				
+				$this->printExecuteErrors($exec_result);
+				
+				if ($this->hasExecuteError($exec_result, \Smm\VK\API\Response::VK_ERR_RATE_LIMIT))
+					$this->nextApi();
+				
+				if ($exec_result->success() && $exec_result->response->success) {
 					$ok = true;
 					echo "=> OK\n";
 					break;
 				} else {
-					if ($exec_result->error())
-						echo "=> fetch metadata error: ".$exec_result->error()."\n";
-					
-					$flood = false;
 					$sleep = false;
 					
-					if ($exec_result->errorCode() == \Smm\VK\API\Response::VK_ERR_FLOOD)
-						$flood = true;
-					if ($exec_result->errorCode() == \Smm\VK\API\Response::VK_ERR_TOO_FAST)
-						$sleep = true;
-					
-					if (isset($exec_result->execute_errors)) {
-						foreach ($exec_result->execute_errors as $err) {
-							echo "=> fetch metadata error: ".$err->method.": #".$err->error_code." ".$err->error_msg."\n";
-							if ($err->error_code == \Smm\VK\API\Response::VK_ERR_FLOOD)
-								$flood = true;
-							if ($err->error_code == \Smm\VK\API\Response::VK_ERR_TOO_FAST)
-								$sleep = true;
-						}
-					}
-					
-					if ($flood)
+					if ($this->hasExecuteError($exec_result, \Smm\VK\API\Response::VK_ERR_FLOOD))
 						break;
 					
-					sleep($sleep ? 1 : 60);
+					if ($this->hasExecuteError($exec_result, \Smm\VK\API\Response::VK_ERR_TOO_FAST))
+						$sleep = true;
+					
+					if (!$this->hasFreeApi() && $this->hasExecuteError($exec_result, \Smm\VK\API\Response::VK_ERR_RATE_LIMIT))
+						break;
+					
+					sleep($sleep ? 60 : 1);
 				}
 			}
 			
@@ -415,39 +465,32 @@ class GroupActivityGrabber extends \Z\Task {
 			
 			$ok = false;
 			for ($i = 0; $i < 10; ++$i) {
-				$exec_result = $this->api->exec("execute", [
+				$exec_result = $this->getApi()->exec("execute", [
 					'code'		=> $js_code
 				]);
-				if ($exec_result->success()) {
+				
+				$this->printExecuteErrors($exec_result);
+				
+				if ($this->hasExecuteError($exec_result, \Smm\VK\API\Response::VK_ERR_RATE_LIMIT))
+					$this->nextApi();
+				
+				if ($exec_result->success() && $exec_result->response->success) {
 					$ok = true;
 					echo "=> OK\n";
 					break;
 				} else {
-					if ($exec_result->error())
-						echo "=> fetch metadata error: ".$exec_result->error()."\n";
-					
-					$flood = false;
 					$sleep = false;
 					
-					if ($exec_result->errorCode() == \Smm\VK\API\Response::VK_ERR_FLOOD)
-						$flood = true;
-					if ($exec_result->errorCode() == \Smm\VK\API\Response::VK_ERR_TOO_FAST)
-						$sleep = true;
-					
-					if (isset($exec_result->execute_errors)) {
-						foreach ($exec_result->execute_errors as $err) {
-							echo "=> fetch metadata error: ".$err->method.": #".$err->error_code." ".$err->error_msg."\n";
-							if ($err->error_code == \Smm\VK\API\Response::VK_ERR_FLOOD)
-								$flood = true;
-							if ($err->error_code == \Smm\VK\API\Response::VK_ERR_TOO_FAST)
-								$sleep = true;
-						}
-					}
-					
-					if ($flood)
+					if ($this->hasExecuteError($exec_result, \Smm\VK\API\Response::VK_ERR_FLOOD))
 						break;
 					
-					sleep($sleep ? 1 : 60);
+					if ($this->hasExecuteError($exec_result, \Smm\VK\API\Response::VK_ERR_TOO_FAST))
+						$sleep = true;
+					
+					if (!$this->hasFreeApi() && $this->hasExecuteError($exec_result, \Smm\VK\API\Response::VK_ERR_RATE_LIMIT))
+						break;
+					
+					sleep($sleep ? 60 : 1);
 				}
 			}
 			
@@ -540,39 +583,32 @@ class GroupActivityGrabber extends \Z\Task {
 			
 			$ok = false;
 			for ($i = 0; $i < 10; ++$i) {
-				$exec_result = $this->api->exec("execute", [
+				$exec_result = $this->getApi()->exec("execute", [
 					'code'		=> $js_code
 				]);
-				if ($exec_result->success()) {
+				
+				$this->printExecuteErrors($exec_result);
+				
+				if ($this->hasExecuteError($exec_result, \Smm\VK\API\Response::VK_ERR_RATE_LIMIT))
+					$this->nextApi();
+				
+				if ($exec_result->success() && $exec_result->response->success) {
 					$ok = true;
 					echo "=> OK\n";
 					break;
 				} else {
-					if ($exec_result->error())
-						echo "=> fetch metadata error: ".$exec_result->error()."\n";
-					
-					$flood = false;
 					$sleep = false;
 					
-					if ($exec_result->errorCode() == \Smm\VK\API\Response::VK_ERR_FLOOD)
-						$flood = true;
-					if ($exec_result->errorCode() == \Smm\VK\API\Response::VK_ERR_TOO_FAST)
-						$sleep = true;
-					
-					if (isset($exec_result->execute_errors)) {
-						foreach ($exec_result->execute_errors as $err) {
-							echo "=> fetch metadata error: ".$err->method.": #".$err->error_code." ".$err->error_msg."\n";
-							if ($err->error_code == \Smm\VK\API\Response::VK_ERR_FLOOD)
-								$flood = true;
-							if ($err->error_code == \Smm\VK\API\Response::VK_ERR_TOO_FAST)
-								$sleep = true;
-						}
-					}
-					
-					if ($flood)
+					if ($this->hasExecuteError($exec_result, \Smm\VK\API\Response::VK_ERR_FLOOD))
 						break;
 					
-					sleep($sleep ? 1 : 60);
+					if ($this->hasExecuteError($exec_result, \Smm\VK\API\Response::VK_ERR_TOO_FAST))
+						$sleep = true;
+					
+					if (!$this->hasFreeApi() && $this->hasExecuteError($exec_result, \Smm\VK\API\Response::VK_ERR_RATE_LIMIT))
+						break;
+					
+					sleep($sleep ? 60 : 1);
 				}
 			}
 			
@@ -625,6 +661,50 @@ class GroupActivityGrabber extends \Z\Task {
 				echo "done: ".$exec_result->response->count." posts\n";
 				break;
 			}
+		}
+	}
+	
+	public function getApi() {
+		return $this->api[$this->api_index];
+	}
+	
+	public function nextApi() {
+		++$this->api_index;
+		
+		if ($this->api_index >= count($this->api)) {
+			$this->api_index = 0;
+			$this->has_free_api = false;
+		}
+	}
+	
+	public function hasFreeApi() {
+		return $this->has_free_api;
+	}
+	
+	public function hasExecuteError($response, $code) {
+		if ($response->errorCode() == $code)
+			return true;
+		if (isset($response->execute_errors)) {
+			foreach ($response->execute_errors as $err) {
+				if ($err->error_code == $code)
+					return true;
+			}
+		}
+		return false;
+	}
+	
+	
+	public function printExecuteErrors($response) {
+		if ($response->error())
+			echo "=> api error: ".$response->error()."\n";
+		
+		if (isset($response->execute_errors)) {
+			$errors_list = [];
+			foreach ($response->execute_errors as $err)
+				$errors_list[] = "=> api error: ".$err->method.": #".$err->error_code." ".$err->error_msg;
+			$errors_list = array_unique($errors_list);
+			
+			echo implode("\n", $errors_list)."\n";
 		}
 	}
 }

@@ -138,7 +138,12 @@ class VkWidgetsController extends \Smm\GroupController {
 		if (!$widget)
 			return $this->error('Виджет не установлен.');
 		
-		$tiles = $widget['tiles'] ? explode(",", $widget['tiles']) : ["", "", ""];
+		$tiles = $widget['tiles'] ? explode(",", $widget['tiles']) : [];
+		
+		while (count($tiles) < $widget['tiles_n'])
+			$tiles[] = "";
+		
+		$tiles = array_slice($tiles, 0, $widget['tiles_n']);
 		
 		$error_settings = false;
 		$error_upload = false;
@@ -160,7 +165,7 @@ class VkWidgetsController extends \Smm\GroupController {
 				mkdir(dirname($new_path), 0777, true);
 			}
 			
-			if ($file_id < 0 || $file_id > 2) {
+			if ($file_id < 0 || $file_id >= $widget['tiles_n']) {
 				$error_upload = 'Ошибка в параметрах.';
 			} elseif (!isset($_FILES['file'])) {
 				$error_upload = 'Файл не обнаружен!';
@@ -199,6 +204,7 @@ class VkWidgetsController extends \Smm\GroupController {
 		
 		// Common settings
 		elseif ($_POST['do_save_settings'] ?? false) {
+			$widget['tiles_n']			= intval($_POST['tiles_n'] ?? 0);
 			$widget['cost_likes']		= intval($_POST['cost_likes'] ?? 0);
 			$widget['cost_comments']	= intval($_POST['cost_comments'] ?? 0);
 			$widget['title']			= $_POST['title'] ?? '';
@@ -206,6 +212,9 @@ class VkWidgetsController extends \Smm\GroupController {
 			$widget['tile_title']		= $_POST['tile_title'] ?? '';
 			$widget['tile_descr']		= $_POST['tile_descr'] ?? '';
 			$widget['tile_link']		= $_POST['tile_link'] ?? '';
+			
+			$widget['tiles_n']	= min(20, max(0, $widget['tiles_n']));
+			$widget['days']		= min(365, max(0, $widget['days']));
 			
 			DB::update('vk_widget_top_users')
 				->set([
@@ -216,6 +225,7 @@ class VkWidgetsController extends \Smm\GroupController {
 					'tile_title'			=> $widget['tile_title'], 
 					'tile_descr'			=> $widget['tile_descr'], 
 					'tile_link'				=> $widget['tile_link'], 
+					'tiles_n'				=> $widget['tiles_n'], 
 					'mtime'					=> time()
 				])
 				->where('group_id', '=', $widget['group_id'])
@@ -323,7 +333,8 @@ class VkWidgetsController extends \Smm\GroupController {
 			'cost_comments'		=> $widget['cost_comments'], 
 			'images'			=> $images, 
 			'title'				=> htmlspecialchars($widget['title']), 
-			'days'				=> htmlspecialchars($widget['days']), 
+			'days'				=> $widget['days'], 
+			'tiles_n'			=> $widget['tiles_n'], 
 			'tile_title'		=> htmlspecialchars($widget['tile_title']), 
 			'tile_descr'		=> htmlspecialchars($widget['tile_descr']), 
 			'tile_link'			=> htmlspecialchars($widget['tile_link']), 

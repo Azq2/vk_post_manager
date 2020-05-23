@@ -50,7 +50,6 @@ class VkWidgets extends \Z\Task {
 		$ALLOWED_SIZES = ['480.480', '480.720'];
 		
 		$api = new \Smm\VK\API(\Smm\Oauth::getGroupAccessToken($group['id']));
-		$api->setLimit(3, 1.1);
 		
 		// Get community managers
 		$error = false;

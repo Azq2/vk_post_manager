@@ -22,7 +22,14 @@ return [
 		'required'	=> true
 	], 
 	'VK_STAT'			=> [
-		'title'		=> 'ВК (стата)', 
+		'title'		=> 'ВК (стата) #1', 
+		'type'		=> 'VK', 
+		'client'	=> 'standalone', 
+		'auth'		=> 'code', 
+		'required'	=> true
+	], 
+	'VK_STAT_2'			=> [
+		'title'		=> 'ВК (стата) #2', 
 		'type'		=> 'VK', 
 		'client'	=> 'standalone', 
 		'auth'		=> 'code', 
@@ -33,6 +40,7 @@ return [
 		'type'		=> 'VK_WEB', 
 		'required'	=> false
 	], 
+	/*
 	'VK_ANDROID'	=> [
 		'title'		=> 'ВК (посты от android)', 
 		'type'		=> 'VK', 
@@ -53,4 +61,5 @@ return [
 		'auth'		=> 'cookie', 
 		'required'	=> false
 	]
+	*/
 ];

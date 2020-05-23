@@ -5,6 +5,7 @@ class Response {
 	const VK_ERR_TOO_FAST		= 6;
 	const VK_ERR_FLOOD			= 9;
 	const VK_ERR_NEED_CAPTCHA	= 14;
+	const VK_ERR_RATE_LIMIT		= 29;
 	
 	protected $data;
 	
