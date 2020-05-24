@@ -105,10 +105,11 @@
 	<?php endif; ?>
 
 	<div class="row">
-		<?php foreach ($images as $img): ?>
+		<?php foreach ($images as $n => $img): ?>
 			<a href="<?= $img['src'] ?: "/i/img/transparent.gif" ?>" target="_blank" style="width: <?= $img['width'] ?>px; max-width: 30%; display: inline-block">
 				<div class="aspect" style="padding-top: <?= round($img['height'] / $img['width'] * 100, 2) ?>%">
 					<img src="<?= $img['src'] ?: "/i/img/transparent.gif" ?>" alt="" class="preview" />
+					<span style="position: absolute;top: 0;left: 0;background: #cddae7;width: 1em;text-align: center;padding: 5px;"><?= $n + 1 ?></span>
 				</div>
 			</a>
 		<?php endforeach; ?>
@@ -118,9 +119,9 @@
 		<div class="row">
 			<label class="lbl">Файл (PNG, размеры: <?= implode(", ", $allowed_sizes) ?>):</label><br />
 			<select name="file_id">
-				<option value="0">Картинка #1</option>
-				<option value="1">Картинка #2</option>
-				<option value="2">Картинка #3</option>
+				<?php foreach ($images as $n => $img): ?>
+					<option value="<?= $n ?>">Картинка #<?= $n + 1 ?></option>
+				<?php endforeach; ?>
 			</select>
 			<input type="file" name="file" />
 		</div>

@@ -40,7 +40,10 @@ class VkWidgets extends \Z\Task {
 			->execute()
 			->current();
 		
-		$tiles = $widget['tiles'] ? explode(",", $widget['tiles']) : ["", "", ""];
+		$tiles = array_slice(explode(",", $widget['tiles']), 0, $widget['tiles_n']);
+		$tiles = array_filter($tiles, function ($v) {
+			return !empty($v);
+		});
 		
 		$date_to = time();
 		$date_from = $date_to - 3600 * 24 * ($widget['days'] - 1);
@@ -98,7 +101,7 @@ class VkWidgets extends \Z\Task {
 			->where('user_id', '>', 0)
 			->order('points', 'DESC')
 			->group('user_id')
-			->limit(3);
+			->limit(count($tiles));
 		
 		if ($blacklist)
 			$users->where('user_id', 'NOT IN', $blacklist);
@@ -108,8 +111,8 @@ class VkWidgets extends \Z\Task {
 		
 		$users = $users->execute()->asArray('user_id');
 		
-		if (count($users) < 3) {
-			echo "Not enought users! (need 3, but get ".count($users).")\n";
+		if (count($users) < count($tiles)) {
+			echo "Not enought users! (need ".count($tiles).", but get ".count($users).")\n";
 			return false;
 		}
 		
@@ -380,26 +383,28 @@ class VkWidgets extends \Z\Task {
 		
 		// Try save
 		for ($i = 0; $i < 3; ++$i) {
+			$js_code = '
+				var is_member = API.groups.isMember({
+					group_id:		'.$group['id'].', 
+					user_id:		Args.uid
+				});
+				
+				if (is_member) {
+					return '.json_encode([
+						'title'		=> $widget['title'], 
+						'tiles'		=> $widget_tiles_items_member
+					], JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE).';
+				} else {
+					return '.json_encode([
+						'title'		=> $widget['title'], 
+						'tiles'		=> $widget_tiles_items_guest
+					], JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE).';
+				}
+			';
+			
 			$update_widget = $api->exec("appWidgets.update", [
 				'type'			=> 'tiles', 
-				'code'			=> '
-					var is_member = API.groups.isMember({
-						group_id:		'.$group['id'].', 
-						user_id:		Args.uid
-					});
-					
-					if (is_member) {
-						return '.json_encode([
-							'title'		=> $widget['title'], 
-							'tiles'		=> $widget_tiles_items_member
-						], JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE).';
-					} else {
-						return '.json_encode([
-							'title'		=> $widget['title'], 
-							'tiles'		=> $widget_tiles_items_guest
-						], JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE).';
-					}
-				'
+				'code'			=> $js_code
 			]);
 			
 			if ($update_widget->success()) {

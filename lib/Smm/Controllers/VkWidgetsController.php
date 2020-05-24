@@ -143,8 +143,6 @@ class VkWidgetsController extends \Smm\GroupController {
 		while (count($tiles) < $widget['tiles_n'])
 			$tiles[] = "";
 		
-		$tiles = array_slice($tiles, 0, $widget['tiles_n']);
-		
 		$error_settings = false;
 		$error_upload = false;
 		
@@ -319,8 +317,8 @@ class VkWidgetsController extends \Smm\GroupController {
 			} else {
 				$images[] = [
 					'src'		=> false, 
-					'width'		=> 160, 
-					'height'	=> 240, 
+					'width'		=> 480, 
+					'height'	=> 480, 
 				];
 			}
 		}
