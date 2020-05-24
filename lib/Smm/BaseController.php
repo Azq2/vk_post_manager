@@ -18,14 +18,10 @@ class BaseController extends \Z\Controller {
 	public function before() {
 		$this->user = User::instance();
 		
-		if ($this->user->logged() && $this->user->login == 'guest2') {
-			header("HTTP/1.1 500 Internal Server Error");
-			die("PHP Parse error:  syntax error, unexpected '::' (T_PAAMAYIM_NEKUDOTAYIM), expecting end of file in /var/www/cats_memes/lib/Http.php on line 78\n");
-		}
-		
 		View::setGlobal([
 			'logged'		=> $this->user->logged(), 
 			'user'	=> [
+				'login'			=> $this->user->login, 
 				'read_only'		=> $this->user->can('guest')
 			]
 		]);

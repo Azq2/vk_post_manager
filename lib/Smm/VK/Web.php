@@ -59,7 +59,8 @@ class Web {
 				'Message'				=> $data['message'] ?? '', 
 				'al'					=> 1, 
 				'_ads_group_id'			=> -$data['owner_id'], 
-				'topic_id'				=> $data['topic_id'] ?? 0
+				'topic_id'				=> $data['topic_id'] ?? 0, 
+				'copyright'				=> $data['copyright'] ?? ''
 			];
 		} else {
 			$post = [
@@ -83,6 +84,7 @@ class Web {
 				'Message'				=> $data['message'] ?? '', 
 				'al'					=> 1, 
 				'_ads_group_id'			=> -$data['owner_id'], 
+				'copyright'				=> $data['copyright'] ?? ''
 			];
 		}
 		

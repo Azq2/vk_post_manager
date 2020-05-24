@@ -142,12 +142,14 @@ function init() {
 			emojiarea = textarea.data('emojioneArea'), 
 			text_enable_cb = wrap.find('.js-post_textarea_enable'), 
 			text_enable = !text_enable_cb.length || text_enable_cb.prop("checked"), 
-			from_web = wrap.find('.js-post_web_enable').prop("checked"), 
+			from_web = wrap.find('[data-action="web_enable"]').prop("checked"), 
+			copyright_enable = wrap.find('[data-action="copyright_enable"]').prop("checked"), 
+			copyright = wrap.find('.js-post_comment_copyright').val(), 
 			topic_id = wrap.find('.js-post_topic_id').val(), 
 			
 			comment_textarea = wrap.find('.js-post_comment_textarea'), 
 			comment_emojiarea = comment_textarea.data('emojioneArea'), 
-			comment_enable = wrap.find('.js-post_action[data-action="enable_comment"]').prop("checked");
+			comment_enable = wrap.find('.js-post_action[data-action="comment_enable"]').prop("checked");
 		
 		if (el.attr("disabled"))
 			return;
@@ -159,6 +161,7 @@ function init() {
 			type:		'new', 
 			message:	text_enable ? $.trim(emojiarea ? emojiarea.getText() : post.text) : "", 
 			comment:	comment_enable ? $.trim(comment_emojiarea ? comment_emojiarea.getText() : post.comment_text) : "", 
+			copyright:	copyright_enable ?  $.trim(copyright) : "", 
 			attachments: [], 
 			topic_id:	topic_id
 		};

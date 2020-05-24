@@ -136,6 +136,7 @@ class IndexController extends \Smm\GroupController {
 					'time'			=> $item->date, 
 					'type'			=> $item->post_type, 
 					'comment_text'	=> $item->comment_text, 
+					'copyright'		=> $item->copyright->link ?? "", 
 					'comment_spell'	=> \Smm\Utils\Spellcheck::check($item->comment_text), 
 					'likes'			=> 0, 
 					'reposts'		=> 0, 
@@ -253,7 +254,8 @@ class IndexController extends \Smm\GroupController {
 						'message'		=> $_POST['message'] ?? "", 
 						'attachments'	=> implode(",", array_keys($result->attachments)), 
 						'publish_date'	=> $fake_date, 
-						'topic_id'		=> $topic_id
+						'topic_id'		=> $topic_id, 
+						'copyright'		=> $_POST['copyright'] ?? "", 
 					];
 					
 					if (($captcha_code = \Smm\VK\Captcha::getCode())) {

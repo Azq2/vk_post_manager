@@ -53,6 +53,10 @@ var tpl = {
 								'<label><input type="checkbox" name="from_web" value="1" id="from_web_' + data.id + '" /> Убрать шестернь</label>' + 
 							'</div>' + 
 							
+							'<div class="pad_t red">' + 
+								'<input type="text" name="copyright" value="" id="copyright_' + data.id + '" placeholder="Источник" />' + 
+							'</div>' + 
+							
 							'<div class="pad_t">' + 
 								'<label class="lbl">Тематика:</label><br />' + 
 								'<select id="topic_id_' + data.id + '">' + 
@@ -198,7 +202,8 @@ function uploadNextFile() {
 	form.append('message', $('#file_descr_' + cur_file.id).prop("emojioneArea").getText());
 	form.append('caption', $('#file_caption_' + cur_file.id).prop("emojioneArea").getText());
 	form.append('from_web', $('#from_web_' + cur_file.id).prop("checked") ? 1 : 0);
-	form.append('topic_id', $('#topic_id' + cur_file.id).val());
+	form.append('topic_id', $('#topic_id_' + cur_file.id).val());
+	form.append('copyright', $('#copyright_' + cur_file.id).val());
 	
 	var xhr = new XMLHttpRequest();
 	xhr.onreadystatechange = function () {

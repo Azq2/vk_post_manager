@@ -175,6 +175,7 @@ class VkPostsController extends \Smm\GroupController {
 		$message		= $_REQUEST['message'] ?? '';
 		$attachments	= $_REQUEST['attachments'] ?? '';
 		$post_type		= $_REQUEST['type'] ?? '';
+		$copyright		= $_REQUEST['copyright'] ?? '';
 		$comment		= trim($_REQUEST['comment'] ?? '');
 		$from_web		= intval($_REQUEST['from_web'] ?? 0);
 		
@@ -206,7 +207,8 @@ class VkPostsController extends \Smm\GroupController {
 				'message'		=> $message, 
 				'lat'			=> $lat, 
 				'long'			=> $long, 
-				'attachments'	=> $attachments
+				'attachments'	=> $attachments, 
+				'copyright'		=> $copyright
 			];
 			
 			$fake_date = DB::select('fake_date')
@@ -265,6 +267,7 @@ class VkPostsController extends \Smm\GroupController {
 		$message		= $_REQUEST['message'] ?? '';
 		$attachments	= $_REQUEST['attachments'] ?? '';
 		$post_type		= $_REQUEST['type'] ?? '';
+		$copyright		= $_REQUEST['copyright'] ?? '';
 		$comment		= trim($_REQUEST['comment'] ?? '');
 		$from_web		= intval($_REQUEST['from_web'] ?? 0);
 		$topic_id		= intval($_REQUEST['topic_id'] ?? 0);
@@ -298,7 +301,8 @@ class VkPostsController extends \Smm\GroupController {
 			'long'			=> $long, 
 			'attachments'	=> $attachments, 
 			'publish_date'	=> $fake_date, 
-			'topic_id'		=> $topic_id
+			'topic_id'		=> $topic_id, 
+			'copyright'		=> $copyright
 		];
 		
 		if (($captcha_code = \Smm\VK\Captcha::getCode())) {

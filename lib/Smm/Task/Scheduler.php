@@ -127,6 +127,7 @@ class Scheduler extends \Z\Task {
 									'message'		=> $post_meta['message'], 
 									'lat'			=> $post_meta['lat'], 
 									'long'			=> $post_meta['long'], 
+									'copyright'		=> $post_meta['copyright'], 
 									'attachments'	=> implode(",", $post_meta['attachments']), 
 									'publish_date'	=> $fake_date
 								];
@@ -170,11 +171,10 @@ class Scheduler extends \Z\Task {
 								'message'		=> $post_meta['message'], 
 								'lat'			=> $post_meta['lat'], 
 								'long'			=> $post_meta['long'], 
+								'copyright'		=> $post_meta['copyright'], 
 								'attachments'	=> implode(",", $post_meta['attachments']), 
 								'publish_date'	=> $item->date <= time() + 60 ? time() + 60 : $item->date
 							];
-							
-							var_dump($post_meta, $api_data);
 							
 							$deadline = round($this->getNextRun() + $sched_config['interval'] / 2);
 							

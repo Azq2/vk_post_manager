@@ -17,7 +17,8 @@ class Posts {
 			'post_type'		=> $post->post_type, 
 			'publish_date'	=> $post->publish_date ?? 0, 
 			'message'		=> $post->text, 
-			'signed'		=> $post->signer_id ?? 0
+			'signed'		=> $post->signer_id ?? 0, 
+			'copyright'		=> $post->copyright->link ?? ""
 		];
 		
 		if (isset($post->attachments)) {

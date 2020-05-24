@@ -256,7 +256,7 @@ var tpl = {
 						
 						'<div class="js-post_textarea_wrap pad_t">' + 
 							'<div class="pad_b oh">' + 
-								'<label><input type="checkbox" name="text_add" value="1" data-action="enable_comment" class="js-post_action" /> Первонах комментарий</label>' + 
+								'<label><input type="checkbox" name="text_add" value="1" data-action="comment_enable" class="js-post_action" /> Первонах комментарий</label>' + 
 								'<a href="#" class="right js-post_action hide" data-action="spellcheck">Проверить текст</a>' + 
 							'</div>' + 
 							'<div class="js-post_comment_edit hide">' + 
@@ -266,7 +266,7 @@ var tpl = {
 						'</div>' + 
 						
 						'<div class="pad_b pad_t oh red">' + 
-							'<label><input type="checkbox" name="from_web" value="1" class="js-post_web_enable" /> Убрать шестернь</label>' + 
+							'<label><input type="checkbox" name="from_web" data-action="web_enable" value="1" class="js-post_action" /> Убрать шестернь</label>' +
 						'</div>' + 
 						
 						'<div class="pad_b pad_t">' + 
@@ -274,6 +274,13 @@ var tpl = {
 							'<select class="js-post_topic_id">' + 
 								topics_html + 
 							'</select>' + 
+						'</div>' + 
+						
+						'<div class="js-post_textarea_wrap pad_t">' + 
+							'<div class="pad_b oh">' + 
+								'<label><input type="checkbox" name="copyright_enable" value="1" data-action="copyright_enable" class="js-post_action" /> Указать источник</label>' + 
+							'</div>' + 
+							'<input class="js-post_comment_copyright hide" type="text" name="comment_copyright" value="' + url + '" />' + 
 						'</div>' + 
 						
 						'<div class="js-upload_form pad_t" data-action="/?a=vk_posts/upload&amp;gid=' + custom.gid + '" data-id="vk_upload">' + 
@@ -438,8 +445,6 @@ var VkFeed = Class({
 					img.replaceWith(img.clone(true).prop("src", gif));
 				}
 			}
-		}).on('change', '.js-post_web_enable', function (e) {
-			window.localStorage["post_web_enable"] = $(this).prop("checked") ? 1 : "";
 		}).on('change', '.js-post_topic_id', function (e) {
 			window.localStorage["post_topic_id"] = $(this).val();
 		}).on('click', '.js-post_action', function (e) {
@@ -495,7 +500,15 @@ var VkFeed = Class({
 			--self.busy;
 		});
 		
-		self.addAction('enable_comment', function (e) {
+		self.addAction('web_enable', function (e) {
+			var el = e.target, 
+				wrap = e.wrap, 
+				post = e.post;
+			
+			window.localStorage["post_web_enable"] = el.prop("checked") ? 1 : "";
+		});
+		
+		self.addAction('comment_enable', function (e) {
 			var el = e.target, 
 				wrap = e.wrap, 
 				post = e.post;
@@ -506,10 +519,22 @@ var VkFeed = Class({
 				.toggleClass('hide', !el.prop("checked"));
 		});
 		
+		self.addAction('copyright_enable', function (e) {
+			var el = e.target, 
+				wrap = e.wrap, 
+				post = e.post;
+			
+			var textarea_wrap = el.parents('.js-post_textarea_wrap');
+			textarea_wrap
+				.find('.js-post_comment_copyright')
+				.toggleClass('hide', !el.prop("checked"));
+		});
+		
 		self.addAction('spellcheck', function (e) {
 			var el = e.target, 
 				wrap = e.wrap, 
 				post = e.post, 
+				textarea_wrap = el.parents('.js-post_textarea_wrap'), 
 				textarea = textarea_wrap.find('.js-post_comment_textarea, .js-post_textarea'), 
 				emojiarea = textarea.data('emojioneArea');
 			
@@ -520,8 +545,6 @@ var VkFeed = Class({
 			var done = function () {
 				el.text('Проверить текст').css("opacity", 1);
 			};
-			
-			var textarea_wrap = el.parents('.js-post_textarea_wrap');
 			
 			$.api('/?a=vk_posts/spellcheck', {text: text}, function (res) {
 				done();
@@ -562,7 +585,7 @@ var VkFeed = Class({
 				});
 			
 			try {
-				wrap.find('.js-post_web_enable').prop("checked", !!window.localStorage["post_web_enable"]);
+				wrap.find('[data-action="web_enable"]').prop("checked", !!window.localStorage["post_web_enable"]);
 				wrap.find('.js-post_topic_id').val(window.localStorage["post_topic_id"] || -1);
 			} catch (e) { }
 			
@@ -581,7 +604,14 @@ var VkFeed = Class({
 				});
 			
 			if (e.post.comment_text)
-				wrap.find('.js-post_action[data-action="enable_comment"]').click();
+				wrap.find('.js-post_action[data-action="comment_enable"]').click();
+			
+			if ('copyright' in e.post) {
+				if (e.post.copyright)
+					wrap.find('.js-post_action[data-action="copyright_enable"]').click();
+				
+				wrap.find('.js-post_comment_copyright').val(e.post.copyright || "");
+			}
 			
 			wrap.genericUploader();
 			
