@@ -6,13 +6,12 @@ class Update extends \Z\DB\Builder {
 	protected $order = [];
 	protected $ignore = false;
 	protected $limit = NULL;
-	protected $db;
 	
 	use Traits\Where;
 	use Traits\Set;
 	
 	public function __construct($table = NULL, $db = NULL) {
-		$this->db = $db;
+		$this->setDB($db);
 		
 		if ($table)
 			$this->table($table);

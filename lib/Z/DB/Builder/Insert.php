@@ -4,14 +4,13 @@ namespace Z\DB\Builder;
 class Insert extends \Z\DB\Builder {
 	protected $table = NULL;
 	protected $ignore = false;
-	protected $db;
 	
 	use Traits\Where;
 	use Traits\Set;
 	use Traits\OnDuplicateKeyUpdate;
 	
 	public function __construct($table = NULL, $db = NULL) {
-		$this->db = $db;
+		$this->setDB($db);
 		
 		if ($table)
 			$this->table($table);

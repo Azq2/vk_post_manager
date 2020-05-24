@@ -83,4 +83,8 @@ class MySQLi extends \Z\DB\Provider {
 	public function escape($v) {
 		return $this->connection()->escape_string($v);
 	}
+	
+	public function __debugInfo() {
+		return [];
+	}
 }

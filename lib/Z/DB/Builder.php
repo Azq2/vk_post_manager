@@ -1,15 +1,26 @@
 <?php
 namespace Z\DB;
 
-class Builder extends \Z\DB\Query {
+abstract class Builder extends \Z\DB\Query {
 	protected function compileSet($db, $set, $set_expr) {
 		$result = [];
 		
-		foreach ($set as $k => $v)
-			$result[] = $db->quoteColumn($k)." = ".$db->quote($v);
+		foreach ($set as $k => $v) {
+			if (!isset($set_expr[$k]))
+				$result[] = $db->quoteColumn($k)." = ".$db->quote($v);
+		}
 		
-		foreach ($set_expr as $k => $v)
-			$result[] = $db->quoteColumn($k)." = ".$db->quoteColumn($k)." ".$v[0]." ".$db->quote($v[1]);
+		foreach ($set_expr as $k => $v) {
+			$tmp = isset($set[$k]) ? $db->quote($set[$k]) : $db->quoteColumn($k);
+			
+			$n = 0;
+			foreach ($v as $expr) {
+				$tmp = ($n ? "($tmp)" : $tmp)." ".$expr[0]." ".$db->quote($expr[1]);
+				++$n;
+			}
+			
+			$result[] = $db->quoteColumn($k)." = ".$tmp;
+		}
 		
 		return implode(", ", $result);
 	}

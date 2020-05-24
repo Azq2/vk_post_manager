@@ -26,27 +26,28 @@ class Result extends \Z\DB\Result {
 	}
 	
 	protected function fetchAll() {
-		$this->result->data_seek(0);
+		if (!$this->total_rows)
+			return [];
 		
-		$result = [];
+		if (!$this->result->data_seek(0))
+			throw new \Z\DB\Exception("Can't seek result to 0");
+		
 		switch ($this->fetch_mode) {
 			case self::FETCH_OBJECT:
-				while ($row = $this->result->fetch_object($this->fetch_class))
+				$result = [];
+				while ($row = $this->result->fetch_object($this->fetch_class, $this->fetch_params))
 					$result[] = $row;
+				return $result;
 			break;
 			
 			case self::FETCH_ARRAY:
-				while ($row = $this->result->fetch_row())
-					$result[] = $row;
+				return $this->result->fetch_all(MYSQLI_NUM);
 			break;
 			
 			default:
-				while ($row = $this->result->fetch_assoc())
-					$result[] = $row;
+				return $this->result->fetch_all(MYSQLI_ASSOC);
 			break;
 		}
-		
-		return $result;
 	}
 	
 	public function current() {
@@ -56,7 +57,7 @@ class Result extends \Z\DB\Result {
 			
 			switch ($this->fetch_mode) {
 				case self::FETCH_OBJECT:
-					return $this->result->fetch_object($this->fetch_class);
+					return $this->result->fetch_object($this->fetch_class, $this->fetch_params);
 				
 				case self::FETCH_ARRAY:
 					return $this->result->fetch_row();

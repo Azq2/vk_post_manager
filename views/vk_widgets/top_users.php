@@ -32,6 +32,13 @@
 					<input type="text" name="days" autocomplete="off" value="<?= $days ?>" placeholder="0" required="required" size="3" />
 				</div>
 			</div>
+			
+			<div style="display: inline-block; width: 345px">
+				<div class="row">
+					<label class="lbl">Кол-во тайлов:</label><br />
+					<input type="text" name="tiles_n" autocomplete="off" value="<?= $tiles_n ?>" placeholder="0" required="required" size="3" />
+				</div>
+			</div>
 		</div>
 		
 		<div class="row">

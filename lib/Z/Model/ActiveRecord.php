@@ -1,180 +1,241 @@
 <?php
 namespace Z\Model;
 
-use \Mysql;
-use \MysqlResult;
+use \Z\DB;
 
-class ModelException extends \Exception {  }
+// after delete
+// before delete
+
+// after save
+// before save
 
 abstract class ActiveRecord {
 	const STATE_NEW			= 0;
 	const STATE_LOADED		= 1;
 	const STATE_DELETED		= 2;
 	
-	protected $__fields;
-	protected $__state			= self::STATE_NEW;
-	protected $__changed		= [];
-	protected $__operations		= [];
+	protected $fields;
+	protected $state		= self::STATE_NEW;
+	protected $changed		= [];
+	protected $operations	= [];
+	protected $readonly		= false;
 	
-	protected static $pk;
-	protected static $ai;
-	protected static $table;
+	protected static $table_info_cache = [];
 	
-	protected function __construct($fields = NULL) {
-		$this->__state = self::STATE_NEW;
-		$this->__fields = self::getDefaultValues();
-		
+	// options
+	protected static $database = NULL;
+	
+	/*
+	 * Model create & load
+	 * */
+	public function __construct(array $fields = NULL) {
+		// Load model from fields array
 		if ($fields) {
-			foreach ($fields as $k => $v) {
-				if (array_key_exists($k, $this->__fields))
-					$this->__fields[$k] = $v;
+			$default_values = $this->getDefaultValues();
+			$this->fields = array_intersect_key($fields, $default_values);
+			
+			if (count($default_values) != $fields) {
+				$err = "Invalid fields count, expected: ".implode(", ", array_keys($default_values)).", but got: ".implode(", ", array_keys($fields));
+				throw new ActiveRecord\Exception($err);
 			}
-			$this->__state = self::STATE_LOADED;
+			
+			$this->state = self::STATE_LOADED;
+		}
+		// Create new model
+		else {
+			$this->fields = self::getDefaultValues();
+			$this->state = self::STATE_NEW;
 		}
 	}
 	
-	public static function createNew() {
-		$class = get_called_class();
-		return new $class();
-	}
-	
-	public static function createModel($data) {
-		if (!is_array($data) && !is_object($data))
-			$data = Mysql::query("SELECT * FROM `".static::$table."` WHERE `".static::$pk."` = ?", $data);
+	// Load one model from database by primary key
+	public static function load($data) {
+		$data = DB::select()
+			->from(static::table())
+			->where(self::pk(), '=', $data)
+			->execute()
+			->current();
 		
-		if ($data instanceof MysqlResult) {
-			if (!$data->num())
-				return NULL;
-			$data = $data->fetchAssoc();
+		if ($data) {
+			$class_name = get_called_class();
+			return new $class_name($data);
 		}
 		
-		if (is_array($data)) {
-			$class = get_called_class();
-			return new $class($data);
-		}
-		
-		throw new ModelException("Unknown data type: ".gettype($data));
+		return NULL;
 	}
 	
-	public static function createModels($data) {
+	// Load multiple models from database by primary key
+	public static function loadMulti(array $data) {
+		// Preserve sort
 		$models = [];
-		if (is_array($data) && $data && !is_array($data[0])) {
-			foreach ($data as $v)
-				$models[$v] = NULL;
-			$data = Mysql::query("SELECT * FROM `".static::$table."` WHERE `".static::$pk."` IN (?)", $data);
+		foreach ($data as $v)
+			$models[$v] = NULL;
+		
+		$query = DB::select()
+			->from(static::table())
+			->where(self::pk(), 'IN', $data)
+			->execute();
+		
+		$class_name = get_called_class();
+		foreach ($query as $row)
+			$models[$row[self::pk()]] = new $class_name($data);
+		
+		if ($data) {
+			$class_name = get_called_class();
+			return new $class_name($data);
 		}
 		
-		if ($data instanceof MysqlResult) {
-			$req = $data;
-			if (!$req->num())
-				return $models;
-			$data = [];
-			while ($row = $req->fetchAssoc())
-				$data[] = $row;
-		}
-		
-		if (is_array($data)) {
-			$class = get_called_class();
-			foreach ($data as $row) {
-				if (!is_array($row))
-					throw new ModelException("Unknown data type: ".gettype($row));
-				
-				$pk = $row[static::$pk];
-				$models[$pk] = new $class($row);
-			}
-			return $models;
-		}
-		
-		throw new ModelException("Unknown data type: ".gettype($data));
+		return NULL;
+	}
+	
+	/*
+	 * Model insert & update
+	 * */
+	public function onBeforeSave() {
+		return true;
+	}
+	
+	public function onAfterSave() {
+		return true;
 	}
 	
 	public function save() {
-		if (!$this->isChanged())
+		if ($this->isDeletedRecord())
+			throw new ActiveRecord\Exception("Model deleted!");
+		
+		if (!$this->isNewRecord() && !$this->isChanged())
 			return true;
 		
-		if ($this->isDeletedRecord())
-			throw new ModelException("Model deleted!");
+		if (!$this->validate())
+			return false;
+		
+		
+		$db = DB::instance(static::database());
+		
+		try {
+			$db->begin();
+			
+			if (!$this->_save()) {
+				$db->commit();
+				return true;
+			}
+			
+			$db->rollback();
+		} catch (\Throwable $e) {
+			$db->rollback();
+			throw $e;
+		} catch (\Exception $e) {
+			$db->rollback();
+			throw $e;
+		}
+		
+		return false;
+	}
+	
+	protected function _save() {
+		if (!$this->beforeSave()) {
+			return false;
+		}
 		
 		if ($this->isNewRecord()) {
-			$req = Mysql::query(
-				"INSERT INTO `".static::$table."` SET ".
-				self::_buildQuery($this->__fields, $this->__fields, true)
-			);
-			if (static::$ai)
-				$this->__fields[static::$pk] = $req->id();
-			$this->__state = self::STATE_LOADED;
+			$result = DB::insert(static::table())
+				->set($this->fields)
+				->execute();
+			
+			if (self::autoIncrementKey())
+				$this->fields[self::autoIncrementKey()] = $result->insertId();
+			
+			$this->state = self::STATE_LOADED;
 		} else {
-			Mysql::query(
-				"UPDATE `".static::$table."` SET ".self::_buildQuery($this->__changed, $this->__fields)." ".
-				"WHERE `".static::$pk."` = ".Mysql::value($this->__fields[static::$pk])
-			);
+			$query = DB::update(static::table())
+				->where(self::pk(), '=', $this->fields[self::pk()]);
+			
+			foreach ($this->changed as $k => $old_value) {
+				if (isset($this->operations[$k])) {
+					switch ($this->operations[$k][0]) {
+						case "incr":
+							if ($this->operations[$k][1] >= 0) {
+								$query->incr($k, $this->operations[$k][1]);
+							} else {
+								$query->decr($k, $this->operations[$k][1]);
+							}
+						break;
+						
+						case "bits":
+							$query->bitUp($k, $this->operations[$k][1]);
+							$query->bitDown($k, $this->operations[$k][2]);
+						break;
+					}
+				} else {
+					$query->set($k, $this->fields[$k]);
+				}
+			}
+			
+			$query->execute();
+			
+			$this->state = self::STATE_LOADED;
 		}
 		
-		$this->onAfterSave();
+		$this->changed = [];
+		$this->operations = [];
 		
-		$this->__changed = [];
-		$this->__operations = [];
+		$this->afterSave();
 		
 		return true;
 	}
 	
-	public function onAfterSave() { }
-	
+	/*
+	 * Model delete
+	 * */
 	public function delete() {
 		if ($this->isNewRecord() || $this->isChanged())
-			throw new ModelException("Model not saved!");
+			throw new ActiveRecord\Exception("Model not saved!");
 		
 		if ($this->isDeletedRecord())
-			throw new ModelException("Model already deleted!");
+			throw new ActiveRecord\Exception("Model already deleted!");
 		
-		Mysql::query("DELETE FROM `".static::$table."` WHERE `".static::$pk."` = ".Mysql::value($this->__fields[static::$pk]));
-		$this->__state = self::STATE_DELETED;
+		DB::delete(static::table())
+			->where(self::pk(), '=', $this->fields[self::pk()])
+			->execute();
+		
+		$this->state = self::STATE_DELETED;
 		
 		return true;
 	}
 	
+	/*
+	 * Model state
+	 * */
 	public function isChanged($key = NULL) {
-		return $key ? array_key_exists($key, $this->__changed) : !empty($this->__changed);
-	}
-	
-	private function _buildQuery($keys, $values, $insert = false) {
-		$pairs = [];
-		foreach ($keys as $k => $_) {
-			if (isset($this->__operations[$k]) && !$insert) {
-				$pairs[] = "`$k` = `$k` ".$this->__operations[$k][0]." ".$this->__operations[$k][1];
-			} else {
-				$pairs[] = "`$k` = ".Mysql::value($values[$k]);
-			}
-		}
-		return implode(", ", $pairs);
-	}
-	
-	public function getDefaultValues() {
-		$defaults = apcu_fetch("ar:meta:fields:".static::$table);
-		if (!$defaults) {
-			$defaults = [];
-			$req = Mysql::query("SHOW COLUMNS IN `".static::$table."`");
-			while ($field = $req->fetchArray())
-				$defaults[$field[0]] = $field[4];
-			apcu_store("ar:meta:fields:".static::$table, $defaults);
-		}
-		return $defaults;
+		return $key ? array_key_exists($key, $this->changed) : !empty($this->changed);
 	}
 	
 	public function isNewRecord() {
-		return $this->__state == self::STATE_NEW;
+		return $this->state == self::STATE_NEW;
 	}
 	
 	public function isDeletedRecord() {
-		return $this->__state == self::STATE_DELETED;
+		return $this->state == self::STATE_DELETED;
 	}
 	
 	public function isLoadedRecord() {
-		return $this->__state == self::STATE_LOADED;
+		return $this->state == self::STATE_LOADED;
 	}
 	
+	public function isReadOnly() {
+		return $this->readonly;
+	}
+	
+	public function setReadOnly($flag) {
+		$this->readonly = $flag;
+		return $this;
+	}
+	
+	/*
+	 * Model data acessors
+	 * */
 	public function getOldValue($k) {
-		return $this->isChanged($k) ? $this->__changed[$k] : $this->get($k);
+		return $this->isChanged($k) ? $this->changed[$k] : $this->get($k);
 	}
 	
 	public function get($k) {
@@ -187,63 +248,196 @@ abstract class ActiveRecord {
 	
 	public function __set($key, $value) {
 		if ($this->isDeletedRecord())
-			throw new ModelException("Model deleted!");
+			throw new ActiveRecord\Exception("Model deleted!");
 		
-		if (isset($this->__operations[$key]))
-			throw new ModelException("Key `$key` already atomic changed");
+		if (isset($this->operations[$key]))
+			throw new ActiveRecord\Exception("Key `$key` already atomic changed");
 		
-		if (!array_key_exists($key, $this->__fields))
-			throw new ModelException("Key `$key` not found in `".static::$table."` (allowed: ".implode(", ", array_keys($this->__fields)).")");
+		if ($this->isReadOnly())
+			throw new ActiveRecord\Exception("Model is readonly!");
 		
-		if (!array_key_exists($key, $this->__changed) && $this->__fields[$key] !== $value)
-			$this->__changed[$key] = $this->__fields[$key];
-		$this->__fields[$key] = $value;
+		if (!array_key_exists($key, $this->fields))
+			throw new ActiveRecord\Exception("Key `$key` not found in `".static::table()."` (allowed: ".implode(", ", array_keys($this->fields)).")");
+		
+		if (!array_key_exists($key, $this->changed) && $this->fields[$key] !== $value)
+			$this->changed[$key] = $this->fields[$key];
+		$this->fields[$key] = $value;
 	}
 	
 	public function __get($key) {
-		if (!array_key_exists($key, $this->__fields))
-			throw new ModelException("Key `$key` not found in `".static::$table."` (allowed: ".implode(", ", array_keys($this->__fields)).")");
-		return $this->__fields[$key];
+		if (!array_key_exists($key, $this->fields))
+			throw new ActiveRecord\Exception("Key `$key` not found in `".static::table()."` (allowed: ".implode(", ", array_keys($this->fields)).")");
+		return $this->fields[$key];
 	}
 	
 	public function __unset($key) {
-		throw new ModelException("Not supported");
+		throw new ActiveRecord\Exception("Not supported");
 	}
 	
 	public function __isset($key) {
-		return array_key_exists($key, $this->__fields);
+		return array_key_exists($key, $this->fields);
+	}
+	
+	/*
+	 * Atomic operations
+	 * */
+	public function incr($key, $value = 1) {
+		return $this->setAtomic($key, '+', $value);
 	}
 	
 	public function decr($key, $value = 1) {
-		return $this->incr($key, -$value);
+		return $this->setAtomic($key, '-', $value);
 	}
 	
-	public function incr($key, $value = 1) {
-		if (!array_key_exists($key, $this->__fields))
-			throw new ModelException("Key `$key` not found in `".static::$table."` (allowed: ".implode(", ", array_keys($this->__fields)).")");
+	public function bitUp($key, $value = 1) {
+		return $this->setAtomic($key, '|', $value);
+	}
+	
+	public function bitDown($key, $value = 1) {
+		return $this->setAtomic($key, '&~', $value);
+	}
+	
+	protected function setAtomic($key, $operation, $value) {
+		if ($this->isDeletedRecord())
+			throw new ActiveRecord\Exception("Model deleted!");
 		
-		if (isset($this->__operations[$key])) {
-			if ($this->__operations[$key][0] != '+')
-				throw new ModelException("Key `$key` already non-atomic changed");
-			$this->__operations[$key][1] += $value;
-		} else {
-			if ($this->isChanged($key))
-				throw new ModelException("Key `$key` already non-atomic changed");
-			$this->__operations[$key] = ['+', $value];
+		if (!array_key_exists($key, $this->fields))
+			throw new ActiveRecord\Exception("Key `$key` not found in `".static::table()."` (allowed: ".implode(", ", array_keys($this->fields)).")");
+		
+		if ($this->isReadOnly())
+			throw new ActiveRecord\Exception("Model is readonly!");
+		
+		if (!isset($this->operations[$key]) && $this->isChanged($key))
+			throw new ActiveRecord\Exception("Key `$key` already non-atomic changed");
+		
+		$old_value = $this->fields[$key];
+		
+		switch ($operation) {
+			case "+":
+				if (isset($this->operations[$key])) {
+					$this->operations[$key][1] += $value;
+				} else {
+					if ($this->operations[$key][0] != 'incr')
+						throw new ActiveRecord\Exception("Key `$key` already changed by other atomic operation");
+					
+					$this->operations[$key] = ['incr', $value];
+				}
+				
+				$this->fields[$key] += $value;
+			break;
+			
+			case "-":
+				if (isset($this->operations[$key])) {
+					$this->operations[$key][1] -= $value;
+				} else {
+					if ($this->operations[$key][0] != 'incr')
+						throw new ActiveRecord\Exception("Key `$key` already changed by other atomic operation");
+					
+					$this->operations[$key] = ['incr', -$value];
+				}
+				
+				$this->fields[$key] -= $value;
+			break;
+			
+			case "|":
+				if (isset($this->operations[$key])) {
+					$this->operations[$key][1] |= $value;
+					$this->operations[$key][2] &= ~$value;
+				} else {
+					if ($this->operations[$key][0] != 'bits')
+						throw new ActiveRecord\Exception("Key `$key` already changed by other atomic operation");
+					
+					$this->operations[$key] = ['bits', $value, 0];
+				}
+				
+				$this->fields[$key] |= $value;
+			break;
+			
+			case "&~":
+				if (isset($this->operations[$key])) {
+					$this->operations[$key][1] &= ~$value;
+					$this->operations[$key][2] |= $value;
+				} else {
+					if ($this->operations[$key][0] != 'bits')
+						throw new ActiveRecord\Exception("Key `$key` already changed by other atomic operation");
+					
+					$this->operations[$key] = ['bits', 0, $value];
+				}
+				
+				$this->fields[$key] &= ~$value;
+			break;
 		}
 		
-		if (!array_key_exists($key, $this->__changed))
-			$this->__changed[$key] = $this->__fields[$key];
-		$this->__fields[$key] += $value;
+		if (!array_key_exists($key, $this->changed))
+			$this->changed[$key] = $old_value;
 		
 		return $this;
 	}
 	
-	public function toArray() {
-		return $this->__fields;
+	/*
+	 * Model metadata
+	 * */
+	public static function database() {
+		return NULL;
 	}
 	
-	public function toObject() {
-		return (object) $this->__fields;
+	public static abstract function table();
+	
+	public static function pk() {
+		return self::tableInfo(static::table(), 'primary_key');
+	}
+	
+	public static function autoIncrementKey() {
+		return self::tableInfo(static::table(), 'auto_increment');
+	}
+	
+	protected static function getDefaultValues() {
+		return self::tableInfo(static::table(), 'values');
+	}
+	
+	public static function tableInfo($table, $key = NULL) {
+		if (!isset(self::$table_info_cache[$table])) {
+			$info = [
+				'primary_key'		=> NULL, 
+				'auto_increment'	=> NULL, 
+				'values'			=> [], 
+				'fields'			=> []
+			];
+			
+			$query = DB::query("SHOW COLUMNS IN :table", [":table" => DB::exprTable($table)]);
+			foreach ($query->execute() as $row) {
+				if ($row['Key'] == 'PRI') {
+					if ($info['primary_key'])
+						throw new ActiveRecord\Exception("Table $table has combined primary key, but this not supported.");
+					$info['primary_key'] = $row["Field"];
+				}
+				
+				if ($row['Extra'] == 'auto_increment')
+					$info['auto_increment'] = $row["Field"];
+				
+				$info['values'][$row["Field"]] = $row["Default"];
+				
+				$info['fields'][$row["Field"]] = [
+					'is_auto_increment'		=> $row['Extra'] == 'auto_increment', 
+					'is_primary_key'		=> $row['Key'] == 'PRI', 
+					'is_nullable'			=> $row['Null'] == 'YES', 
+					'type'					=> $row['Type']
+				];
+			}
+			
+			self::$table_info_cache[$table] = $info;
+		}
+		return self::$table_info_cache[$table][$key];
+	}
+	
+	/*
+	 * Model data converters
+	 * */
+	public function asArray() {
+		return $this->fields;
+	}
+	
+	public function asObject() {
+		return (object) $this->fields;
 	}
 }

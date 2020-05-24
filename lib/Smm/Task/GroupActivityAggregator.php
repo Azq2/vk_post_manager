@@ -37,7 +37,7 @@ class GroupActivityAggregator extends \Z\Task {
 			->get('date', NULL);
 		
 		$has_dirty_stat = ($last_dirty_date && strtotime(date("Y-m-d 00:00:00")) > strtotime("$last_dirty_date 00:00:00"));
-		if ($has_dirty_stat || 1)
+		if ($has_dirty_stat)
 			$cache->set("group_activity_check_time", 0);
 		
 		$last_full_check_time = $cache->get("group_activity_check_time") ?: 0;
@@ -95,9 +95,7 @@ class GroupActivityAggregator extends \Z\Task {
 					->where('dt', 'BETWEEN', [date("Y-m-d", $cursor), date("Y-m-t", $cursor)])
 					->group('dt')
 					->group('owner_id')
-					->group('user_id');
-				
-				
+					->group('user_id');				
 				
 				foreach ($commentators->execute() as $row) {
 					$insert_comments->values([$row['dt'], $row['owner_id'], $row['user_id'], $row['comments'], $row['comments_meaningful'], $row['comments'] > 0 ? 1 : 0]);

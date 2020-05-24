@@ -7,6 +7,6 @@ class DB {
 	}
 	
 	public static function __callStatic($method, $args) {
-		return call_user_func_array(array(DB\Connection::instance(), $method), $args);
+		return call_user_func_array([DB\Connection::instance(), $method], $args);
 	}
 }

@@ -90,9 +90,8 @@ abstract class Result implements \Countable, \SeekableIterator, \ArrayAccess {
 	}
 	
 	public function offsetGet($offset) {
-		if ($this->seek($offset))
-			return $this->current();
-		return NULL;
+		$this->cursor = $offset;
+		return $this->current();
 	}
 	
 	public function offsetSet($offset, $value) {

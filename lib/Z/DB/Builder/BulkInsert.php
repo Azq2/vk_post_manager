@@ -6,18 +6,17 @@ class BulkInsert extends \Z\DB\Builder {
 	protected $fields = [];
 	protected $values = [];
 	protected $ignore = false;
-	protected $db;
 	
 	use Traits\OnDuplicateKeyUpdate;
 	
 	public function __construct($table = NULL, $fields = NULL, $db = NULL) {
-		$this->db = $db;
+		$this->setDB($db);
 		
 		if ($table)
 			$this->table($table);
 		
 		if ($fields)
-			$this->fieldsArray($fields);
+			$this->fields($fields);
 	}
 	
 	public function table($table) {
@@ -26,10 +25,6 @@ class BulkInsert extends \Z\DB\Builder {
 	}
 	
 	public function fields($fields) {
-		return $this->fieldsArray($fields);
-	}
-	
-	public function fieldsArray($fields) {
 		$this->fields = $fields;
 		return $this;
 	}
@@ -59,6 +54,11 @@ class BulkInsert extends \Z\DB\Builder {
 	
 	public function setValues($arr) {
 		$this->values = $arr;
+		return $this;
+	}
+	
+	public function resetValues() {
+		$this->values = [];
 		return $this;
 	}
 	

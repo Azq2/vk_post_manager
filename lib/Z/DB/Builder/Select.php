@@ -10,14 +10,13 @@ class Select extends \Z\DB\Builder {
 	protected $limit = NULL;
 	protected $offset = NULL;
 	protected $calc_found_rows = false;
-	protected $db;
 	
 	use Traits\Where;
 	use Traits\Having;
 	use Traits\Join;
 	
 	public function __construct($select = [], $db = NULL) {
-		$this->db = $db;
+		$this->setDB($db);
 		
 		if ($select)
 			$this->selectArray($select);

@@ -3,12 +3,13 @@ namespace Z\DB;
 
 class Connection {
 	protected static $instances = [];
-	protected $config;
+	
+	protected $in_transaction = false;
 	
 	protected function __construct($name) {
-		$this->config = \Z\Config::get('database', $name);
-		$provider = strpos($this->config['provider'], "\\") !== false ? $this->config['provider'] : '\\Z\\DB\\Provider\\'.$this->config['provider'];
-		$this->provider = new $provider($this->config);
+		$config = \Z\Config::get('database', $name);
+		$provider = strpos($config['provider'], "\\") !== false ? $config['provider'] : '\\Z\\DB\\Provider\\'.$config['provider'];
+		$this->provider = new $provider($config);
 	}
 	
 	public static function instance($name = 'default') {
@@ -17,31 +18,53 @@ class Connection {
 		return self::$instances[$name];
 	}
 	
-	public function exec($value, $params = []) {
-		if ($params)
-			$value = strtr($value, $params);
+	public static function getInstances() {
+		return self::$instances;
+	}
+	
+	public function exec($value) {
 		return $this->provider->query($value);
 	}
 	
+	public function inTransaction() {
+		return $this->in_transaction;
+	}
+	
 	public function begin() {
+		$this->in_transaction = true;
 		return $this->provider->begin();
 	}
 	
 	public function commit() {
+		$this->in_transaction = false;
 		return $this->provider->commit();
 	}
 	
 	public function rollback() {
+		$this->in_transaction = false;
 		return $this->provider->rollback();
 	}
 	
 	public function quoteTable($value) {
-		if ($value instanceof Expression) {
+		if ($value instanceof Builder\Expression) {
 			return $value->compile($this);
 		} elseif ($value instanceof Query) {
 			return "(".$value->compile($this).")";
 		} elseif (is_array($value)) {
-			return $value[0]." AS ".$this->quoteTable($value[1]);
+			switch (count($value)) {
+				// ['expression', 'field'] => "expression AS `field`"
+				case 2:
+					return $value[0]." AS ".$this->quoteTable($value[1]);
+				break;
+				
+				// ['expression' => 'field'] => "`expression` AS `field`"
+				case 1:
+					$key = array_key_first($value);
+					return $this->quoteTable($key)." AS ".$this->quoteTable($value[$key]);
+				break;
+			}
+			
+			throw new \InvalidArgumentException("Invalid arguments.");
 		}
 		return implode(".", array_map(function ($v) {
 			return $this->provider->quoteTable($v);
@@ -49,12 +72,25 @@ class Connection {
 	}
 	
 	public function quoteColumn($value) {
-		if ($value instanceof Expression) {
+		if ($value instanceof Builder\Expression) {
 			return $value->compile($this);
 		} elseif ($value instanceof Query) {
 			return "(".$value->compile($this).")";
 		} elseif (is_array($value)) {
-			return $value[0]." AS ".$this->quoteColumn($value[1]);
+			switch (count($value)) {
+				// ['expression', 'field'] => "expression AS `field`"
+				case 2:
+					return $value[0]." AS ".$this->quoteTable($value[1]);
+				break;
+				
+				// ['expression' => 'field'] => "`expression` AS `field`"
+				case 1:
+					$key = array_key_first($value);
+					return $this->quoteTable($key)." AS ".$this->quoteTable($value[$key]);
+				break;
+			}
+			
+			throw new \InvalidArgumentException("Invalid arguments.");
 		}
 		return implode(".", array_map(function ($v) {
 			return $this->provider->quoteColumn($v);
@@ -67,7 +103,7 @@ class Connection {
 		} elseif (is_bool($v)) {
 			return $v ? "'1'" : "'0'";
 		} elseif (is_object($v)) {
-			if ($v instanceof Expression) {
+			if ($v instanceof Builder\Expression) {
 				return $v->compile($this);
 			} elseif ($v instanceof Query) {
 				return "(".$v->compile($this).")";
@@ -85,14 +121,20 @@ class Connection {
 		return $this->provider->quote($v);
 	}
 	
-	public function query() {
-		$args = func_get_args();
-		$sql = array_shift($args);
-		return new Builder\Query($sql, $args, $this);
+	public function query($query, $args = []) {
+		return new Builder\Query($query, $args, $this);
 	}
 	
-	public function expr($query = NULL, $params = NULL) {
-		return new Expression($query, $params, $this);
+	public function expr($query, $params = []) {
+		return new Builder\Expression($query, $params, $this);
+	}
+	
+	public function exprTable($table) {
+		return new Builder\Expression($this->quoteTable($table), [], $this);
+	}
+	
+	public function exprColumn($table) {
+		return new Builder\Expression($this->quoteColumn($table), [], $this);
 	}
 	
 	public function select() {

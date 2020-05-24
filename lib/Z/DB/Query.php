@@ -1,40 +1,38 @@
 <?php
 namespace Z\DB;
 
-class Query {
-	protected $db, $params;
+abstract class Query {
+	protected $db, $fetch_params;
 	protected $fetch_type = Result::FETCH_ASSOC;
 	
-	public function __construct($query = NULL, $params = NULL, $db = NULL) {
-		$this->query = $query;
-		$this->params = $params;
-		$this->db = $db;
-	}
-	
-	public function compile() {
-		return $this->params ? strtr($this->query, $this->params) : $this->query;
-	}
+	public abstract function compile($db = NULL);
 	
 	public function __toString() {
 		return $this->compile();
 	}
 	
-	public function asList() {
+	public function asArray() {
 		$this->fetch_type = Result::FETCH_ARRAY;
 		return $this;
 	}
 	
-	public function asArray() {
+	public function asAssoc() {
 		$this->fetch_type = Result::FETCH_ASSOC;
 		return $this;
 	}
 	
-	public function asObject($class_name = 'stdClass') {
+	public function asObject($class_name = 'stdClass', $class_params = []) {
 		$this->fetch_type = $class_name;
+		$this->fetch_params = $class_params;
 		return $this;
 	}
 	
-	public function getDB($db = NULL) {
+	public function setDB($db = NULL) {
+		$this->db = $db;
+		return $this;
+	}
+	
+	protected function getDB($db = NULL) {
 		if (is_null($db))
 			$db = $this->db;
 		if (!is_object($db))
