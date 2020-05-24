@@ -351,6 +351,9 @@ class Grabber extends \Z\Task {
 				} else if ($code == 404) {
 					echo "ERROR: 404\n";
 					break;
+				} else if ($code == 302) {
+					echo "ERROR: unexpected redirect ($url): ".curl_getinfo($ch, CURLINFO_REDIRECT_URL)."\n";
+					break;
 				} else if ($code == 0) {
 					echo "ERROR: connect error: ".curl_strerror(curl_errno($ch))." ($url)\n";
 				} else {
@@ -573,6 +576,8 @@ class Grabber extends \Z\Task {
 				} else if ($code == 404) {
 					echo "ERROR: 404\n";
 					break;
+				} else if ($code == 302) {
+					echo "ERROR: unexpected redirect ($url): ".curl_getinfo($ch, CURLINFO_REDIRECT_URL)."\n";
 				} else if ($code == 0) {
 					echo "ERROR: connect error: ".curl_strerror(curl_errno($ch))." ($url)\n";
 				} else {
