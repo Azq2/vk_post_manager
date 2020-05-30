@@ -326,7 +326,7 @@ class Grabber extends \Z\Task {
 			CURLOPT_TIMEOUT				=> 30, 
 			CURLOPT_COOKIEJAR			=> $jar, 
 			CURLOPT_COOKIEFILE			=> $jar, 
-			CURLOPT_USERAGENT			=> "Mozilla/5.0 (Windows NT 10.0; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/73.0.3683.75 Safari/537.36"
+			CURLOPT_USERAGENT			=> "Mozilla/5.0 (Linux; Android 6.0.1; Nexus 5X Build/MMB29P) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/41.0.2272.96 Mobile Safari/537.36 (compatible; Googlebot/2.1; +http://www.google.com/bot.html)"
 		]);
 		
 		$fetch_json = function ($ch, $url) {
@@ -345,8 +345,8 @@ class Grabber extends \Z\Task {
 					break;
 				
 				if ($code == 429) {
-					echo "ERROR: error 429, wait minute... ($url)\n";
-					sleep(60);
+					echo "ERROR: error 429, wait... ($url)\n";
+					sleep(3 * 60);
 					--$ban_errors;
 				} else if ($code == 404) {
 					echo "ERROR: 404\n";
@@ -383,6 +383,17 @@ class Grabber extends \Z\Task {
 			
 			return $json;
 		};
+		
+		$last_graphql_query = 0;
+		
+		$query_hashes_iter = 0;
+		
+		$query_hashes = [
+			'477b65a610463740ccdb83135b2014db', 
+			'8c1ccd0d1cab582bafc9df9f5983e80d', 
+			'ea0f07e73ad28955150d066bd22ef843', 
+			'2b0673e0dc4580674a88d426fe00ea90'
+		];
 		
 		$ended = [];
 		$page = 0;
@@ -461,20 +472,39 @@ class Grabber extends \Z\Task {
 						$attaches = [];
 						$edges_to_parse = [];
 						
-						if  (isset($edge->node->__typename) && $edge->node->__typename == "GraphSidecar") {
-							$ajax_topic_url = "https://www.instagram.com/p/$topic_id/?__a=1";
+						if (isset($edge->node->__typename) && $edge->node->__typename == "GraphSidecar") {
+							$ajax_topic_url = "https://www.instagram.com/graphql/query/?".http_build_query([
+								'query_hash'		=> $query_hashes[$query_hashes_iter % count($query_hashes)], 
+								'variables'			=> json_encode([
+									'shortcode'				=> $topic_id, 
+									'child_comment_count'	=> 3, 
+									'fetch_comment_count'	=> 40, 
+									'parent_comment_count'	=> 24, 
+									'has_threaded_comments'	=> 'true'
+								])
+							], '', '&');
+							
+							++$query_hashes_iter;
+							
+							$now = microtime(true);
+							if ($now - $last_graphql_query < 0.3) {
+								$sleep = round((0.3 - ($now - $last_graphql_query)) * 1000000);
+								usleep($sleep);
+							}
 							
 							$json = $fetch_json($ch, $ajax_topic_url);
+							$last_graphql_query = microtime(true);
+							
 							if (!$json)
 								continue;
 							
-							if (!isset($json->graphql, $json->graphql->shortcode_media)) {
-								echo "ERROR: Can't find graphql->shortcode_media from JSON ($ajax_topic_url)\n";
+							if (!isset($json->data, $json->data->shortcode_media)) {
+								echo "ERROR: Can't find data->shortcode_media from JSON ($ajax_topic_url)\n";
 								var_dump($json);
 								break;
 							}
 							
-							foreach ($json->graphql->shortcode_media->edge_sidecar_to_children->edges as $sub_edge)
+							foreach ($json->data->shortcode_media->edge_sidecar_to_children->edges as $sub_edge)
 								$edges_to_parse[] = $sub_edge;
 						} else {
 							$edges_to_parse[] = $edge;
@@ -519,7 +549,7 @@ class Grabber extends \Z\Task {
 							'gifs_cnt'			=> 0
 						]);
 						
-						echo "OK: $topic_url\n";
+						echo "OK: $topic_url [likes: $likes, comments $comments]\n";
 						
 						if ($ok) {
 							++$good;
