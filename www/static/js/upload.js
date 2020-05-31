@@ -76,6 +76,7 @@ $.urlUploader = function (options) {
 		files:			[], 
 		images:			[], 
 		documents:		[], 
+		videos:			[], 
 		cover:			false, 
 		coverOffset:	false, 
 		onStateChanged:	false, 
@@ -94,6 +95,7 @@ $.urlUploader = function (options) {
 				files:			options.files, 
 				images:			options.images, 
 				documents:		options.documents, 
+				videos:			options.videos, 
 				type:			"url", 
 				cover:			options.cover, 
 				offset:			options.coverOffset

@@ -594,7 +594,7 @@ class SettingsController extends \Smm\GroupController {
 							'form'				=> 'CODE', 
 							'title'				=> $oauth['title'], 
 							'oauth_url'			=> $api->getOauthUrl([
-								'scope'		=> 'offline wall groups photos docs'
+								'scope'		=> 'offline wall groups photos docs video'
 							]), 
 							'user'				=> $logged_user, 
 							'help'				=> [

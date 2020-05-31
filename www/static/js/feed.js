@@ -45,10 +45,16 @@ var tpl = {
 					tile = att.type == 'doc' ? '100%' : (photo_h / photo_w > 1.2 ? '25%' : '50%');
 				
 				html += 
-					'<div class="center post-pic' + (deleted ? ' deleted' : '') + ' js-attach' + (att.ext == 'gif' ? ' js-gif' : '') + '" ' + 
+					'<div class="center post-pic' + (deleted ? ' deleted' : '') + ' js-attach' + (att.ext == 'mp4' || att.ext == 'gif' ? ' js-gif' : '') + '" ' + 
 							(
 								att.ext == 'gif' ? 
 								' data-gif="' + att.url + '" data-mp4="' + (att.mp4 || "") + '"' + 
+								' data-width="' + att.w + '" data-height="' + att.h + '"' : 
+								' '
+							) + 
+							(
+								att.ext == 'mp4' ? 
+								' data-gif="" data-mp4="' + att.mp4 + '"' + 
 								' data-width="' + att.w + '" data-height="' + att.h + '"' : 
 								' '
 							) + 

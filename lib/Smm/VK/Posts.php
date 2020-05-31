@@ -72,6 +72,20 @@ class Posts {
 			return $result;
 		}
 		
+		$images_cnt = 0;
+		$videos_cnt = 0;
+		$docs_cnt = 0;
+		
+		foreach ($images as $image) {
+			if ($image['video'] ?? false) {
+				++$videos_cnt;
+			} elseif ($image['document'] ?? false) {
+				++$docs_cnt;
+			} else {
+				++$images_cnt;
+			}
+		}
+		
 		$data = ['group_id' => $gid, '_' => microtime(true)];
 		
 		if (($captcha_code = Captcha::getCode())) {
@@ -79,15 +93,23 @@ class Posts {
 			$data['captcha_sid'] = $captcha_code['sid'];
 		}
 		
-		$upload_photos = $api->exec("photos.getWallUploadServer", $data);
-		
-		usleep(100000);
-		
-		if (!$upload_photos->success()) {
-			$result->error = $upload_photos->error();
-			$result->captcha = $upload_photos->captcha();
-			Captcha::set($upload_photos->captcha());
-			return $result;
+		$upload_photos = false;
+		if ($images_cnt) {
+			$upload_photos = $api->exec("photos.getWallUploadServer", $data);
+			
+			usleep(100000);
+			
+			if (!$upload_photos->success()) {
+				$result->error = $upload_photos->error();
+				$result->captcha = $upload_photos->captcha();
+				Captcha::set($upload_photos->captcha());
+				return $result;
+			}
+			
+			if (!isset($upload_photos->response->upload_url)) {
+				$result->error = "Параметр upload_url не найден в ответе VK API!";
+				return $result;
+			}
 		}
 		
 		$data = [
@@ -100,20 +122,23 @@ class Posts {
 			$data['captcha_sid'] = $captcha_code['sid'];
 		}
 		
-		$upload_docs = $api->exec("docs.getWallUploadServer", $data);
-		
-		usleep(100000);
-		
-		if (!$upload_docs->success()) {
-			$result->error = $upload_docs->error();
-			$result->captcha = $upload_docs->captcha();
-			Captcha::set($upload_docs->captcha());
-			return $result;
-		}
-		
-		if (!isset($upload_photos->response->upload_url) || !isset($upload_docs->response->upload_url)) {
-			$result->error = "Параметр upload_url не найден в ответе VK API!";
-			return $result;
+		$upload_docs = false;
+		if ($docs_cnt) {
+			$upload_docs = $api->exec("docs.getWallUploadServer", $data);
+			
+			usleep(100000);
+			
+			if (!$upload_docs->success()) {
+				$result->error = $upload_docs->error();
+				$result->captcha = $upload_docs->captcha();
+				Captcha::set($upload_docs->captcha());
+				return $result;
+			}
+			
+			if (!isset($upload_docs->response->upload_url)) {
+				$result->error = "Параметр upload_url не найден в ответе VK API!";
+				return $result;
+			}
 		}
 		
 		$attachments = [];
@@ -121,78 +146,194 @@ class Posts {
 			if ($i)
 				usleep(100000);
 			
-			$is_doc = isset($img['document']) && $img['document'];
-			$upload = false;
-			
-			// Загружаем на сервера VK
-			for ($i = 0; $i < 3; ++$i) {
-				$upload_raw = $api->upload($is_doc ? $upload_docs->response->upload_url : $upload_photos->response->upload_url, [
-					['path' => $img['path'], 'name' => $is_doc ? "image.gif" : "image.jpg", 'key' => $is_doc ? 'file' : 'photo']
-				]);
-				$upload = @json_decode($upload_raw->body);
+			$is_video = isset($img['video']) && $img['video'];
+			if ($is_video) {
+				$video_upload_url = false;
 				
-				if ($upload_raw->code != 200) {
-					$result->error = "Ошибка подключения к UPLOAD серверу при загрузке ".($is_doc ? 'документа' : 'фото').
-						" #$i! (path: ".$img['path'].", server: ".$res->response->upload_url.", code: ".$upload_raw->code.")";
-				} else if (!$upload) {
-					$result->error = 'UPLOAD ответил ерундой: <pre>'.htmlspecialchars($upload_raw).'</pre>';
-				} else if (isset($upload->error)) {
-					$result->error = "UPLOAD (gid=$gid) ".$upload->error;
-				} else {
-					$result->error = false;
-					break;
-				}
-			}
-			
-			if ($result->error)
-				return $result;
-			
-			for ($i = 0; $i < 3; ++$i) {
-				// Сохраняем загруженный файл
-				if ($is_doc) {
-					$method = "docs.save";
-					$data = [
-						'file'			=> $upload->file, 
-						'title'			=> isset($img['title']) ? $img['title'] : "", 
-						'tags'			=> isset($img['tags']) ? $img['tags'] : "", 
-					];
-				} else {
-					$method = "photos.saveWallPhoto";
+				// Создаём видеофайл
+				for ($i = 0; $i < 3; ++$i) {
 					$data = [
 						'group_id'		=> $gid, 
-						'photo'			=> $upload->photo, 
-						'server'		=> $upload->server, 
-						'hash'			=> $upload->hash, 
-						'caption'		=> isset($img['caption']) ? $img['caption'] : ""
+						'repeat'		=> 1, 
+						'wallpost'		=> 0, 
+						'name'			=> $img['title']
 					];
+					
+					if (($captcha_code = Captcha::getCode())) {
+						$data['captcha_key'] = $captcha_code['key'];
+						$data['captcha_sid'] = $captcha_code['sid'];
+					}
+					
+					$file = $api->exec("video.save", $data);
+					
+					if ($file->success()) {
+						$video_upload_url = $file->response->upload_url;
+						$result->error = false;
+						break;
+					} else {
+						$result->error = $file->error();
+						$result->captcha = $file->captcha();
+						Captcha::set($file->captcha());
+						
+						if ($file->errorCode() == \Smm\VK\API\Response::VK_ERR_TOO_FAST)
+							sleep(3);
+					}
 				}
+				
+				if ($result->error)
+					return $result;
+				
+				// Загружаем на сервера VK
+				$video_id = false;
+				$owner_id = false;
+				
+				for ($i = 0; $i < 3; ++$i) {
+					$upload_raw = $api->upload($video_upload_url, [
+						['path' => $img['path'], 'name' => "video.mp4", 'key' => 'file']
+					]);
+					$upload = @json_decode($upload_raw->body);
+					
+					if ($upload_raw->code != 200) {
+						$result->error = "Ошибка подключения к UPLOAD серверу при загрузке ".($is_doc ? 'документа' : 'фото').
+							" #$i! (path: ".$img['path'].", server: ".$video_upload_url.", code: ".$upload_raw->code.")";
+					} else if (!$upload) {
+						$result->error = 'JSON error: <pre>'.htmlspecialchars($upload_raw).'</pre>';
+					} else if (isset($upload->error)) {
+						$result->error = $upload->error;
+					} else if (isset($upload->error_msg)) {
+						$result->error = $upload->error_msg;
+					} else if (!isset($upload->video_id)) {
+						$result->error = 'Unknown error: <pre>'.htmlspecialchars($upload_raw).'</pre>';
+					} else {
+						$video_id = $upload->video_id;
+						$owner_id = $upload->owner_id;
+						$result->error = false;
+						break;
+					}
+				}
+				
+				if ($result->error)
+					return $result;
 				
 				if (($captcha_code = Captcha::getCode())) {
 					$data['captcha_key'] = $captcha_code['key'];
 					$data['captcha_sid'] = $captcha_code['sid'];
 				}
 				
-				$file = $api->exec($method, $data);
+				// Получаем загруженный файл
+				for ($i = 0; $i < 3; ++$i) {
+					$data = [
+						'owner_id'		=> $owner_id, 
+						'videos'		=> $owner_id.'_'.$video_id
+					];
+					
+					if (($captcha_code = Captcha::getCode())) {
+						$data['captcha_key'] = $captcha_code['key'];
+						$data['captcha_sid'] = $captcha_code['sid'];
+					}
+					
+					$file = $api->exec("video.get", $data);
+					
+					if ($file->success()) {
+						if ($file->response->items) {
+							$att = 'video'.$file->response->items[0]->owner_id.'_'.$file->response->items[0]->id;
+							
+							$attachments[$att] = $file->response->items[0];
+							
+							if ($progress)
+								$progress($att, $attachments[$att]);
+							
+							$result->error = false;
+						} else {
+							$result->error = 'Video not found after upload!!!';
+						}
+						break;
+					} else {
+						$result->error = $file->error();
+						$result->captcha = $file->captcha();
+						Captcha::set($file->captcha());
+						
+						if ($file->errorCode() == \Smm\VK\API\Response::VK_ERR_TOO_FAST)
+							sleep(3);
+					}
+				}
+			} else {
+				$is_doc = isset($img['document']) && $img['document'];
+				$upload = false;
 				
-				if ($file->success()) {
-					$att = $is_doc ? 
-						'doc'.$file->response->doc->owner_id.'_'.$file->response->doc->id : 
-						'photo'.$file->response[0]->owner_id.'_'.$file->response[0]->id;
+				// Загружаем на сервера VK
+				for ($i = 0; $i < 3; ++$i) {
+					$upload_url = $is_doc ? $upload_docs->response->upload_url : $upload_photos->response->upload_url;
+					$upload_raw = $api->upload($upload_url, [
+						['path' => $img['path'], 'name' => $is_doc ? "image.gif" : "image.jpg", 'key' => $is_doc ? 'file' : 'photo']
+					]);
+					$upload = @json_decode($upload_raw->body);
 					
-					$attachments[$att] = $is_doc ? $file->response->doc : $file->response[0];
+					if ($upload_raw->code != 200) {
+						$result->error = "Ошибка подключения к UPLOAD серверу при загрузке ".($is_doc ? 'документа' : 'фото').
+							" #$i! (path: ".$img['path'].", server: ".$upload_url.", code: ".$upload_raw->code.")";
+					} else if (!$upload) {
+						$result->error = 'JSON error: <pre>'.htmlspecialchars($upload_raw).'</pre>';
+					} else if (isset($upload->error)) {
+						$result->error = $upload->error;
+					} else if (isset($upload->error_msg)) {
+						$result->error = $upload->error_msg;
+					} else {
+						$result->error = false;
+						break;
+					}
+				}
+				
+				if ($result->error)
+					return $result;
+				
+				for ($i = 0; $i < 3; ++$i) {
+					// Сохраняем загруженный файл
+					if ($is_doc) {
+						$method = "docs.save";
+						$data = [
+							'file'			=> $upload->file, 
+							'title'			=> isset($img['title']) ? $img['title'] : "", 
+							'tags'			=> isset($img['tags']) ? $img['tags'] : "", 
+						];
+					} else {
+						$method = "photos.saveWallPhoto";
+						$data = [
+							'group_id'		=> $gid, 
+							'photo'			=> $upload->photo, 
+							'server'		=> $upload->server, 
+							'hash'			=> $upload->hash, 
+							'caption'		=> isset($img['caption']) ? $img['caption'] : ""
+						];
+					}
 					
-					if ($progress)
-						$progress($att, $attachments[$att]);
+					if (($captcha_code = Captcha::getCode())) {
+						$data['captcha_key'] = $captcha_code['key'];
+						$data['captcha_sid'] = $captcha_code['sid'];
+					}
 					
-					$result->error = false;
-					break;
-				} else {
-					$result->error = $file->error();
-					$result->captcha = $file->captcha();
-					Captcha::set($file->captcha());
+					$file = $api->exec($method, $data);
 					
-					if ($file->errorCode() == \Smm\VK\API\Response::VK_ERR_TOO_FAST)
-						sleep(3);
+					if ($file->success()) {
+						$att = $is_doc ? 
+							'doc'.$file->response->doc->owner_id.'_'.$file->response->doc->id : 
+							'photo'.$file->response[0]->owner_id.'_'.$file->response[0]->id;
+						
+						$attachments[$att] = $is_doc ? $file->response->doc : $file->response[0];
+						
+						if ($progress)
+							$progress($att, $attachments[$att]);
+						
+						$result->error = false;
+						break;
+					} else {
+						$result->error = $file->error();
+						$result->captcha = $file->captcha();
+						Captcha::set($file->captcha());
+						
+						if ($file->errorCode() == \Smm\VK\API\Response::VK_ERR_TOO_FAST)
+							sleep(3);
+					}
 				}
 			}
 			
@@ -524,8 +665,9 @@ class Posts {
 						'w'				=> isset($att->width) ? $att->width : 0, 
 						'h'				=> isset($att->height) ? $att->height : 0, 
 						'title'			=> $att->title, 
-						'description'	=> $att->description, 
+						'description'	=> $att->description ?? '', 
 						'thumbs'		=> $thumbs_info->thumbs, 
+						'player'		=> $att->player ?? false, 
 						'url'			=> "https://vk.com/".$att->type.$att->owner_id.'_'.$att->id
 					];
 				} else if ($att->type == 'album') {
@@ -537,7 +679,7 @@ class Posts {
 						'w'				=> $thumbs_info->width, 
 						'h'				=> $thumbs_info->height, 
 						'title'			=> $att->title, 
-						'description'	=> $att->description, 
+						'description'	=> $att->description ?? '', 
 						'thumbs'		=> $thumbs_info->thumbs, 
 						'url'			=> 'https://vk.com/'.$att->type.$att->owner_id.'_'.$att->id
 					];

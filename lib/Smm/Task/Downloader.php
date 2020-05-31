@@ -85,7 +85,7 @@ class Downloader extends \Z\Task {
 		
 		echo $queue->id.": start download files\n";
 		
-		$queue->total = count($queue->images) + count($queue->documents) + count($queue->files);
+		$queue->total = count($queue->images) + count($queue->documents) + count($queue->videos) + count($queue->files);
 		$queue->downloaded = 0;
 		$queue->uploaded = 0;
 		
@@ -94,6 +94,8 @@ class Downloader extends \Z\Task {
 			$files[] = ['url' => $file, 'type' => 'photo', 'out' => APP."/tmp/download/".md5($id.$file).".bin", 'index' => count($files)];
 		foreach ($queue->documents as $file)
 			$files[] = ['url' => $file, 'type' => 'doc', 'out' => APP."/tmp/download/".md5($id.$file).".bin", 'index' => count($files)];
+		foreach ($queue->videos as $file)
+			$files[] = ['url' => $file, 'type' => 'video', 'out' => APP."/tmp/download/".md5($id.$file).".bin", 'index' => count($files)];
 		foreach ($queue->files as $file)
 			$files[] = ['url' => $file, 'type' => 'file', 'out' => APP."/tmp/download/".md5($id.$file).".bin", 'index' => count($files)];
 		
@@ -126,24 +128,28 @@ class Downloader extends \Z\Task {
 						$file['type'] = 'photo';
 					} elseif ($mime == 'image/gif') {
 						$file['type'] = 'doc';
+					} elseif (substr($mime, 0, 5) == 'video') {
+						$file['type'] = 'video';
 					} else {
 						$this->queueError($queue->id, $file['url'].' - неизвестный тип файла ('.$mime.')');
 						return;
 					}
 				}
 				
-				if ($cover) {
-					$error = $this->imageWatermark($file['out'], $cover, $queue->offset);
-					if ($error) {
-						$this->queueError($queue->id, $queue->error);
-						return;
+				if ($file['type'] != 'video') {
+					if ($cover) {
+						$error = $this->imageWatermark($file['out'], $cover, $queue->offset);
+						if ($error) {
+							$this->queueError($queue->id, $queue->error);
+							return;
+						}
 					}
-				}
-				
-				if (\Smm\Utils\GD::stripMetadata($file['out'])) {
-					echo "  => strip metadata OK\n";
-				//	if (\Smm\Utils\GD::fakeExif($file['out']))
-				//		echo "  => fake exif OK\n";
+					
+					if (\Smm\Utils\GD::stripMetadata($file['out'])) {
+						echo "  => strip metadata OK\n";
+					//	if (\Smm\Utils\GD::fakeExif($file['out']))
+					//		echo "  => fake exif OK\n";
+					}
 				}
 				
 				$upload = [];
@@ -164,6 +170,19 @@ class Downloader extends \Z\Task {
 						'caption'	=> '', 
 						'title'		=> $url ? "vk.com$url" : "image.gif", 
 						'document'	=> true
+					];
+				} elseif ($file['type'] == 'video') {
+					$url = DB::select('url')
+						->from('vk_grabber_data_owners')
+						->where('id', '=', \Smm\Grabber::SOURCE_VK.'_-'.$queue->gid)
+						->execute()
+						->get('url', false);
+					
+					$upload[] = [
+						'path'		=> $file['out'], 
+						'caption'	=> '', 
+						'title'		=> $url ? "vk.com$url" : "video.mp4", 
+						'video'		=> true
 					];
 				}
 				

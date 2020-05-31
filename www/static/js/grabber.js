@@ -84,7 +84,7 @@ function init() {
 		gid:			options.gid, 
 		checkAttach: function (att) {
 			// Разрешаем только картинки и гифки
-			return !att.type.match(/^photo|doc$/) || (att.type == 'doc' && !att.ext.match(/^png|jpg|jpeg|bmp|webp|gif$/i));
+			return !att.type.match(/^photo|doc$/) || (att.type == 'doc' && !att.ext.match(/^png|jpg|jpeg|bmp|webp|gif|mp4$/i));
 		}
 	});
 	
@@ -166,7 +166,7 @@ function init() {
 			topic_id:	topic_id
 		};
 		
-		var documents = [], images = [];
+		var documents = [], images = [], videos = [];
 		for (var i = 0, l = post.attaches.length; i < l; ++i) {
 			var att = post.attaches[i];
 			
@@ -174,7 +174,11 @@ function init() {
 				continue;
 			
 			if (att.type == 'doc') {
-				documents.push(att.url);
+				if (att.ext == 'mp4') {
+					videos.push(att.mp4);
+				} else {
+					documents.push(att.url);
+				}
 			} else if (att.type == 'photo') {
 				var url, max_q = 0;
 				$.each(att.thumbs, function (q, u) {
@@ -189,7 +193,7 @@ function init() {
 		
 		status.removeClass('hide');
 		
-		if (!post_data.message.length && !documents.length && !images.length) {
+		if (!post_data.message.length && !documents.length && !images.length && !videos.length) {
 			status.html(tpl.error('Пост должен быть или с вложениями или с текстом.'));
 			return;
 		}
@@ -232,7 +236,7 @@ function init() {
 			});
 		};
 		
-		if (!documents.length && !images.length) {
+		if (!documents.length && !images.length && !videos.length) {
 			// Если нет аттачей - сразу добавляем в очередь
 			queue_post();
 		} else {
@@ -241,6 +245,7 @@ function init() {
 				action:		"/?a=vk_posts/upload&gid=" + options.gid, 
 				images:		images, 
 				documents:	documents, 
+				videos:		videos, 
 				
 				onError: function (err) {
 				delete busy_posts[e.post.id];

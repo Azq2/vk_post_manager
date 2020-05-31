@@ -16,12 +16,9 @@
 */15 * * * * php {project}/www/index.php Smm/Task/VkToTelegram >> {project}/logs/cron_vk_to_telegram.log 2>&1
 
 # Агрегатор контента (из инсты/вк и др.)
-*/15 * * * * php {project}/www/index.php Smm/Task/Grabber --type=VK >> {project}/logs/cron_grabber.VK.log 2>&1
-*/15 * * * * php {project}/www/index.php Smm/Task/Grabber --type=INSTAGRAM >> {project}/logs/cron_grabber.INSTAGRAM.log 2>&1
-*/15 * * * * php {project}/www/index.php Smm/Task/Grabber --type=PINTEREST >> {project}/logs/cron_grabber.PINTEREST.log 2>&1
-
-# Подсчёт оплаты за услуги SMM (рудимент)
-# 0 * * * * php {project}/www/index.php Smm/Task/CalcSmmMoney >> {project}/logs/cron_money.log 2>&1
+*/15 * * * * php {project}/www/index.php Smm/Task/Grabber/VK >> {project}/logs/cron_grabber.VK.log 2>&1
+*/15 * * * * php {project}/www/index.php Smm/Task/Grabber/Pinterest >> {project}/logs/cron_grabber.PINTEREST.log 2>&1
+*/15 * * * * php {project}/www/index.php Smm/Task/Grabber/Instagram >> {project}/logs/cron_grabber.INSTAGRAM.log 2>&1
 
 # Лог участников (кто ушёл, пришёл)
 */10 * * * * php {project}/www/index.php Smm/Task/LogMembers >> {project}/logs/cron_members.log 2>&1

@@ -16,7 +16,7 @@ class Standalone extends \Smm\VK\API\Client {
 	}
 	
 	public function getApiVersion() {
-		return '5.124';
+		return '5.125';
 	}
 	
 	public function getAppId() {

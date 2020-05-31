@@ -429,6 +429,7 @@ class VkPostsController extends \Smm\GroupController {
 				if (!$id) {
 					$images		= $_REQUEST['images'] ?? [];
 					$documents	= $_REQUEST['documents'] ?? [];
+					$videos		= $_REQUEST['videos'] ?? [];
 					$files		= $_REQUEST['files'] ?? [];
 					$cover		= $_FILES['cover'] ?? false;
 					$offset		= intval($_REQUEST['offset'] ?? 0);
@@ -441,6 +442,9 @@ class VkPostsController extends \Smm\GroupController {
 					
 					if (!is_array($documents))
 						$documents = [];
+					
+					if (!is_array($videos))
+						$videos = [];
 					
 					$cover_path = false;
 					if ($cover) {
@@ -460,10 +464,11 @@ class VkPostsController extends \Smm\GroupController {
 					if ($this->content['error'])
 						return;
 					
-					if ($images || $documents || $files) {
+					if ($images || $documents || $files || $videos) {
 						$msg = (object) [
 							'images'	=> $images, 
 							'documents'	=> $documents, 
+							'videos'	=> $videos, 
 							'files'		=> $files, 
 							'gid'		=> $this->group['id'], 
 							'cover'		=> $cover_path, 

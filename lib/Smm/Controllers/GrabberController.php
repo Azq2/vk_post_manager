@@ -327,7 +327,7 @@ class GrabberController extends \Smm\GroupController {
 			], 
 			'INSTAGRAM'		=> [
 				'title'			=> 'Instagram', 
-				'descr'			=> 'Тег вида: #cat'
+				'descr'			=> 'Тег вида: #cat или @ledravenger'
 			], 
 			'PINTEREST'		=> [
 				'title'			=> 'Pinterest', 
@@ -366,14 +366,12 @@ class GrabberController extends \Smm\GroupController {
 					break;
 					
 					case "INSTAGRAM":
-						$tag_name = preg_replace("/^#/", "", $source_url);
-						$data = @file_get_contents("https://www.instagram.com/explore/tags/".urlencode($tag_name)."/?__a=1");
-						if (json_decode($data)) {
-							$source_id = $tag_name;
-							$source_type = \Smm\Grabber::SOURCE_INSTAGRAM;
-							$source_name = "#$tag_name";
+						if (!preg_match('/^[#\@][\w\d_.-]+$/i', $source_url)) {
+							$error = 'Неправильный тег.';
 						} else {
-							$error = 'Instagram вернул странную дичь или тег не найден =\\ (тег: '.$tag_name.', ссылка: '.$source_url.')';
+							$source_id = $source_url;
+							$source_type = \Smm\Grabber::SOURCE_INSTAGRAM;
+							$source_name = $source_url;
 						}
 					break;
 					
@@ -430,7 +428,12 @@ class GrabberController extends \Smm\GroupController {
 				break;
 				
 				case \Smm\Grabber::SOURCE_INSTAGRAM:
-					$url = 'https://www.instagram.com/explore/tags/'.urlencode($s['source_our_id']).'/';
+					$value = substr($s['source_our_id'], 1);
+					if ($s['source_our_id'][0] == '#') {
+						$url = 'https://www.instagram.com/explore/tags/'.urlencode($value);
+					} elseif ($s['source_our_id'][0] == '@') {
+						$url = 'https://www.instagram.com/'.urlencode($value);
+					}
 					$icon = 'https://www.instagram.com/static/images/ico/favicon.ico/36b3ee2d91ed.ico';
 				break;
 				
@@ -552,7 +555,12 @@ class GrabberController extends \Smm\GroupController {
 				break;
 				
 				case \Smm\Grabber::SOURCE_INSTAGRAM:
-					$url = 'https://www.instagram.com/explore/tags/'.urlencode($s['source_our_id']).'/';
+					$value = substr($s['source_our_id'], 1);
+					if ($s['source_our_id'][0] == '#') {
+						$url = 'https://www.instagram.com/explore/tags/'.urlencode($value);
+					} elseif ($s['source_our_id'][0] == '@') {
+						$url = 'https://www.instagram.com/'.urlencode($value);
+					}
 					$icon = 'https://www.instagram.com/static/images/ico/favicon.ico/36b3ee2d91ed.ico';
 				break;
 				
