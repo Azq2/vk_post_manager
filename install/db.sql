@@ -273,6 +273,7 @@ CREATE TABLE `vk_grabber_sources` (
   `id` int(10) unsigned NOT NULL AUTO_INCREMENT,
   `source_type` int(10) unsigned NOT NULL,
   `source_id` varchar(255) NOT NULL,
+  `internal_id` varchar(255) DEFAULT NULL,
   PRIMARY KEY (`id`),
   UNIQUE KEY `source_type` (`source_type`,`source_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
@@ -418,7 +419,8 @@ CREATE TABLE `vk_widget_top_users` (
   `tile_title` varchar(256) NOT NULL DEFAULT '',
   `tile_descr` varchar(256) NOT NULL DEFAULT '',
   `tile_link` varchar(256) NOT NULL DEFAULT '',
-  `tiles` varchar(256) NOT NULL DEFAULT '',
+  `tiles` varchar(1024) NOT NULL DEFAULT '',
+  `tiles_n` tinyint(3) unsigned NOT NULL DEFAULT '3',
   `mtime` int(10) unsigned NOT NULL DEFAULT '0',
   PRIMARY KEY (`group_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;

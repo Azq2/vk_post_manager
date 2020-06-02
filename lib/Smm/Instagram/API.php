@@ -121,8 +121,11 @@ class API {
 		
 		list ($max_cnt, $max_interval) = $this->getMaxRPS($graphql_hash);
 		
-		if ($count >= $max_cnt && $delta <= $max_interval)
-			usleep(max(0, $max_interval - $delta) * 1000000 + 10);
+		if ($count >= $max_cnt && $delta <= $max_interval) {
+			$to_sleep = max(0, $max_interval - $delta) * 1000000 + 10;
+			// echo "sleep [$graphql_hash] $to_sleep us...\n";
+			usleep($to_sleep);
+		}
 	}
 	
 	protected function incrApiCall($graphql_hash) {
@@ -146,7 +149,7 @@ class API {
 	protected function getMaxRPS($graphql_hash) {
 		if (!$graphql_hash)
 			return [10, 1];
-		return [1, 2];
+		return [1, 5];
 	}
 	
 	protected function _sendRequest($url, $post) {

@@ -39,6 +39,49 @@ class Instagram extends \Z\Task {
 		echo date("Y-m-d H:i:s")." - done.\n";
 	}
 	
+	public function getInstagramUser($insta_api, $login) {
+		$found_user = false;
+		$max_tries = 15;
+		
+		while (true) {
+			$response = $insta_api->exec("https://www.instagram.com/web/search/topsearch/", [
+				'query'		=> $login
+			]);
+			
+			if ($response->success())
+				break;
+			
+			echo "=> ERROR: can't get user ($login): ".$response->error()."\n";
+			
+			if (in_array($response->errorCode(), [400, 404, 403]))
+				break;
+			
+			if (!$max_tries)
+				break;
+			
+			--$max_tries;
+			
+			sleep($response->errorCode() == 429 ? 3 * 60 : 1);
+		}
+		
+		if (!$response->success())
+			return false;
+		
+		if (!isset($response->users)) {
+			echo "=> ERROR: can't get user ($login): invalid response\n";
+			return false;
+		}
+		
+		foreach ($response->users as $row) {
+			if ($row->user->username === $login) {
+				$found_user = $row->user;
+				break;
+			}
+		}
+		
+		return $found_user;
+	}
+	
 	public function grabInstagram($sources) {
 		$insta_api = new \Smm\Instagram\API();
 		
@@ -54,6 +97,27 @@ class Instagram extends \Z\Task {
 				$value = substr($id, 1);
 				$url = "https://www.instagram.com/".urlencode($value);
 				$type = 'user';
+				
+				if (!$source['internal_id']) {
+					echo "Get user_id for $id...\n";
+					
+					$user = $this->getInstagramUser($insta_api, $value);
+					if (!$user || !isset($user->pk)) {
+						echo "=> ERROR: can't get user_id.\n";
+						continue;
+					}
+					
+					echo "=> OK, user_id: ".$user->pk."\n";
+					
+					$source['internal_id'] = $user->pk;
+					
+					DB::update('vk_grabber_sources')
+						->set([
+							'internal_id'		=> $user->pk
+						])
+						->where('id', '=', $source['id'])
+						->execute();
+				}
 			} else {
 				echo "Invalid ID: $id\n";
 				continue;
@@ -65,6 +129,7 @@ class Instagram extends \Z\Task {
 				'value'		=> $value, 
 				'url'		=> $url, 
 				'type'		=> $type, 
+				'user_id'	=> $source['internal_id']
 			];
 			
 			DB::insert('vk_grabber_data_owners')
@@ -107,7 +172,7 @@ class Instagram extends \Z\Task {
 							$response = $insta_api->execGraphql('HASHTAG_NEXT_PAGE', [
 								'tag_name'	=> $source['value'], 
 								'first'		=> 50, 
-								'after'		=> $next[$id]['after'], 
+								'after'		=> $next[$id], 
 							]);
 						} else {
 							$url = "https://www.instagram.com/explore/tags/".urlencode($source['value'])."/";
@@ -116,13 +181,15 @@ class Instagram extends \Z\Task {
 					} elseif ($source['type'] == "user") {
 						if (isset($next[$id])) {
 							$response = $insta_api->execGraphql('PROFILE_NEXT_PAGE', [
-								'id'		=> $next[$id]['id'], 
+								'id'		=> $source['user_id'], 
 								'first'		=> 50, 
-								'after'		=> $next[$id]['after'], 
+								'after'		=> $next[$id], 
 							]);
 						} else {
-							$url = "https://www.instagram.com/".urlencode($source['value'])."/";
-							$response = $insta_api->exec($url, ['__a' => 1]);
+							$response = $insta_api->execGraphql('PROFILE_NEXT_PAGE', [
+								'id'		=> $source['user_id'], 
+								'first'		=> 12
+							]);
 						}
 					}
 					
@@ -159,29 +226,17 @@ class Instagram extends \Z\Task {
 				if (isset($graphql->hashtag->edge_hashtag_to_media->edges))
 					$edges_lists[] = $graphql->hashtag->edge_hashtag_to_media->edges;
 				
-				$last_next_id = $next[$id]['id'] ?? false;
 				$next[$id] = false;
 				
 				if (isset($graphql->user->edge_owner_to_timeline_media->page_info)) {
-					if ($graphql->user->edge_owner_to_timeline_media->page_info->has_next_page) {
-						$user_id = $graphql->user->id ?? $last_next_id;
-						
-						if ($user_id) {
-							$next[$id] = [
-								'id'		=> $user_id, 
-								'after'		=> $graphql->user->edge_owner_to_timeline_media->page_info->end_cursor
-							];
-						}
-					}
+					if ($graphql->user->edge_owner_to_timeline_media->page_info->has_next_page)
+						$next[$id] = $graphql->user->edge_owner_to_timeline_media->page_info->end_cursor;
 				}
 				
 				/*
 				if (isset($graphql->hashtag->edge_hashtag_to_media->page_info)) {
-					if ($graphql->hashtag->edge_hashtag_to_media->page_info->has_next_page) {
-						$next[$id] = [
-							'after'		=> $graphql->hashtag->edge_hashtag_to_media->page_info->end_cursor
-						];
-					}
+					if ($graphql->hashtag->edge_hashtag_to_media->page_info->has_next_page)
+						$next[$id] = $graphql->hashtag->edge_hashtag_to_media->page_info->end_cursor;
 				}
 				*/
 				
@@ -314,8 +369,8 @@ class Instagram extends \Z\Task {
 											$sub_edge->node->dimensions->width => $sub_edge->node->display_url
 										], 
 										'video'		=> [
-											'has_audio'		=> $sub_edge->node->has_audio, 
-											'duration'		=> $sub_edge->node->video_duration, 
+											'has_audio'		=> $sub_edge->node->has_audio ?? NULL, 
+											'duration'		=> $sub_edge->node->video_duration ?? 0, 
 										], 
 										'url'		=> $sub_edge->node->video_url, 
 										'mp4'		=> $sub_edge->node->video_url, 
