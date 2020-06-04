@@ -186,7 +186,6 @@ function initForm(el) {
 		
 		if (!errors.length) {
 			url_input.val('');
-			console.log(extra);
 			file.el.trigger('file_upload_start');
 			$.urlUploader({
 				action:			file.action, 
@@ -265,15 +264,16 @@ function initForm(el) {
 		uploadNextFile();
 	});
 	
-	input_wrap.find('.js-file_input').on('change', function (e) {
+	input_wrap.find('.js-file_input').on('change', function (e, extra) {
 		files_wrap.find('.js-file_error').remove();
 	
-		$.each(this.files, function (_, blob) {
+		$.each(extra ? [extra.blob] : this.files, function (_, blob) {
 			var file = {
 				id: 'upload_file_' + Date.now(), 
 				blob: blob, 
 				action: el.data('action'), 
-				type: 'upload'
+				type: 'upload', 
+				data: extra && extra.data
 			};
 			
 			var errors = [];
@@ -357,8 +357,9 @@ function uploadNextFile() {
 							file.done = true;
 							file.el.trigger('file_upload_end');
 							file.el.trigger('file_uploaded', {
-								file: file, 
-								response: json
+								file:		file, 
+								data:		file.data, 
+								response:	json
 							});
 							file.el.find('.js-file_delete').click();
 						} else {

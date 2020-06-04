@@ -101,6 +101,7 @@ class BaseController extends \Z\Controller {
 						
 						$groups = DB::select('id', 'name')
 							->from('vk_groups')
+							->where('deleted', '=', 0)
 							->order('pos', 'ASC')
 							->execute();
 						foreach ($groups as $group) {
@@ -145,6 +146,10 @@ class BaseController extends \Z\Controller {
 				
 				header('Content-Type: application/json; charset=utf-8');
 				echo json_encode($this->content, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+			break;
+			
+			case "raw":
+				// nothing
 			break;
 		}
 	}

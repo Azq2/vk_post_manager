@@ -3,20 +3,24 @@ requirejs.config({
 	waitSeconds:	9999, 
 	baseUrl:		"/static/js/", 
 	paths: {
-		"jquery":				"vendor/jquery",
-		"emojionearea":			"vendor/emojionearea", 
-		"emojione":				"vendor/emojione", 
+		"jquery":				"https://cdn.jsdelivr.net/npm/jquery@3.5.1/dist/jquery.min",
+		"emojionearea":			"https://cdn.jsdelivr.net/npm/emojionearea@3.4.2/dist/emojionearea.min", 
+		"emojione":				"https://cdn.jsdelivr.net/npm/emojione@4.5.0/lib/js/emojione.min", 
+		"howler":				"https://cdn.jsdelivr.net/npm/howler@2.2.0/dist/howler.min", 
 		
-		"howler":				"//cdnjs.cloudflare.com/ajax/libs/howler/2.1.2/howler.min", 
+		"tui-image-editor":		"https://cdn.jsdelivr.net/npm/tui-image-editor@3.9.0/dist/tui-image-editor.min", 
+		"tui-code-snippet":		"https://cdn.jsdelivr.net/npm/tui-code-snippet@1.5.2/dist/tui-code-snippet.min", 
+		"fabric":				"https://cdn.jsdelivr.net/npm/fabric@3.6.3/dist/fabric.min", 
+		"tui-color-picker":		"https://cdn.jsdelivr.net/npm/tui-color-picker@2.2.6/dist/tui-color-picker", 
 		
 		// amcharts
-		"amcharts":				"//cdnjs.cloudflare.com/ajax/libs/amcharts/3.21.12/amcharts",
-		"amcharts.funnel":		"//cdnjs.cloudflare.com/ajax/libs/amcharts/3.21.12/funnel",
-		"amcharts.gauge":		"//cdnjs.cloudflare.com/ajax/libs/amcharts/3.21.12/gauge",
-		"amcharts.pie":			"//cdnjs.cloudflare.com/ajax/libs/amcharts/3.21.12/pie",
-		"amcharts.radar":		"//cdnjs.cloudflare.com/ajax/libs/amcharts/3.21.12/radar",
-		"amcharts.serial":		"//cdnjs.cloudflare.com/ajax/libs/amcharts/3.21.12/serial",
-		"amcharts.xy":			"//cdnjs.cloudflare.com/ajax/libs/amcharts/3.21.12/xy", 
+		"amcharts":				"https://cdn.jsdelivr.net/npm/amcharts3@3.21.15/amcharts/amcharts.min",
+		"amcharts.funnel":		"https://cdn.jsdelivr.net/npm/amcharts3@3.21.15/amcharts/afunnel",
+		"amcharts.gauge":		"https://cdn.jsdelivr.net/npm/amcharts3@3.21.15/amcharts/agauge",
+		"amcharts.pie":			"https://cdn.jsdelivr.net/npm/amcharts3@3.21.15/amcharts/apie",
+		"amcharts.radar":		"https://cdn.jsdelivr.net/npm/amcharts3@3.21.15/amcharts/aradar",
+		"amcharts.serial":		"https://cdn.jsdelivr.net/npm/amcharts3@3.21.15/amcharts/aserial",
+		"amcharts.xy":			"https://cdn.jsdelivr.net/npm/amcharts3@3.21.15/amcharts/axy", 
 	}, 
 	
 	"shim": {
@@ -30,6 +34,10 @@ requirejs.config({
 		/*
 			Внешние модули
 		*/
+		"tui-image-editor": {
+			"deps": ["jquery", "tui-code-snippet", "fabric", "tui-color-picker"]
+		},
+		
 		"emojionearea": {
 			"deps": ["emojione"]
 		},

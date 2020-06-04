@@ -408,7 +408,7 @@ function loadPosts() {
 				error: html_wrap(res.error) + '<br /><pre>' + html_wrap(res.sql) + '</pre>'
 			}));
 		}
-	}).error(function () {
+	}).fail(function () {
 		toggleSpinner(false);
 		setTimeout(loadPosts, 1000);
 	});

@@ -28,7 +28,7 @@ class CheckLikeBots extends \Z\Task {
 		$res = $api->exec("wall.getById", [
 			'posts'		=> $owner_id."_".$id
 		]);
-		$api->setLimit(3, 1.2);
+//		$api->setLimit(3, 1.2);
 		
 		if (!$res->success()) {
 			echo $res->error();
@@ -344,14 +344,16 @@ class CheckLikeBots extends \Z\Task {
 			'bot'			=> [], 
 			'user'			=> [], 
 			'member'		=> [], 
-			'guest'			=> []
+			'guest'			=> [], 
+			'invisible'		=> []
 		];
 		
 		foreach ($likers_uids as $uid) {
 			$u = $users[$uid];
-			
 			if ($u->deactivated ?? false) {
 				$like_users[$u->deactivated][] = $u;
+			} else if (!isset($u->last_seen->time)) {
+				$like_users['invisible'][] = $u;
 			} else if ($u->last_seen->time < $post->date) {
 				$like_users['bot'][] = $u;
 			} else {
@@ -371,8 +373,10 @@ class CheckLikeBots extends \Z\Task {
 		echo "Забанены: ".count($like_users['deleted'])." (".round(count($like_users['deleted']) / count($likers_uids) * 100, 2)."%)\n";
 		echo "Боты: ".count($like_users['bot'])." (".round(count($like_users['bot']) / count($likers_uids) * 100, 2)."%)\n";
 		echo "Живые: ".count($like_users['user'])." (".round(count($like_users['user']) / count($likers_uids) * 100, 2)."%)\n";
+		echo "Невидимка: ".count($like_users['invisible'])." (".round(count($like_users['invisible']) / count($likers_uids) * 100, 2)."%)\n";
 		echo "Участник: ".count($like_users['member'])." (".round(count($like_users['member']) / count($likers_uids) * 100, 2)."%)\n";
 		echo "Гость: ".count($like_users['guest'])." (".round(count($like_users['guest']) / count($likers_uids) * 100, 2)."%)\n";
+
 		
 		$comment_users = [
 			'banned'		=> [], 

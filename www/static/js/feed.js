@@ -1,4 +1,4 @@
-define(['jquery', 'class', 'utils', 'emojione', 'upload', 'meme'], function ($, Class, utils, emojione) {
+define(['jquery', 'class', 'utils', 'emojione', 'tui-image-editor', 'upload', 'meme'], function ($, Class, utils, emojione, ImageEditor) {
 //
 var TOPICS = [
 	[-1, 'Не выбрано'], 
@@ -70,6 +70,11 @@ var tpl = {
 							(!deleted && att.type == 'photo' ? 
 								'<span class="post-attach_edit js-attach_edit inl post-show_edit">' + 
 									'<img src="/i/img/edit_image.png" alt="" />' + 
+								'</span>' : ''
+							) + 
+							(!deleted && att.type == 'photo' ? 
+								'<span class="post-attach_edit post-attach_edit_2nd js-attach_tui_edit inl post-show_edit">' + 
+									'<img src="/i/img/edit_image_tui.png" alt="" />' + 
 								'</span>' : ''
 							) + 
 							(!deleted ? 
@@ -320,6 +325,19 @@ var tpl = {
 	}, 
 	spellResult: function (data) {
 		return '<div class="row bord wrapper">' + data.text + '</div>';
+	}, 
+	tuiEditor: function (data) {
+		return '<div id="tui-image-editor-container" style="position:fixed; top: 0; z-index: 9999"></div>';
+	}, 
+	tuiButtons: function (data) {
+		var html = '' + 
+			'<button class="tui-image-editor-save-btn" style="background-color: #fdba3b;border: 1px solid #fdba3b;color: #fff;font-size: 12px">' + 
+				'Сохранить' + 
+			'</button> ' + 
+			'<button class="tui-image-editor-cancel-btn" style="background-color: #fff;border: 1px solid #ddd;color: #222;font-size: 12px">' + 
+				'Закрыть' + 
+			'</button>';
+		return html;
 	}
 };
 
@@ -371,6 +389,40 @@ var VkFeed = Class({
 			var el = $(this);
 			el.removeClass("js-post_spell_suggests");
 			el.after(tpl.spellSuggests(el.attr("title")));
+		}).on('click', '.js-attach_tui_edit', function (e) {
+			e.preventDefault();
+			e.stopPropagation();
+			e.stopImmediatePropagation();
+			
+			var el = $(this), 
+				att_wrap = el.parents('.js-attach'), 
+				wrap = el.parents('.js-post'), 
+				post_id = wrap.data('type') + '_' + wrap.data('gid') + '_' + wrap.data('id'), 
+				post = self.posts[post_id];
+			
+			var att;
+			for (var i = 0, l = post.attaches.length; i < l; ++i) {
+				att = post.attaches[i];
+				if (att_wrap.data("id") == att.id)
+					break;
+			}
+			
+			var src = findBestThumb(att.thumbs, 99999).src;
+			
+			// src = '/?a=vk_posts/image_proxy&src=' + encodeURIComponent(src);
+			
+			self.initTuiEditor(src, function (blob) {
+				blob.name = "image.png";
+				
+				wrap.find('.js-file_input').trigger('change', {
+					blob:	blob, 
+					data:	att
+				});
+				
+				var top = wrap.offset().top;
+				if (top < $(window).scrollTop() || top > $(window).scrollTop() + $(window).innerHeight())
+					$('html, body').scrollTop(top);
+			});
 		}).on('click', '.js-attach_edit', function (e) {
 			e.preventDefault();
 			e.stopPropagation();
@@ -685,8 +737,86 @@ var VkFeed = Class({
 		}
 		
 		self.wrap.append(html);
+	}, 
+	
+	resizeTuiEditor: function () {
+		var self = this;
+		self.image_editor.ui.resizeEditor();
+	}, 
+	
+	closeTuiEditor: function () {
+		var self = this;
+		if (self.image_editor) {
+			self.image_editor.destroy();
+			$('#tui-image-editor-container').remove();
+			window.removeEventListener('resize', self.resizeTuiEditor, false);
+			self.image_editor = null;
+		}
+	}, 
+	
+	initTuiEditor: function (src, callback) {
+		var self = this;
+		self.closeTuiEditor();
+		
+		$('body').prepend(tpl.tuiEditor());
+		
+		self.image_editor = new ImageEditor('#tui-image-editor-container', {
+			includeUI: {
+				loadImage: {
+					path: src, 
+					name: 'Картинка'
+				}, 
+				menuBarPosition: 'bottom'
+			}, 
+			cssMaxWidth: document.documentElement.clientWidth, 
+			cssMaxHeight: document.documentElement.clientHeight, 
+			usageStatistics: false, 
+		});
+		
+		self.image_editor.__addText = self.image_editor.addText;
+		
+		self.image_editor.addText = function () {
+			if (arguments.length > 1)
+				arguments[1].styles.fontFamily = 'Tahoma';
+			return self.image_editor.__addText.apply(this, arguments);
+		};
+		
+		var container = $('#tui-image-editor-container');
+		container.find('.tui-image-editor-header-buttons').html(tpl.tuiButtons());
+		container.on('click', '.tui-image-editor-save-btn', function (e) {
+			callback(dataURItoBlob(self.image_editor.toDataURL()));
+			self.closeTuiEditor();
+		}).on('click', '.tui-image-editor-cancel-btn', function (e) {
+			self.closeTuiEditor();
+		});
+		
+		window.addEventListener('resize', self.resizeTuiEditor, false);
 	}
 });
+
+function dataURItoBlob(dataURI) {
+	// convert base64 to raw binary data held in a string
+	// doesn't handle URLEncoded DataURIs - see SO answer #6850276 for code that does this
+	var byteString = atob(dataURI.split(',')[1]);
+	
+	// separate out the mime component
+	var mimeString = dataURI.split(',')[0].split(':')[1].split(';')[0]
+	
+	// write the bytes of the string to an ArrayBuffer
+	var ab = new ArrayBuffer(byteString.length);
+	
+	// create a view into the buffer
+	var ia = new Uint8Array(ab);
+	
+	// set the bytes of the buffer to the correct values
+	for (var i = 0; i < byteString.length; i++) {
+		ia[i] = byteString.charCodeAt(i);
+	}
+	
+	// write the ArrayBuffer to a blob, and you're done
+	var blob = new Blob([ab], {type: mimeString});
+	return blob;
+}
 
 function findBestThumb(hash, size) {
 	var ret;

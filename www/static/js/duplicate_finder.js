@@ -107,7 +107,7 @@ $('body').on('click', '#do_search', function (e) {
 			toggle_spinner(false);
 			alert(res.error);
 		}
-	}).error(function () {
+	}).fail(function () {
 		toggle_spinner(false);
 		alert('Страшная ошибка!!11 Мб нет интернета?');
 	});
@@ -131,7 +131,7 @@ $('body').on('click', '#do_search', function (e) {
 					checker(id, callback);
 				}, 5000);
 			}
-		}).error(function () {
+		}).fail(function () {
 			setTimeout(function () {
 				checker(id, callback);
 			}, 5000);

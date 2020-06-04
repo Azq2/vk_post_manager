@@ -28,6 +28,32 @@ class VkPostsController extends \Smm\GroupController {
 		return $next_sched_update;
 	}
 	
+	public function image_proxyAction() {
+		$this->mode('raw');
+		
+		$src = $_GET['src'] ?? '';
+		
+		if (preg_match("#^https?://#", $src)) {
+			$ch = curl_init();
+			curl_setopt_array($ch, [
+				CURLOPT_RETURNTRANSFER		=> true, 
+				CURLOPT_FOLLOWLOCATION		=> false, 
+				CURLOPT_VERBOSE				=> false, 
+				CURLOPT_TIMEOUT				=> 10, 
+				CURLOPT_CONNECTTIMEOUT		=> 10, 
+				CURLOPT_ENCODING			=> "gzip,deflate", 
+				CURLOPT_USERAGENT			=> "Mozilla/5.0 (Linux; Android 6.0.1; Nexus 5X Build/MMB29P) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/41.0.2272.96 Mobile Safari/537.36 (compatible; Googlebot/2.1; +http://www.google.com/bot.html)", 
+				CURLOPT_IPRESOLVE			=> CURL_IPRESOLVE_V4, 
+				CURLOPT_HTTP_VERSION		=> CURL_HTTP_VERSION_1_1
+			]);
+			
+			ob_end_clean();
+			header('Content-Type: image/jpeg');
+			curl_setopt($ch, CURLOPT_URL, $src);
+			echo curl_exec($ch);
+		}
+	}
+	
 	public function spellcheckAction() {
 		$this->mode('json');
 		

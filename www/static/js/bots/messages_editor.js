@@ -39,7 +39,7 @@ $('body').on('click', '.js-message_save', function (e) {
 		} else {
 			alert(res.error);
 		}
-	}).error(function () {
+	}).fail(function () {
 		toggle_spinner(false);
 		alert('Страшная ошибка!!11 Мб нет интернета?');
 	});

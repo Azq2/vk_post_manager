@@ -360,6 +360,9 @@ table, td, th, tr {
 	left: 0;
 	padding: 20px;
 }
+.post-pic .post-attach_edit_2nd {
+	top: 54px;
+}
 .post-edit .post-hide_edit {
 	display: none
 }

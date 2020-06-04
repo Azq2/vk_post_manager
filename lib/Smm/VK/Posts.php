@@ -511,10 +511,15 @@ class Posts {
 		
 		foreach ($items as $post) {
 			$post->special = false;
-			if (isset($post->marked_as_ads) && $post->marked_as_ads) {
+			
+			if (isset($post->marked_as_ads) && $post->marked_as_ads)
 				$post->special = true;
+			
+			if (!isset($queue[$post->id]) && isset($post->copyright) && $post->copyright)
+				$post->special = true;
+			
+			if ($post->special)
 				$specials[] = $post;
-			}
 			
 			$post->comment_text = $first_comments[$post->id] ?? '';
 			$post->orig_date = $post->date;

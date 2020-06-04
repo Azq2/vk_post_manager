@@ -45,7 +45,7 @@ $.api = function (url, data, fn_ok, fn_err, fn_hook) {
 		} else {
 			fn_ok && fn_ok(res);
 		}
-	}).error(function (e) {
+	}).fail(function (e) {
 		fn_err && fn_err();
 	});
 };

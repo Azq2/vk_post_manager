@@ -159,7 +159,7 @@ $(function () {
 				} else {
 					alert(res.error);
 				}
-			}).error(function () {
+			}).fail(function () {
 				toggle_spinner(false);
 				alert('Страшная ошибка!!11 Мб нет интернета?');
 			});
@@ -267,7 +267,7 @@ $(function () {
 				} else {
 					alert(res.error);
 				}
-			}).error(function () {
+			}).fail(function () {
 				toggle_spinner(false);
 				alert('Страшная ошибка!!11 Мб нет интернета?');
 			});
