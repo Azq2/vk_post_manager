@@ -143,7 +143,7 @@ $(function () {
 					}
 					return xhr;
 				}
-			}).success(function (res) {
+			}).done(function (res) {
 				toggle_spinner(false);
 				if (res.success) {
 					if (id) {
@@ -251,7 +251,7 @@ $(function () {
 					}
 					return xhr;
 				}
-			}).success(function (res) {
+			}).done(function (res) {
 				toggle_spinner(false);
 				if (res.success) {
 					if (id) {

@@ -1,51 +1,22 @@
 <?php
-namespace Smm\Task\Tools;
+namespace Smm\VK;
 
-use \Z\DB;
-use \Z\View;
-use \Z\Date;
-use \Z\Config;
-use \Z\Util\Url;
-use \Z\Net\Anticaptcha;
-
-use \Smm\VK\Captcha;
-
-class Test extends \Z\Task {
-	public function options() {
-		return [];
-	}
-	
-	public function run($args) {
-		$now = time();
-		
-		$api = new \Smm\VK\API(\Smm\Oauth::getAccessToken('VK'));
-		$response = $api->exec("stats.get", [
-			'group_id'			=> 186341291, 
-			'timestamp_from'	=> strtotime(date("Y-m-d", $now - 3600 * 24 * 30)." 00:00:00"), 
-			'timestamp_to'		=> strtotime(date("Y-m-d", $now)." 00:00:00"), 
-			'interval'			=> 'all', 
-			'intervals_count'	=> 0, 
-		]);
-		$a = $response->response[0];
-		
-		$response = $api->exec("stats.get", [
-			'group_id'			=> 194035741, 
-			'timestamp_from'	=> strtotime(date("Y-m-d", $now - 3600 * 24 * 30)." 00:00:00"), 
-			'timestamp_to'		=> strtotime(date("Y-m-d", $now)." 00:00:00"), 
-			'interval'			=> 'all', 
-			'intervals_count'	=> 0, 
-		]);
-		$b = $response->response[0];
-		
-		$this->getDiffStatistic($a, $b, false);
-	}
-	
-	public function getDiffStatistic($a, $b, $relative) {
+class Statistic {
+	public static function computeStatisticDiff($a, $b) {
 		$diff = [
 			'activity'		=> [], 
 			'reach'			=> [], 
 			'visitors'		=> [], 
 		];
+		
+		$a->activity->self_growth = $a->activity->subscribed - $a->activity->unsubscribed;
+		$b->activity->self_growth = $b->activity->subscribed - $b->activity->unsubscribed;
+		
+		$a->reach->pc_reach = $a->reach->reach - $a->reach->mobile_reach;
+		$b->reach->pc_reach = $b->reach->reach - $b->reach->mobile_reach;
+		
+		$a->reach->reach_guests = $a->reach->reach - $a->reach->reach_subscribers;
+		$b->reach->reach_guests = $b->reach->reach - $b->reach->reach_subscribers;
 		
 		foreach ($a->activity as $k => $v) {
 			$diff['activity'][$k] = [
@@ -55,12 +26,13 @@ class Test extends \Z\Task {
 		}
 		
 		foreach (['reach', 'visitors'] as $k) {
-			$diff[$k]['socdem'] = $this->getSocDem($a->{$k}, $b->{$k}, $relative);
-			$diff[$k]['countries'] = $this->getGeo($a->{$k}->countries, $b->{$k}->countries, $relative);
-			$diff[$k]['cities'] = $this->getGeo($a->{$k}->cities, $b->{$k}->cities, $relative);
+			$diff[$k]['socdem'] = self::computeSocDemDiff($a->{$k}, $b->{$k});
+			$diff[$k]['countries'] = self::computeGeoDiff($a->{$k}->countries, $b->{$k}->countries);
+			$diff[$k]['cities'] = self::computeGeoDiff($a->{$k}->cities, $b->{$k}->cities);
 		}
 		
-		foreach (['mobile_reach', 'reach', 'reach_subscribers'] as $k) {
+		$fields = ['mobile_reach', 'pc_reach', 'reach_subscribers', 'reach_guests', 'reach'];
+		foreach ($fields as $k) {
 			$diff['reach'][$k] = [
 				$a->reach->{$k}, 
 				$b->reach->{$k}
@@ -74,10 +46,10 @@ class Test extends \Z\Task {
 			];
 		}
 		
-		echo json_encode($diff)."\n";
+		return $diff;
 	}
 	
-	public function getGeo($a, $b, $relative) {
+	public static function computeGeoDiff($a, $b) {
 		$a_values = [];
 		$b_values = [];
 		
@@ -121,9 +93,11 @@ class Test extends \Z\Task {
 		foreach ($diff as $k => $row) {
 			if ($n >= 10) {
 				if (!isset($new_diff["Остальные"]))
-					$new_diff["Остальные"] = [0, 0];
+					$new_diff["Остальные"] = [0, 0, 0, 0];
 				$new_diff["Остальные"][0] += $row[0];
 				$new_diff["Остальные"][1] += $row[1];
+				$new_diff["Остальные"][2] += $row[2];
+				$new_diff["Остальные"][3] += $row[3];
 			} else {
 				$new_diff[$k] = $row;
 			}
@@ -133,7 +107,7 @@ class Test extends \Z\Task {
 		return $new_diff;
 	}
 	
-	public function getSocDem($a, $b, $relative) {
+	public static function computeSocDemDiff($a, $b) {
 		$diff = [
 			"age"		=> [], 
 			"sex"		=> [], 

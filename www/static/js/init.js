@@ -14,13 +14,13 @@ requirejs.config({
 		"tui-color-picker":		"https://cdn.jsdelivr.net/npm/tui-color-picker@2.2.6/dist/tui-color-picker", 
 		
 		// amcharts
-		"amcharts":				"https://cdn.jsdelivr.net/npm/amcharts3@3.21.15/amcharts/amcharts.min",
-		"amcharts.funnel":		"https://cdn.jsdelivr.net/npm/amcharts3@3.21.15/amcharts/afunnel",
-		"amcharts.gauge":		"https://cdn.jsdelivr.net/npm/amcharts3@3.21.15/amcharts/agauge",
-		"amcharts.pie":			"https://cdn.jsdelivr.net/npm/amcharts3@3.21.15/amcharts/apie",
-		"amcharts.radar":		"https://cdn.jsdelivr.net/npm/amcharts3@3.21.15/amcharts/aradar",
-		"amcharts.serial":		"https://cdn.jsdelivr.net/npm/amcharts3@3.21.15/amcharts/aserial",
-		"amcharts.xy":			"https://cdn.jsdelivr.net/npm/amcharts3@3.21.15/amcharts/axy", 
+		"amcharts":				"https://cdn.jsdelivr.net/npm/amcharts3@3.21.15/amcharts/amcharts",
+		"amcharts.funnel":		"https://cdn.jsdelivr.net/npm/amcharts3@3.21.15/amcharts/funnel",
+		"amcharts.gauge":		"https://cdn.jsdelivr.net/npm/amcharts3@3.21.15/amcharts/gauge",
+		"amcharts.pie":			"https://cdn.jsdelivr.net/npm/amcharts3@3.21.15/amcharts/pie",
+		"amcharts.radar":		"https://cdn.jsdelivr.net/npm/amcharts3@3.21.15/amcharts/radar",
+		"amcharts.serial":		"https://cdn.jsdelivr.net/npm/amcharts3@3.21.15/amcharts/serial",
+		"amcharts.xy":			"https://cdn.jsdelivr.net/npm/amcharts3@3.21.15/amcharts/xy", 
 	}, 
 	
 	"shim": {

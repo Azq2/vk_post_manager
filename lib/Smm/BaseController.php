@@ -123,7 +123,7 @@ class BaseController extends \Z\Controller {
 							'index'						=> 'Предложки', 
 							'tools/index'				=> 'Тулзы', 
 							'grabber'					=> 'Граббер', 
-							'statistic/join_visual'		=> 'Вступления', 
+							'statistic/index'			=> 'Статистика', 
 							'vk_widgets/index'			=> 'Apps', 
 							'settings/index'			=> 'Настройки'
 						], 

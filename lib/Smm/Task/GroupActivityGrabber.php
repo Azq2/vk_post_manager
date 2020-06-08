@@ -501,9 +501,22 @@ class GroupActivityGrabber extends \Z\Task {
 				foreach ($response as $post) {
 					$likes = $post->likes->count ?? 0;
 					$comments = $post->comments->count ?? 0;
+					$views = $post->views->count ?? 0;
+					$reposts = $post->reposts->count ?? 0;
 					
 					$need_check_likes = $posts[$post->id]['need_check_likes'];
 					$need_check_comments = $posts[$post->id]['need_check_likes'];
+					$need_update = false;
+					
+					if ($posts[$post->id]['views'] != $views) {
+						echo "#".$post->id." - changed views [".$posts[$post->id]['views']." != ".$views."]\n";
+						$need_update = true;
+					}
+					
+					if ($posts[$post->id]['reposts'] != $reposts) {
+						echo "#".$post->id." - changed reposts [".$posts[$post->id]['reposts']." != ".$reposts."]\n";
+						$need_update = true;
+					}
 					
 					if ($posts[$post->id]['likes'] != $likes) {
 						echo "#".$post->id." - changed likes [".$posts[$post->id]['likes']." != ".$likes."]\n";
@@ -515,11 +528,13 @@ class GroupActivityGrabber extends \Z\Task {
 						$need_check_comments = 1;
 					}
 					
-					if ($need_check_comments || $need_check_likes) {
+					if ($need_check_comments || $need_check_likes || $need_update) {
 						DB::update('vk_activity_posts')
 							->set([
 								'need_check_likes'		=> $need_check_likes, 
 								'need_check_comments'	=> $need_check_comments, 
+								'views'					=> $views, 
+								'reposts'				=> $reposts, 
 								'last_check'			=> time()
 							])
 							->where('owner_id', '=', -$group['id'])

@@ -32,7 +32,7 @@ $('body').on('click', '.js-message_save', function (e) {
 	$.post($('#add_form').prop("action"),  {
 		id:		wrap.data('id'), 
 		text:	wrap.find('.js-message_text').prop("emojioneArea").getText()
-	}, "json").success(function (res) {
+	}, "json").done(function (res) {
 		toggle_spinner(false);
 		if (res.success) {
 			wrap.find('.js-status_text').removeClass('hide').text('сохранено');

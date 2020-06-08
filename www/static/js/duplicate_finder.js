@@ -33,7 +33,7 @@ $('body').on('click', '#do_search', function (e) {
 	
 	$.post("/?a=tools/duplicate_finder_queue",  {
 		photo:		photo
-	}, "json").success(function (res) {
+	}, "json").done(function (res) {
 		if (res.success) {
 			checker(res.id, function (queue, error) {
 				if (error) {
@@ -115,7 +115,7 @@ $('body').on('click', '#do_search', function (e) {
 	function checker(id, callback) {
 		$.post("/?a=tools/duplicate_finder_queue",  {
 			id:		id
-		}, "json").success(function (res) {
+		}, "json").done(function (res) {
 			if (res.success) {
 				if (!res.queue.done) {
 					setTimeout(function () {

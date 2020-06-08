@@ -44,7 +44,7 @@ class Date {
 		$time = localtime($time_unix);
 		
 		if ($full)
-			return date("d ".$month_list[$time[4] + 1]." Y в H:i:s", $time_unix);
+			return date("d ".$month_list[$time[4] + 1]." Y".($show_time ? " в H:i:s" : ""), $time_unix);
 		
 		// Сегодня
 		if ($time[3] == $curr_time[3] && $time[4] == $curr_time[4] && $time[5] == $curr_time[5])

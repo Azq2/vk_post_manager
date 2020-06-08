@@ -29,7 +29,7 @@ $('body').on('click', '.js-oauth_form_submit', function (e) {
 	
 	toggle_spinner(true);
 	
-	$.post(wrap.prop("action"), wrap.serialize(), null, "json").success(function (res) {
+	$.post(wrap.prop("action"), wrap.serialize(), null, "json").done(function (res) {
 		toggle_spinner(false);
 		if (res.success) {
 			wrap
@@ -57,7 +57,7 @@ $('body').on('click', '.js-oauth_form_submit', function (e) {
 				.html(tpl.error(res.error));
 		}
 		console.log(res);
-	}).error(function () {
+	}).fail(function () {
 		toggle_spinner(false);
 		wrap
 			.find('.js-status_text')

@@ -22,6 +22,142 @@ class ToolsController extends \Smm\GroupController {
 		]);
 	}
 	
+	public function compare_groupsAction() {
+		$now = time();
+		
+		$api = new \Smm\VK\API(\Smm\Oauth::getAccessToken('VK'));
+		$response = $api->exec("stats.get", [
+			'group_id'			=> 186341291, 
+			'timestamp_from'	=> strtotime(date("Y-m-d", $now - 3600 * 24 * 30)." 00:00:00"), 
+			'timestamp_to'		=> strtotime(date("Y-m-d", $now)." 00:00:00"), 
+			'interval'			=> 'all', 
+			'intervals_count'	=> 0, 
+		]);
+		$a = $response->response[0];
+		
+		$response = $api->exec("stats.get", [
+			'group_id'			=> 194035741, 
+			'timestamp_from'	=> strtotime(date("Y-m-d", $now - 3600 * 24 * 30)." 00:00:00"), 
+			'timestamp_to'		=> strtotime(date("Y-m-d", $now)." 00:00:00"), 
+			'interval'			=> 'all', 
+			'intervals_count'	=> 0, 
+		]);
+		$b = $response->response[0];
+		
+		$diff = \Smm\VK\Statistic::computeStatisticDiff($a, $b);
+		
+		$compares = [
+			'activity'		=> [
+				'title'		=> 'Активность', 
+				'tables'	=> $this->_getTables($diff['activity'])
+			], 
+			'reach'			=> [
+				'title'		=> 'Охват', 
+				'tables'	=> $this->_getTables($diff['reach'])
+			], 
+			'visitors'		=> [
+				'title'		=> 'Посещения', 
+				'tables'	=> $this->_getTables($diff['visitors'])
+			], 
+		];
+		
+		$this->title = 'Сравниватель сообществ';
+		$this->content = View::factory('tools/compare_groups', [
+			'compares'		=> $compares
+		]);
+	}
+	
+	public function _getTables($diff) {
+		$tables = [
+			'summary'	=> [
+				'title'		=> 'Основное', 
+				'rows'		=> []
+			]
+		];
+		
+		foreach ($diff as $k => $v) {
+			switch ($k) {
+				case "socdem":
+					$names = [
+						'age'			=> 'Возраст', 
+						'sex'			=> 'Пол', 
+						'sex_age'		=> 'Возраст+Пол', 
+					];
+					
+					foreach ($names as $k => $title) {
+						$tables[$k] = [
+							'title'		=> $title, 
+							'rows'		=> []
+						];
+						foreach ($v[$k] as $item_name => $item_value)
+							$tables[$k]['rows'][] = $this->_getValueRow($item_name, $item_value, false);
+					}
+				break;
+				
+				case "countries":
+				case "cities":
+					$names = [
+						'countries'		=> 'Страны', 
+						'cities'		=> 'Города'
+					];
+					
+					$tables[$k] = [
+						'title'		=> $names[$k], 
+						'rows'		=> []
+					];
+					foreach ($v as $geo_name => $geo_value)
+						$tables[$k]['rows'][] = $this->_getValueRow($geo_name, $geo_value, false);
+				break;
+				
+				default:
+					$negative = [
+						'unsubscribed', 
+						'hidden'
+					];
+					
+					$names = [
+						'comments'				=> 'Комментарии', 
+						'copies'				=> 'Репосты', 
+						'hidden'				=> 'Скрытия из новостей', 
+						'likes'					=> 'Лайки', 
+						'subscribed'			=> 'Подписались', 
+						'unsubscribed'			=> 'Отписались', 
+						'mobile_reach'			=> 'Охват (мобилы)', 
+						'reach_subscribers'		=> 'Охват (подписчики)', 
+						'reach'					=> 'Охват (полный)', 
+						'self_growth'			=> 'Саморост'
+					];
+					
+					$tables['summary']['rows'][] = $this->_getValueRow($names[$k] ?? $k, $v, in_array($k, $negative));
+				break;
+			}
+		}
+		
+		return $tables;
+	}
+	
+	public function _getValueRow($title, $v, $is_negative) {
+		if (isset($v[2])) {
+			return [
+				'title'			=> $title, 
+				'value'			=> [$v[0], $v[1]], 
+				'pct'			=> [$v[2], $v[3]], 
+				'diff'			=> $v[2] - $v[3], 
+				'type'			=> 'pct', 
+				'negative'		=> $is_negative
+			];
+		} else {
+			return [
+				'title'		=> $title, 
+				'value'		=> [$v[0], $v[1]], 
+				'diff'		=> $v[0] > $v[1] ? (100 - $v[1] / $v[0] * 100) : -(100 - $v[0] / $v[1] * 100), 
+				'pct'		=> false, 
+				'type'		=> 'pct', 
+				'negative'		=> $is_negative
+			];
+		}
+	}
+	
 	public function duplicate_finderAction() {
 		$this->title = 'SMM Tools : Поиск баянов';
 		
