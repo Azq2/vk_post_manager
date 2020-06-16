@@ -14,7 +14,8 @@ class API {
 			'ea0f07e73ad28955150d066bd22ef843', 
 			'2b0673e0dc4580674a88d426fe00ea90', 
 			'2cc8bfb89429345060d1212147913582', 
-			'fead941d698dc1160a298ba7bec277ac'
+			'fead941d698dc1160a298ba7bec277ac', 
+			'505f2f2dfcfce5b99cb7ac4155cbf299'
 		], 
 		'PROFILE_NEXT_PAGE'		=> [
 			'44efc15d3c13342d02df0b5a9fa3d33f', 
@@ -23,7 +24,10 @@ class API {
 			'bd0d6d184eefd4d0ce7036c11ae58ed9'
 		], 
 		'HASHTAG_NEXT_PAGE'		=> [
-			'7dabc71d3e758b1ec19ffb85639e427b'
+			'7dabc71d3e758b1ec19ffb85639e427b', 
+			'f92f56d47dc7a55b606908374b43a314', 
+			'c769cb6c71b24c8a86590b22402fda50', 
+			'174a5243287c5f3a7de741089750ab3b'
 		]
 	];
 	
@@ -149,7 +153,7 @@ class API {
 	protected function getMaxRPS($graphql_hash) {
 		if (!$graphql_hash)
 			return [10, 1];
-		return [1, 5];
+		return [1, 7];
 	}
 	
 	protected function _sendRequest($url, $post) {

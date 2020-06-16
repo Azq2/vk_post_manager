@@ -175,8 +175,10 @@ class Instagram extends \Z\Task {
 								'after'		=> $next[$id], 
 							]);
 						} else {
-							$url = "https://www.instagram.com/explore/tags/".urlencode($source['value'])."/";
-							$response = $insta_api->exec($url, ['__a' => 1]);
+							$response = $insta_api->execGraphql('HASHTAG_NEXT_PAGE', [
+								'tag_name'	=> $source['value'], 
+								'first'		=> 12, 
+							]);
 						}
 					} elseif ($source['type'] == "user") {
 						if (isset($next[$id])) {
@@ -188,7 +190,7 @@ class Instagram extends \Z\Task {
 						} else {
 							$response = $insta_api->execGraphql('PROFILE_NEXT_PAGE', [
 								'id'		=> $source['user_id'], 
-								'first'		=> 12
+								'first'		=> 5
 							]);
 						}
 					}
