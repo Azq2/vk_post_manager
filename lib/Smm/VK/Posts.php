@@ -7,14 +7,13 @@ use \Z\Date;
 use \Z\Util\Url;
 
 class Posts {
-	public static function getWallPostMeta($post) {
+	public static function getWallPostApiData($post) {
 		$out = [
 			'lat'			=> 0, 
 			'long'			=> 0, 
 			'attachments'	=> [], 
 			'post_id'		=> $post->id, 
 			'owner_id'		=> $post->owner_id, 
-			'post_type'		=> $post->post_type, 
 			'publish_date'	=> $post->publish_date ?? 0, 
 			'message'		=> $post->text, 
 			'signed'		=> $post->signer_id ?? 0, 
@@ -46,6 +45,8 @@ class Posts {
 				return false;
 			}
 		}
+		
+		$out['attachments'] = implode(",", $out['attachments']);
 		
 		return $out;
 	}

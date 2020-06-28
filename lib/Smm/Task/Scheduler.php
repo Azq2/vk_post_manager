@@ -78,14 +78,19 @@ class Scheduler extends \Z\Task {
 					continue;
 				}
 				
-				echo "postponed:\n";
-				foreach ($comments->postponed as $p) {
+				foreach ($comments->postponed as $p)
 					echo "[".$p->post_type."] https://vk.com/wall".$p->owner_id."_".$p->id." | ".date("d/m/Y H:i", $p->date)." | ".date("d/m/Y H:i", $p->orig_date)." ".($p->special ? "[SPECIAL]" : "")."\n";
-				}
 				
-				echo "suggests:\n";
-				foreach ($comments->suggests as $p) {
-					echo "[".$p->post_type."] https://vk.com/wall".$p->owner_id."_".$p->id." | ".date("d/m/Y H:i", $p->date)." | ".date("d/m/Y H:i", $p->orig_date)." ".($p->special ? "[SPECIAL]" : "")."\n";
+				// Текущая рабочая очередь
+				$current_queue = [];
+				foreach ($comments->postponed as $item) {
+					if (!in_array($item->post_type, ['postpone', 'suggest']) || $item->special)
+						continue;
+					
+					$current_queue[] = $item->owner_id.":".$item->id;
+					
+					if (count($current_queue) >= $sched_config['limit'])
+						break;
 				}
 				
 				$limit = 0;
@@ -93,9 +98,23 @@ class Scheduler extends \Z\Task {
 					if (!in_array($item->post_type, ['postpone', 'suggest']) || $item->special)
 						continue;
 					
-					if (abs($item->date - $item->orig_date) > 60) { // Нужно пофиксить время
-						echo "[NEW] QUEUE: #".$item->id." at ".date("d/m/Y H:i", $item->date)." (diff=".($item->date - $item->orig_date).")\n";
-						
+					$need_to_fix_date = false;
+					
+					if (in_array($item->owner_id.":".$item->id, $current_queue)) {
+						// Обновляем время постам из рабочей очереди
+						if (abs($item->date - $item->orig_date) > 60) {
+							echo "[NEW] QUEUE: #".$item->id." at ".date("d/m/Y H:i", $item->date)." (diff=".($item->date - $item->orig_date).")\n";
+							$need_to_fix_date = true;
+						}
+					} else {
+						// Обновляем время постам из отложенной очереди
+						if ($item->orig_date - time() < 3600 * 24 * 7) {
+							echo "[FIX] QUEUE: #".$item->id." at ".date("d/m/Y H:i", $item->date)." (diff=".($item->date - $item->orig_date).")\n";
+							$need_to_fix_date = true;
+						}
+					}
+					
+					if ($need_to_fix_date) { // Нужно пофиксить время
 						// Ищем посты, которые перекрывают нужный нам
 						$overlaps = [];
 						foreach (array_merge($comments->postponed, $comments->suggests) as $p) {
@@ -107,30 +126,20 @@ class Scheduler extends \Z\Task {
 						
 						// Меняем время таким постам на левое
 						foreach ($overlaps as $p) {
-							$fake_date = \Smm\VK\Posts::getFakeDate($group['id']);
+							echo "\t=> fix overlaped post #".$p->id." ".date("d/m/Y H:i", $p->date)."\n";
 							
-							echo "\t=> fix overlaped post #".$p->id." ".date("d/m/Y H:i", $p->date)." -> ".date("d/m/Y H:i", $fake_date)."\n";
-							
-							$p->date = $fake_date;
-							
-							$post_meta = \Smm\VK\Posts::getWallPostMeta($p);
-							if (!$post_meta) {
+							$api_data = \Smm\VK\Posts::getWallPostApiData($p);
+							if (!$api_data) {
 								echo "\t=> invalid post data: ".json_encode($p, JSON_PRETTY_PRINT)."\n";
 								continue;
 							}
 							
 							for ($i = 0; $i < $sched_config['max_api_fails']; ++$i) {
-								$api_data = [
-									'post_id'		=> $p->id, 
-									'owner_id'		=> $p->owner_id, 
-									'signed'		=> $post_meta['signed'], 
-									'message'		=> $post_meta['message'], 
-									'lat'			=> $post_meta['lat'], 
-									'long'			=> $post_meta['long'], 
-									'copyright'		=> $post_meta['copyright'], 
-									'attachments'	=> implode(",", $post_meta['attachments']), 
-									'publish_date'	=> $fake_date
-								];
+								$fake_date = \Smm\VK\Posts::getFakeDate($group['id']);
+								$api_data['publish_date'] = $fake_date;
+								$p->orig_date = $fake_date;
+								
+								echo "\t\tnew date: ".date("d/m/Y H:i", $fake_date)."\n";
 								
 								if (($captcha_code = Captcha::getCode())) {
 									$api_data['captcha_key'] = $captcha_code['key'];
@@ -157,30 +166,23 @@ class Scheduler extends \Z\Task {
 								->execute();
 						}
 						
-						$post_meta = \Smm\VK\Posts::getWallPostMeta($item);
-						if (!$post_meta) {
+						$api_data = \Smm\VK\Posts::getWallPostApiData($item);
+						if (!$api_data) {
 							echo "\t=> invalid post data: ".json_encode($item, JSON_PRETTY_PRINT)."\n";
 							continue;
 						}
 						
 						for ($i = 0; $i < $sched_config['max_api_fails']; ++$i) {
-							$api_data = [
-								'post_id'		=> $item->id, 
-								'owner_id'		=> $item->owner_id, 
-								'signed'		=> $post_meta['signed'], 
-								'message'		=> $post_meta['message'], 
-								'lat'			=> $post_meta['lat'], 
-								'long'			=> $post_meta['long'], 
-								'copyright'		=> $post_meta['copyright'], 
-								'attachments'	=> implode(",", $post_meta['attachments']), 
-								'publish_date'	=> $item->date <= time() + 60 ? time() + 60 : $item->date
-							];
+							if (in_array($item->owner_id.":".$item->id, $current_queue)) {
+								$api_data['publish_date'] = $item->date <= time() + 60 ? time() + 60 : $item->date;
+							} else {
+								$api_data['publish_date'] = \Smm\VK\Posts::getFakeDate($group['id']);
+							}
 							
 							$deadline = round($this->getNextRun() + $sched_config['interval'] / 2);
 							
 							if (!isset($strange_posts[$item->owner_id.":".$item->id]) && $deadline >= $item->date) {
 								echo "\t=> #".$p->id." - publish date ".date("Y-m-d H:i:s", $item->date)." is too early, possible bug (deadline: ".date("Y-m-d H:i:s", $deadline).").\n";
-								$limit = 9999; // выходим из очереди
 								$need_rerun = true;
 								$strange_posts[$item->owner_id.":".$item->id] = true;
 								break;
@@ -206,6 +208,8 @@ class Scheduler extends \Z\Task {
 								break;
 							}
 							
+							$item->orig_date = $api_data['publish_date'];
+							
 							Captcha::set($res->captcha());
 							echo "\t=> #".$p->id." - ERROR: ".$res->error()."\n";
 							
@@ -223,8 +227,7 @@ class Scheduler extends \Z\Task {
 							->execute();
 					}
 					
-					++$limit;
-					if ($limit >= min($sched_config['limit'], count($comments->postponed)))
+					if ($need_rerun)
 						break;
 				}
 			}

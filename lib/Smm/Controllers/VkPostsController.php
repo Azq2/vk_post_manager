@@ -105,7 +105,7 @@ class VkPostsController extends \Smm\GroupController {
 			return;
 		}
 		
-		if ($this->getPostDeadLine($current->orig_date) - time() < 60) {
+		if ($this->getPostDeadLine($current->orig_date) - time() < 3 * 60) {
 			$this->content['error'] = 'Ошибка, не успеем передвинуть этот пост до его публикации. '.
 				'Крайнее время: '.date("Y-m-d H:i:s", $this->getPostDeadLine($current->orig_date)).', сейчас: '.date("Y-m-d H:i:s");
 			return;
@@ -117,7 +117,7 @@ class VkPostsController extends \Smm\GroupController {
 				return;
 			}
 			
-			if ($this->getPostDeadLine($before->orig_date) - time() < 60) {
+			if ($this->getPostDeadLine($before->orig_date) - time() < 3 * 60) {
 				$this->content['error'] = 'Ошибка, не успеем передвинуть предыдущий пост до его публикации. '.
 					'Крайнее время: '.date("Y-m-d H:i:s", $this->getPostDeadLine($before->orig_date)).', сейчас: '.date("Y-m-d H:i:s");
 				return;
@@ -130,7 +130,7 @@ class VkPostsController extends \Smm\GroupController {
 				return;
 			}
 			
-			if ($this->getPostDeadLine($after->orig_date) - time() < 60) {
+			if ($this->getPostDeadLine($after->orig_date) - time() < 3 * 60) {
 				$this->content['error'] = 'Ошибка, не успеем передвинуть следующий пост до его публикации. '.
 					'Крайнее время: '.date("Y-m-d H:i:s", $this->getPostDeadLine($after->orig_date)).', сейчас: '.date("Y-m-d H:i:s");
 				return;

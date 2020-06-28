@@ -331,6 +331,9 @@ var tpl = {
 	}, 
 	tuiButtons: function (data) {
 		var html = '' + 
+			'<button class="tui-image-editor-download-btn" style="background-color: #61a961;border: 1px solid #61a961;color: #fff;font-size: 12px">' + 
+				'Скачать' + 
+			'</button> ' + 
 			'<button class="tui-image-editor-save-btn" style="background-color: #fdba3b;border: 1px solid #fdba3b;color: #fff;font-size: 12px">' + 
 				'Сохранить' + 
 			'</button> ' + 
@@ -741,7 +744,8 @@ var VkFeed = Class({
 	
 	resizeTuiEditor: function () {
 		var self = this;
-		self.image_editor.ui.resizeEditor();
+		if (self.image_editor)
+			self.image_editor.ui.resizeEditor();
 	}, 
 	
 	closeTuiEditor: function () {
@@ -773,6 +777,10 @@ var VkFeed = Class({
 			usageStatistics: false, 
 		});
 		
+		setTimeout(function () {
+			$('.tie-text-color .tui-colorpicker-palette-button[value="#ffffff"]').click()
+		}, 0);
+		
 		self.image_editor.__addText = self.image_editor.addText;
 		
 		self.image_editor.addText = function () {
@@ -786,6 +794,18 @@ var VkFeed = Class({
 		container.on('click', '.tui-image-editor-save-btn', function (e) {
 			callback(dataURItoBlob(self.image_editor.toDataURL()));
 			self.closeTuiEditor();
+		}).on('click', '.tui-image-editor-download-btn', function (e) {
+			var a = document.createElement("a");
+			a.style = "display: none";
+			a.href = self.image_editor.toDataURL();
+			a.download = "image-" + Date.now() + ".png";
+			document.body.appendChild(a);
+			a.click();
+			
+			setTimeout(function () {
+				a.parentNode.removeChild(a);
+				a = null;
+			});
 		}).on('click', '.tui-image-editor-cancel-btn', function (e) {
 			self.closeTuiEditor();
 		});
