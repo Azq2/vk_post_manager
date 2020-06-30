@@ -10,15 +10,20 @@ use \Z\Net\Anticaptcha;
 use \Smm\VK\Captcha;
 
 class VK extends \Z\Task {
+	protected $api, $api_index = 0, $has_free_api = true;
+	
 	public function run($args) {
-		exit;
-		
 		if (!\Smm\Utils\Lock::lock(__CLASS__)) {
 			echo "Already running.\n";
 			return;
 		}
 		
 		echo date("Y-m-d H:i:s")." - start.\n";
+		
+		$this->api = [
+			new \Smm\VK\API(\Smm\Oauth::getAccessToken('VK_GRABBER')), 
+			new \Smm\VK\API(\Smm\Oauth::getAccessToken('VK_GRABBER_2')), 
+		];
 		
 		// Граббим так же и свои группы, поэтому добавим их в список
 		$all_groups = DB::select('id', 'name')
@@ -30,8 +35,11 @@ class VK extends \Z\Task {
 			DB::insert('vk_grabber_sources')
 				->ignore()
 				->set([
-					'source_type'	=> \Smm\Grabber::SOURCE_VK, 
-					'source_id'		=> -$group['id'], 
+					'value'			=> -$group['id'], 
+					'type'			=> \Smm\Grabber::SOURCE_VK, 
+					'name'			=> $group['name'], 
+					'url'			=> 'https://vk.com/public'.$group['id'], 
+					'avatar'		=> '/images/grabber/avatar/VK.png', 
 				])
 				->execute();
 		}
@@ -51,8 +59,6 @@ class VK extends \Z\Task {
 	}
 	
 	public function grabVK($sources) {
-		$api = new \Smm\VK\API(\Smm\Oauth::getAccessToken('VK_GRABBER'));
-		
 		$max_api_calls = 5;
 		$execute_api_limit = 25;
 		
@@ -62,17 +68,18 @@ class VK extends \Z\Task {
 		
 		$counters = [];
 		$ended = [];
+		$group_updated = [];
 		
-		$source2id = [];
+		$group_to_source = [];
 		foreach ($sources as $id => $source)
-			$source2id[$source['source_id']] = $source['id'];
+			$group_to_source[$source['value']] = $source['id'];
 		
 		while (true) {
 			$new_posts = 0;
 			$code_chunks = [];
 			
 			// Формируем чанки
-			foreach ($source2id as $vk_id => $source_id) {
+			foreach ($group_to_source as $vk_id => $source_id) {
 				do {
 					$progress = DB::select()
 						->from('vk_grabber_sources_progress')
@@ -135,27 +142,44 @@ class VK extends \Z\Task {
 						$js_code[] = $code['code'];
 					}
 					
-					$res = 0;
 					$time = microtime(true);
+					
+					$ok = false;
 					for ($i = 0; $i < 10; ++$i) {
-						$res = $api->exec("execute", [
+						$res = $this->getApi()->exec("execute", [
 							"code" => 'return {'.implode(",", $js_code).'};'
 						]);
+						
+						$this->printExecuteErrors($res);
+						
+						if ($this->hasExecuteError($res, \Smm\VK\API\Response::VK_ERR_RATE_LIMIT))
+							$this->nextApi();
+						
 						if ($res->success()) {
+							$ok = true;
+							echo "=> OK\n";
 							break;
 						} else {
-							echo "=> fetch posts error: ".$res->error()."\n";
-							sleep(60);
+							$sleep = false;
+							
+							if ($this->hasExecuteError($res, \Smm\VK\API\Response::VK_ERR_FLOOD))
+								break;
+							
+							if ($this->hasExecuteError($res, \Smm\VK\API\Response::VK_ERR_TOO_FAST))
+								$sleep = true;
+							
+							if (!$this->hasFreeApi() && $this->hasExecuteError($res, \Smm\VK\API\Response::VK_ERR_RATE_LIMIT))
+								break;
+							
+							sleep($sleep ? 60 : 1);
 						}
 					}
 					$time = microtime(true) - $time;
 					
 					++$api_calls;
 					
-					if (isset($res->response)) {
+					if ($ok) {
 						echo "=> OK (".round($time, 4)." s)\n";
-						
-						$used_owners = [];
 						
 						foreach ($res->response as $gid => $response) {
 							if (!$response) {
@@ -172,15 +196,12 @@ class VK extends \Z\Task {
 								$images_cnt = $att->images;
 								$attaches = $att->attaches;
 								
-								$used_owners[$item->owner_id] = 1;
-								
 								$ok = \Smm\Grabber::addNewPost((object) [
-									'source_id'			=> $source2id[$item->owner_id], 
+									'source_id'			=> $group_to_source[$item->owner_id], 
 									'source_type'		=> \Smm\Grabber::SOURCE_VK, 
 									'remote_id'			=> $item->owner_id."_".$item->id, 
 									
 									'text'				=> $item->text, 
-									'owner'				=> $item->owner_id, 
 									'attaches'			=> $attaches, 
 									
 									'time'				=> $item->date, 
@@ -197,38 +218,21 @@ class VK extends \Z\Task {
 								}
 							}
 							
-							foreach ($response->profiles as $item) {
-								if (!isset($used_owners[$item->id]))
-									continue;
-								
-								DB::insert('vk_grabber_data_owners')
-									->set([
-										'id'		=> \Smm\Grabber::SOURCE_VK."_".$item->id, 
-										'name'		=> $item->first_name." ".$item->last_name, 
-										'url'		=> "/".$item->screen_name, 
-										'avatar'	=> $item->photo_50
-									])
-									->onDuplicateSetValues('url')
-									->onDuplicateSetValues('name')
-									->onDuplicateSetValues('avatar')
-									->execute();
-							}
-							
-							foreach ($response->groups as $item) {
-								if (!isset($used_owners[-$item->id]))
-									continue;
-								
-								DB::insert('vk_grabber_data_owners')
-									->set([
-										'id'		=> \Smm\Grabber::SOURCE_VK."_-".$item->id, 
-										'name'		=> $item->name, 
-										'url'		=> "/".$item->screen_name, 
-										'avatar'	=> $item->photo_50
-									])
-									->onDuplicateSetValues('url')
-									->onDuplicateSetValues('name')
-									->onDuplicateSetValues('avatar')
-									->execute();
+							if (!isset($group_updated[$gid])) {
+								foreach ($response->groups as $item) {
+									if (-$item->id == $gid) {
+										DB::update('vk_grabber_sources')
+											->set([
+												'name'		=> htmlspecialchars($item->name), 
+												'avatar'	=> $item->photo_50
+											])
+											->where('id', '=', $group_to_source[$gid])
+											->execute();
+										
+										$group_updated[$gid] = true;
+										break;
+									}
+								}
 							}
 							
 							if ($code_chunks[$gid]['mode'] == 'fetch_all') {
@@ -237,7 +241,7 @@ class VK extends \Z\Task {
 										'offset'		=> $code_chunks[$gid]['chunk'][0] + count($response->items), 
 										'done'			=> !count($response->items)
 									])
-									->where('source_id', '=', $source2id[$gid])
+									->where('source_id', '=', $group_to_source[$gid])
 									->execute();
 								if (!count($response->items))
 									$ended[$gid] = true;
@@ -256,7 +260,7 @@ class VK extends \Z\Task {
 					break;
 				}
 				
-				if (count($ended) != count($source2id))
+				if (count($ended) != count($group_to_source))
 					sleep(10);
 			} else {
 				echo "done.\n";
@@ -264,6 +268,50 @@ class VK extends \Z\Task {
 			}
 			
 			$offset += $chunk;
+		}
+	}
+	
+	public function getApi() {
+		return $this->api[$this->api_index];
+	}
+	
+	public function nextApi() {
+		++$this->api_index;
+		
+		if ($this->api_index >= count($this->api)) {
+			$this->api_index = 0;
+			$this->has_free_api = false;
+		}
+	}
+	
+	public function hasFreeApi() {
+		return $this->has_free_api;
+	}
+	
+	public function hasExecuteError($response, $code) {
+		if ($response->errorCode() == $code)
+			return true;
+		if (isset($response->execute_errors)) {
+			foreach ($response->execute_errors as $err) {
+				if ($err->error_code == $code)
+					return true;
+			}
+		}
+		return false;
+	}
+	
+	
+	public function printExecuteErrors($response) {
+		if ($response->error())
+			echo "=> api error: ".$response->error()."\n";
+		
+		if (isset($response->execute_errors)) {
+			$errors_list = [];
+			foreach ($response->execute_errors as $err)
+				$errors_list[] = "=> api error: ".$err->method.": #".$err->error_code." ".$err->error_msg;
+			$errors_list = array_unique($errors_list);
+			
+			echo implode("\n", $errors_list)."\n";
 		}
 	}
 }

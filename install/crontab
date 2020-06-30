@@ -16,7 +16,7 @@
 */15 * * * * php {project}/www/index.php Smm/Task/VkToTelegram >> {project}/logs/cron_vk_to_telegram.log 2>&1
 
 # Агрегатор контента (из инсты/вк и др.)
-#*/15 * * * * php {project}/www/index.php Smm/Task/Grabber/VK >> {project}/logs/cron_grabber.VK.log 2>&1
+*/15 * * * * php {project}/www/index.php Smm/Task/Grabber/VK >> {project}/logs/cron_grabber.VK.log 2>&1
 #*/15 * * * * php {project}/www/index.php Smm/Task/Grabber/Pinterest >> {project}/logs/cron_grabber.PINTEREST.log 2>&1
 */15 * * * * php {project}/www/index.php Smm/Task/Grabber/Instagram >> {project}/logs/cron_grabber.INSTAGRAM.log 2>&1
 

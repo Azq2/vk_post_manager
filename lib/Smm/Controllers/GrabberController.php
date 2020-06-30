@@ -183,6 +183,10 @@ class GrabberController extends \Smm\GroupController {
 			case "year":
 				$grabber_query->where('time', '>=', time() - 3600 * 24 * 365);
 			break;
+			
+			case "3month_old":
+				$grabber_query->where('time', '<', time() - 3600 * 24 * 31 * 3);
+			break;
 		}
 		
 		if ($mode == 'internal') {
@@ -574,10 +578,11 @@ class GrabberController extends \Smm\GroupController {
 			'url'		=> Url::current(), 
 			'param'		=> 'interval', 
 			'items'		=> [
-				'all'		=> 'Всё время', 
-				'today'		=> 'Сегодня', 
-				'week'		=> 'Неделя', 
-				'month'		=> 'Месяц'
+				'all'			=> 'Всё время', 
+				'today'			=> 'Сегодня', 
+				'week'			=> 'Неделя', 
+				'month'			=> 'Месяц', 
+				'3month_old'	=> '&gt;3 месяца'
 			], 
 			'active'	=> $interval
 		]);

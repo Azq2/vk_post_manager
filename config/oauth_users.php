@@ -15,7 +15,14 @@ return [
 		'required'	=> true
 	], 
 	'VK_GRABBER'		=> [
-		'title'		=> 'ВК (граббер)', 
+		'title'		=> 'ВК (граббер) #1', 
+		'type'		=> 'VK', 
+		'client'	=> 'standalone', 
+		'auth'		=> 'code', 
+		'required'	=> true
+	], 
+	'VK_GRABBER_2'		=> [
+		'title'		=> 'ВК (граббер) #2', 
 		'type'		=> 'VK', 
 		'client'	=> 'standalone', 
 		'auth'		=> 'code', 

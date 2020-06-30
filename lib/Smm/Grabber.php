@@ -45,7 +45,7 @@ class Grabber {
 		$all_groups_ids = [];
 		
 		if ($type == self::SOURCE_VK) {
-			$all_groups_ids = DB::select('-id')
+			$all_groups_ids = DB::select(['-id', 'id'])
 				->from('vk_groups')
 				->where('deleted', '=', 0)
 				->execute()
@@ -77,7 +77,10 @@ class Grabber {
 		if (!$sources_ids)
 			return 0;
 		
+		DB::begin();
+		
 		$rows = DB::select('id', 'data_id')
+			->forUpdate()
 			->from('vk_grabber_data_index')
 			->where('source_id', 'IN', $sources_ids)
 			->limit(1000)
@@ -88,15 +91,19 @@ class Grabber {
 		$data_ids = array_map(function ($v) { return $v['data_id']; }, $rows);
 		
 		if ($rows) {
-			DB::begin();
 			DB::delete('vk_grabber_data')
 				->where('id', 'IN', $data_ids)
 				->execute();
 			DB::delete('vk_grabber_data_index')
 				->where('id', 'IN', $post_ids)
 				->execute();
-			DB::commit();
+		} else {
+			DB::delete('vk_grabber_sources_progress')
+				->where('source_id', 'IN', $sources_ids)
+				->execute();
 		}
+		
+		DB::commit();
 		
 		return count($rows);
 	}
@@ -124,6 +131,8 @@ class Grabber {
 		$post_ids = array_map(function ($v) { return $v['id']; }, $rows);
 		$data_ids = array_map(function ($v) { return $v['data_id']; }, $rows);
 		
+		DB::begin();
+		
 		if ($rows) {
 			DB::delete('vk_grabber_data')
 				->where('id', 'IN', $data_ids)
@@ -132,6 +141,8 @@ class Grabber {
 				->where('id', 'IN', $post_ids)
 				->execute();
 		}
+		
+		DB::commit();
 		
 		return count($rows);
 	}

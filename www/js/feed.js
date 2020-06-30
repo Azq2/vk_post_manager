@@ -64,7 +64,7 @@ var tpl = {
 						'</div>' + 
 						'<a href="' + src + '" target="_blank" class="aspect" style="padding-top: ' + (aspect * 100) + '%">' + 
 							(att.mp4 ? 
-								'<video poster="' + thumb.src + '" src="' + att.mp4 + '" class="preview" preload="none" />' : 
+								'<video poster="' + thumb.src + '" src="' + att.mp4 + '" class="preview" preload="none"></video>' : 
 								'<img src="' + thumb.src + '" alt="" class="preview" />'
 							) + 
 							(!deleted && att.type == 'photo' ? 
@@ -82,7 +82,7 @@ var tpl = {
 									'<img src="/images/remove_image.png" alt="" />' + 
 								'</span>' : ''
 							) + 
-							(att.ext == 'gif' ? '<img src="/images/play.svg" alt="" class="post-doc_play js-gif_hide" />' : '') + 
+							(att.ext == 'gif' || att.ext == 'mp4' ? '<img src="/images/play.svg" alt="" class="post-doc_play js-gif_hide" />' : '') + 
 							(att.type == 'doc' ? '<div class="post-doc_title js-gif_hide"><b>' + utils.htmlWrap(att.title) + '</b></div>' : '') + 
 						'</a>' + 
 					'</div>';
@@ -190,19 +190,15 @@ var tpl = {
 		return attaches;
 	}, 
 	post: function (data, custom) {
-		var url, owner_url;
+		var url;
 		if (data.source_type == 'VK') {
 			url = 'https://vk.com/wall' + data.remote_id;
-			owner_url = 'https://vk.com' + data.owner_url;
 		} else if (data.source_type == 'OK') {
 			url = 'https://ok.ru/group/' + data.source_id + '/topic/' + data.remote_id;
-			owner_url = data.owner_url;
 		} else if (data.source_type == 'INSTAGRAM') {
 			url = 'https://www.instagram.com/p/' + data.remote_id;
-			owner_url = data.owner_url;
 		} else if (data.source_type == 'PINTEREST') {
 			url = 'https://www.pinterest.ru/pin/' + data.remote_id;
-			owner_url = data.owner_url;
 		}
 		
 		var post_class = '';
@@ -230,7 +226,7 @@ var tpl = {
 						'<span class="time js-post_time">' + 
 							'<span class="m">' + utils.getHumanDate(data.time) + '</span> ' + 
 						'</span>' + 
-						'<a href="' + owner_url + '" target="_blank" class="m"><b class="post-author post-author-' + data.source_type + '">' + data.owner_name + '</b></a> ' + 
+						'<a href="' + data.owner_url + '" target="_blank" class="m"><b class="post-author post-author-' + data.source_type + '">' + data.owner_name + '</b></a> ' + 
 						'<a href="' + url + '" target="_blank">' + 
 							'<img src="/images/external.svg" width="14" height="14" class="m" alt="" />' + 
 						'</a>' + 
