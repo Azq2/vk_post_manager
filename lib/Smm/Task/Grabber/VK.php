@@ -11,6 +11,8 @@ use \Smm\VK\Captcha;
 
 class VK extends \Z\Task {
 	public function run($args) {
+		exit;
+		
 		if (!\Smm\Utils\Lock::lock(__CLASS__)) {
 			echo "Already running.\n";
 			return;

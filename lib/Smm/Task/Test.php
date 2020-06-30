@@ -15,6 +15,44 @@ class Test extends \Z\Task {
 	public function run($args) {
 		// var_dump(new TestModel());
 		
+		$sources = DB::select()
+			->from('vk_grabber_sources')
+			->execute();
+		
+		foreach ($sources as $s) {
+			$url = "";
+			
+			switch ($s['type']) {
+				case \Smm\Grabber::SOURCE_VK:
+					$url = 'https://vk.com/public'.(-$s['value']);
+				break;
+				
+				case \Smm\Grabber::SOURCE_INSTAGRAM:
+					$value = substr($s['value'], 1);
+					if ($s['value'][0] == '#') {
+						$url = 'https://www.instagram.com/explore/tags/'.urlencode($value);
+					} elseif ($s['value'][0] == '@') {
+						$url = 'https://www.instagram.com/'.urlencode($value);
+					}
+				break;
+				
+				case \Smm\Grabber::SOURCE_PINTEREST:
+					$url = 'https://www.pinterest.ru/search/pins/?rs=ac&len=2&q='.urlencode($s['value']);
+				break;
+			}
+			
+			$q = DB::update('vk_grabber_sources')
+				->set([
+					'url'		=> $url
+				])
+				->where('id', '=', $s['id']);
+			
+			echo "$q\n";
+			
+			$q->execute();
+		}
+		
+		/*
 		$data2id = DB::select('id', 'data_id')
 			->from('vk_grabber_data_index')
 			->where('source_type', '=', 2)
@@ -61,6 +99,7 @@ class Test extends \Z\Task {
 					->execute();
 			}
 		}
+		*/
 		
 		/*
 		$list = DB::select('data_id')

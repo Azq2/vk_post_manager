@@ -48,7 +48,7 @@ $('body').on('click', '#do_search', function (e) {
 						var thumb = {
 							w: 320, 
 							h: 320, 
-							src: "/i/img/transparent.gif"
+							src: "/images/transparent.gif"
 						};
 						for (var img of res.photo.sizes) {
 							if (img.width <= 640) {

@@ -14,7 +14,7 @@
 	
 	<div class="row">
 		<button class="btn" id="do_search">
-			<img src="/i/img/spinner.gif" alt="" class="m js-spinner hide" /> 
+			<img src="/images/spinner.gif" alt="" class="m js-spinner hide" /> 
 			<span class="m">Найти посты</span>
 		</button>
 	</div>

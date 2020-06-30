@@ -28,7 +28,7 @@ class GrabberController extends \Smm\GroupController {
 			if ($restore) {
 				DB::delete('vk_grabber_blacklist')
 					->where('group_id', '=', $this->group['id'])
-					->where('source_type', '=', $post['source_type'])
+					->where('source_type', '=', $post['type'])
 					->where('remote_id', '=', $post['remote_id'])
 					->execute();
 			} else {
@@ -36,7 +36,7 @@ class GrabberController extends \Smm\GroupController {
 					->ignore()
 					->set([
 						'group_id'		=> $this->group['id'], 
-						'source_type'	=> $post['source_type'], 
+						'source_type'	=> $post['type'], 
 						'remote_id'		=> $post['remote_id'], 
 						'time'			=> time()
 					])
@@ -50,13 +50,13 @@ class GrabberController extends \Smm\GroupController {
 	}
 	
 	public function delete_sourceAction() {
-		$source_id = $_GET['id'] ?? 0;
+		$id = $_GET['id'] ?? 0;
 		
 		$base_url = Url::mk('/')->set('gid', $this->group['id']);
 		
 		if ($this->user->can('user')) {
 			DB::delete('vk_grabber_selected_sources')
-				->where('source_id', '=', $source_id)
+				->where('source_id', '=', $id)
 				->where('group_id', '=', $this->group['id'])
 				->execute();
 		}
@@ -66,7 +66,7 @@ class GrabberController extends \Smm\GroupController {
 	
 	public function enable_sourceAction() {
 		$enable = $_GET['on'] ?? false;
-		$source_id = $_GET['id'] ?? 0;
+		$id = $_GET['id'] ?? 0;
 		
 		$base_url = Url::mk('/')->set('gid', $this->group['id']);
 		
@@ -75,7 +75,7 @@ class GrabberController extends \Smm\GroupController {
 				->set([
 					'enabled' => $enable ? 1 : 0
 				])
-				->where('source_id', '=', $source_id)
+				->where('source_id', '=', $id)
 				->where('group_id', '=', $this->group['id'])
 				->execute();
 		}
@@ -94,18 +94,19 @@ class GrabberController extends \Smm\GroupController {
 		$include = isset($_REQUEST['include']) && is_array($_REQUEST['include']) ? $_REQUEST['include'] : [];
 		$exclude = isset($_REQUEST['exclude']) && is_array($_REQUEST['exclude']) ? $_REQUEST['exclude'] : [];
 		$interval = $_REQUEST['interval'] ?? 'all';
+		$list_type = $_REQUEST['list_type'] ?? 'all';
 		
 		$sources = $this->_getSources();
 		
 		$sources_ids = [];
 		foreach ($sources as $s) {
 			if ($s['enabled']) {
-				$key = \Smm\Grabber::$type2name[$s['source_type']].'_'.$s['source_our_id'];
+				$key = \Smm\Grabber::$type2name[$s['type']].'_'.$s['value'];
 				if ($include && !in_array($key, $include))
 					continue;
 				if ($exclude && in_array($key, $exclude))
 					continue;
-				$sources_ids[] = $s['source_id'];
+				$sources_ids[] = $s['id'];
 			}
 		}
 		
@@ -123,16 +124,29 @@ class GrabberController extends \Smm\GroupController {
 		
 		// Фильтр по типу контента
 		if ($content_filter == 'pics')
-			$grabber_query->where('post_type', '>', 0);
+			$grabber_query->where('post_type', 'IN', [\Smm\Grabber::POST_WITH_TEXT_PIC, \Smm\Grabber::POST_WITH_TEXT_PIC_GIF]);
 		elseif ($content_filter == 'only_gif')
-			$grabber_query->where('post_type', 'IN', [1, 3]);
+			$grabber_query->where('post_type', 'IN', [\Smm\Grabber::POST_WITH_TEXT_GIF, \Smm\Grabber::POST_WITH_TEXT_PIC_GIF]);
 		elseif ($content_filter == 'without_gif')
-			$grabber_query->where('post_type', '=', 2);
+			$grabber_query->where('post_type', 'IN', [\Smm\Grabber::POST_WITH_TEXT_PIC]);
+		
+		$time_sort_field = 'time';
+		
+		if ($list_type == 'top') {
+			$grabber_query->where('list_type', 'IN', [
+				\Smm\Grabber::LIST_TOP
+			]);
+			$time_sort_field = 'first_grab_time';
+		} elseif ($list_type == 'new') {
+			$grabber_query->where('list_type', 'IN', [
+				\Smm\Grabber::LIST_UNKNOWN, \Smm\Grabber::LIST_NEW
+			]);
+		}
 		
 		if ($sort == 'DESC') {
-			$grabber_query->order('time', 'DESC');
+			$grabber_query->order($time_sort_field, 'DESC');
 		} else if ($sort == 'ASC') {
-			$grabber_query->order('time', 'ASC');
+			$grabber_query->order($time_sort_field, 'ASC');
 		} else if ($sort == 'RAND') {
 			if (isset($_REQUEST['exclude_posts'])) {
 				$exclude = [];
@@ -174,8 +188,8 @@ class GrabberController extends \Smm\GroupController {
 		if ($mode == 'internal') {
 			$source_id = DB::select('id')
 				->from('vk_grabber_sources')
-				->where('source_type', '=', \Smm\Grabber::SOURCE_VK)
-				->where('source_id', '=', -$this->group['id'])
+				->where('type', '=', \Smm\Grabber::SOURCE_VK)
+				->where('id', '=', -$this->group['id'])
 				->execute()
 				->get('id', 0);
 			
@@ -221,24 +235,17 @@ class GrabberController extends \Smm\GroupController {
 				->asArray('data_id');
 		}
 		
-		$owners = [];
 		$blacklist_ids = [];
 		$time_data = microtime(true);
 		
 		if ($meta) {
-			// Получаем овнеров
-			$owners = DB::select()
-				->from('vk_grabber_data_owners')
-				->execute()
-				->asArray('id');
-			
 			$post_data_query = DB::select()
 				->from('vk_grabber_data')
 				->where('id', 'IN', array_keys($meta));
 			foreach ($post_data_query->execute() as $post_data) {
 				$post = $meta[$post_data['id']];
 				$source_type = \Smm\Grabber::$type2name[$post['source_type']];
-				$owner = $owners[$post['source_type'].'_'.$post_data['owner']];
+				$source = $sources[$post['source_id']];
 				
 				if (!isset($blacklist_ids[$post['source_type']]))
 					$blacklist_ids[$post['source_type']] = [];
@@ -258,9 +265,9 @@ class GrabberController extends \Smm\GroupController {
 					'images_cnt'		=> $post['images_cnt'], 
 					'text'				=> $post_data['text'], 
 					'spell'				=> \Smm\Utils\Spellcheck::check($post_data['text']), 
-					'owner_name'		=> $owner['name'], 
-					'owner_url'			=> $owner['url'], 
-					'owner_avatar'		=> $owner['avatar'], 
+					'owner_name'		=> $source['name'], 
+					'owner_url'			=> $source['url'], 
+					'owner_avatar'		=> $source['avatar'], 
 					'attaches'			=> unserialize(gzinflate($post_data['attaches']))
 				];
 			}
@@ -313,7 +320,7 @@ class GrabberController extends \Smm\GroupController {
 	}
 	
 	public function sourcesAction() {
-		$source_url = trim($_POST['url'] ?? '');
+		$raw_source_url = trim($_POST['url'] ?? '');
 		$source_type_name = $_POST['type'] ?? 'VK';
 		$error = false;
 		$sources = $this->_getSources();
@@ -327,7 +334,9 @@ class GrabberController extends \Smm\GroupController {
 			], 
 			'INSTAGRAM'		=> [
 				'title'			=> 'Instagram', 
-				'descr'			=> 'Тег вида: #cat или @ledravenger'
+				'descr'			=> 
+					'Для хэштега: #cat<br />'.
+					'Для профиля: https://www.instagram.com/p/CAJe9h5pITl/ (ссылку на любой пост)'
 			], 
 			'PINTEREST'		=> [
 				'title'			=> 'Pinterest', 
@@ -336,17 +345,22 @@ class GrabberController extends \Smm\GroupController {
 		];
 		
 		if ($_POST) {
-			$source_id = false;
-			$source_type = false;
+			$new_source = false;;
+			
+			if (strpos($raw_source_url, "//vk.com") !== false)
+				$source_type_name = 'VK';
+			
+			if (strpos($raw_source_url, "//www.instagram.com") !== false)
+				$source_type_name = 'INSTAGRAM';
 			
 			if (!$this->user->can('user')) {
 				$error = 'Гостевой доступ!';
-			} elseif ($source_url == '') {
+			} elseif ($raw_source_url == '') {
 				$error = 'Сейчас бы тыкать на кнопки ничего не введя.';
 			} else {
 				switch ($source_type_name) {
 					case "VK":
-						$parts = parse_url($source_url);
+						$parts = parse_url($raw_source_url);
 						$api = new \Smm\VK\API(\Smm\Oauth::getAccessToken('VK'));
 						
 						$group_id = substr($parts['path'], 1);
@@ -357,28 +371,74 @@ class GrabberController extends \Smm\GroupController {
 							'group_ids'	=> $group_id
 						));
 						if ($res->success()) {
-							$source_id = -$res->response[0]->id;
-							$source_type = \Smm\Grabber::SOURCE_VK;
-							$source_name = $res->response[0]->name;
+							$new_source = [
+								'value'		=> -$res->response[0]->id, 
+								'type'		=> \Smm\Grabber::SOURCE_VK, 
+								'name'		=> htmlspecialchars($res->response[0]->name), 
+								'url'		=> 'https://vk.com/public'.$res->response[0]->id, 
+								'avatar'	=> '/images/grabber/avatar/VK.png'
+							];
 						} else {
 							$error = $res->error();
 						}
 					break;
 					
 					case "INSTAGRAM":
-						if (!preg_match('/^[#\@][\w\d_.-]+$/i', $source_url)) {
-							$error = 'Неправильный тег.';
-						} else {
-							$source_id = $source_url;
-							$source_type = \Smm\Grabber::SOURCE_INSTAGRAM;
-							$source_name = $source_url;
+						switch ($raw_source_url[0]) {
+							// Хэштег
+							case "#":
+								if (!preg_match('/^[#\@\*][\w\d_.-]+$/i', $raw_source_url)) {
+									$error = 'Неправильный тег.';
+								} else {
+									$new_source = [
+										'value'			=> htmlspecialchars($raw_source_url), 
+										'type'			=> \Smm\Grabber::SOURCE_INSTAGRAM, 
+										'name'			=> $raw_source_url, 
+										'url'			=> 'https://www.instagram.com/explore/tags/'.urlencode(substr($raw_source_url, 1)), 
+										'avatar'		=> '/images/grabber/avatar/INSTAGRAM.png', 
+										'internal_id'	=> ''
+									];
+								}
+							break;
+							
+							// Профиль
+							case "@":
+								$error = "Добавление через @ПРОФИЛЬ не работает. Теперь нужно указать ссылку на любой пост.";
+							break;
+							
+							// Oembed
+							default:
+								if (strpos($raw_source_url, "https://") === 0) {
+									$json = @json_decode(@file_get_contents("https://api.instagram.com/oembed?url=".urlencode($raw_source_url)));
+									if (isset($json->author_id, $json->author_name)) {
+										$new_source = [
+											'value'			=> htmlspecialchars("@".$json->author_name), 
+											'type'			=> \Smm\Grabber::SOURCE_INSTAGRAM, 
+											'name'			=> "@".$json->author_name, 
+											'url'			=> 'https://www.instagram.com/'.urlencode($json->author_name), 
+											'avatar'		=> '/images/grabber/avatar/INSTAGRAM.png', 
+											'internal_id'	=> $json->author_id
+										];
+									} else {
+										$error = 'Instagram пост не найден.';
+									}
+								} else {
+									$error = 'Неправильная ссылка на пост.';
+								}
+							break;
 						}
 					break;
 					
 					case "PINTEREST":
-						$source_type = \Smm\Grabber::SOURCE_PINTEREST;
-						$source_id = preg_replace("/\s+/", " ", mb_strtolower($source_url));
-						$source_name = $source_id;
+						$value = preg_replace("/\s+/", " ", mb_strtolower($raw_source_url));
+						
+						$new_source = [
+							'value'		=> $value, 
+							'type'		=> \Smm\Grabber::SOURCE_PINTEREST, 
+							'name'		=> htmlspecialchars($value), 
+							'url'		=> 'https://www.pinterest.ru/search/pins/?rs=ac&len=2&q='.urlencode($value), 
+							'avatar'	=> '/images/grabber/avatar/PINTEREST.png'
+						];
 					break;
 					
 					default:
@@ -387,31 +447,35 @@ class GrabberController extends \Smm\GroupController {
 				}
 			}
 			
-			if (!$error && $source_type !== false) {
+			if ($new_source) {
+				DB::begin();
+				
 				DB::insert('vk_grabber_sources')
 					->ignore()
-					->set([
-						'source_type'	=> $source_type, 
-						'source_id'		=> $source_id, 
-					])
+					->set($new_source)
+					->onDuplicateSetValues('name')
+					->onDuplicateSetValues('avatar')
+					->onDuplicateSetValues('url')
+					->onDuplicateSetValues('internal_id')
 					->execute();
 				
-				$source = DB::select()
+				$new_source_id = DB::select('id')
 					->from('vk_grabber_sources')
-					->where('source_type', '=', $source_type)
-					->where('source_id', '=', $source_id)
+					->where('type', '=', $new_source['type'])
+					->where('value', '=', $new_source['value'])
 					->execute()
-					->current();
+					->get('id', 0);
 				
 				DB::insert('vk_grabber_selected_sources')
 					->set([
-						'source_id'	=> $source['id'], 
+						'source_id'	=> $new_source_id, 
 						'group_id'	=> $this->group['id'], 
-						'name'		=> $source_name, 
 						'enabled'	=> 1, 
 					])
-					->onDuplicateSetValues('name')
+					->onDuplicateSetValues('enabled')
 					->execute();
+				
+				DB::commit();
 				
 				return $this->redirect($base_url->set('a', 'grabber/sources')->url());
 			}
@@ -419,51 +483,28 @@ class GrabberController extends \Smm\GroupController {
 		
 		$sources_list = [];
 		foreach ($sources as $s) {
-			$key = \Smm\Grabber::$type2name[$s['source_type']]."_".$s['source_our_id'];
-			
-			switch ($s['source_type']) {
-				case \Smm\Grabber::SOURCE_VK:
-					$url = 'https://vk.com/public'.(-$s['source_our_id']);
-					$icon = 'https://vk.com/favicon.ico';
-				break;
-				
-				case \Smm\Grabber::SOURCE_INSTAGRAM:
-					$value = substr($s['source_our_id'], 1);
-					if ($s['source_our_id'][0] == '#') {
-						$url = 'https://www.instagram.com/explore/tags/'.urlencode($value);
-					} elseif ($s['source_our_id'][0] == '@') {
-						$url = 'https://www.instagram.com/'.urlencode($value);
-					}
-					$icon = 'https://www.instagram.com/static/images/ico/favicon.ico/36b3ee2d91ed.ico';
-				break;
-				
-				case \Smm\Grabber::SOURCE_PINTEREST:
-					$url = 'https://www.pinterest.ru/search/pins/?rs=ac&len=2&q='.urlencode($s['source_our_id']);
-					$icon = 'https://www.pinterest.ru/favicon.ico';
-				break;
-			}
+			$key = \Smm\Grabber::$type2name[$s['type']]."_".$s['value'];
 			
 			$sources_list[] = [
 				'key'			=> $key,
-				'id'			=> $s['source_our_id'],
+				'id'			=> $s['value'],
 				'enabled'		=> $s['enabled'], 
 				'name'			=> $s['name'], 
-				'type'			=> \Smm\Grabber::$type2name[$s['source_type']], 
-				'url'			=> $url, 
-				'icon'			=> $icon, 
+				'url'			=> $s['url'], 
+				'type'			=> \Smm\Grabber::$type2name[$s['type']], 
 				'on_url'		=> $base_url->copy()
 					->set('a', 'grabber/enable_source')
-					->set('id', $s['source_id'])
+					->set('id', $s['id'])
 					->set('on', 1)
 					->href(), 
 				'off_url'		=> $base_url->copy()
 					->set('a', 'grabber/enable_source')
-					->set('id', $s['source_id'])
+					->set('id', $s['id'])
 					->set('on', 0)
 					->href(), 
 				'delete_url'	=> $base_url->copy()
 					->set('a', 'grabber/delete_source')
-					->set('id', $s['source_id'])
+					->set('id', $s['id'])
 					->set('on', 0)
 					->href(), 
 			];
@@ -473,7 +514,7 @@ class GrabberController extends \Smm\GroupController {
 		$this->content = View::factory('grabber/add', [
 			'form_action'		=> Url::current()->href(), 
 			'form_error'		=> $error, 
-			'form_url'			=> $source_url, 
+			'form_url'			=> $raw_source_url, 
 			'sources'			=> $sources_list, 
 			'sources_types'		=> $sources_types, 
 			'source_type'		=> $source_type_name
@@ -487,6 +528,7 @@ class GrabberController extends \Smm\GroupController {
 		$include = isset($_REQUEST['include']) && is_array($_REQUEST['include']) ? $_REQUEST['include'] : [];
 		$exclude = isset($_REQUEST['exclude']) && is_array($_REQUEST['exclude']) ? $_REQUEST['exclude'] : [];
 		$interval = $_REQUEST['interval'] ?? 'all';
+		$list_type = $_REQUEST['list_type'] ?? 'all';
 		
 		$sources = $this->_getSources();
 		
@@ -540,44 +582,32 @@ class GrabberController extends \Smm\GroupController {
 			'active'	=> $interval
 		]);
 		
+		$list_type_tabs = new Widgets\Tabs([
+			'url'		=> Url::current(), 
+			'param'		=> 'list_type', 
+			'items'		=> [
+				'all'		=> 'Все', 
+				'today'		=> 'Новые', 
+				'top'		=> 'Популярные', 
+			], 
+			'active'	=> $list_type
+		]);
+		
 		$sources_ids = [];
 		$sources_list = [];
 		$include_list = [];
 		$exclude_list = [];
 		
 		foreach ($sources as $s) {
-			$key = \Smm\Grabber::$type2name[$s['source_type']]."_".$s['source_our_id'];
-			
-			switch ($s['source_type']) {
-				case \Smm\Grabber::SOURCE_VK:
-					$url = 'https://vk.com/public'.(-$s['source_our_id']);
-					$icon = 'https://vk.com/favicon.ico';
-				break;
-				
-				case \Smm\Grabber::SOURCE_INSTAGRAM:
-					$value = substr($s['source_our_id'], 1);
-					if ($s['source_our_id'][0] == '#') {
-						$url = 'https://www.instagram.com/explore/tags/'.urlencode($value);
-					} elseif ($s['source_our_id'][0] == '@') {
-						$url = 'https://www.instagram.com/'.urlencode($value);
-					}
-					$icon = 'https://www.instagram.com/static/images/ico/favicon.ico/36b3ee2d91ed.ico';
-				break;
-				
-				case \Smm\Grabber::SOURCE_PINTEREST:
-					$url = 'https://www.pinterest.ru/search/pins/?rs=ac&len=2&q='.urlencode($s['source_our_id']);
-					$icon = 'https://www.pinterest.ru/favicon.ico';
-				break;
-			}
+			$key = \Smm\Grabber::$type2name[$s['type']]."_".$s['value'];
 			
 			$source_view = [
 				'key'			=> $key,
-				'id'			=> $s['source_our_id'],
+				'id'			=> $s['value'],
 				'enabled'		=> $s['enabled'], 
 				'name'			=> $s['name'], 
-				'type'			=> \Smm\Grabber::$type2name[$s['source_type']], 
-				'url'			=> $url, 
-				'icon'			=> $icon
+				'url'			=> $s['url'], 
+				'type'			=> \Smm\Grabber::$type2name[$s['type']], 
 			];
 			
 			if (in_array($key, $include))
@@ -587,7 +617,7 @@ class GrabberController extends \Smm\GroupController {
 				$exclude_list[] = $source_view;
 			
 			if ($s['enabled'])
-				$sources_ids[] = $s['source_id'];
+				$sources_ids[] = $s['id'];
 			
 			$sources_list[] = $source_view;
 		}
@@ -607,19 +637,21 @@ class GrabberController extends \Smm\GroupController {
 			'include'			=> $include, 
 			'exclude'			=> $exclude, 
 			'interval'			=> $interval, 
+			'list_type'			=> $list_type, 
 			
 			'gid'				=> $this->group['id'], 
 			'mode_tabs'			=> $mode_tabs->render(), 
 			'content_tabs'		=> $content_tabs->render(), 
 			'sort_tabs'			=> $sort_tabs->render(), 
-			'date_tabs'			=> $date_tabs->render()
+			'date_tabs'			=> $date_tabs->render(), 
+			'list_type_tabs'		=> $list_type_tabs->render()
 		]);
 	}
 	
 	private function _getSources() {
-		return DB::select('ss.*', 's.source_type', ['s.source_id', 'source_our_id'])
-			->from(['vk_grabber_selected_sources', 'ss'])
-			->join(['vk_grabber_sources', 's'])
+		return DB::select('s.*', 'ss.enabled')
+			->from(['vk_grabber_sources', 's'])
+			->join(['vk_grabber_selected_sources', 'ss'], 'INNER')
 				->on('s.id', '=', 'ss.source_id')
 			->where('ss.group_id', '=', $this->group['id'])
 			->order('s.id', 'DESC')

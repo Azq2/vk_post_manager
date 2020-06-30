@@ -6,7 +6,7 @@
 		<meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no" />
 		<title><?= $title ?></title>
 		
-		<link rel="stylesheet" type="text/css" href="i/main.css?<?= time(); ?>" />
+		<link rel="stylesheet" type="text/css" href="/css/main.css?<?= time(); ?>" />
 		
 		<?php if ($logged): ?>
 			<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/emojione@4.5.0/extras/css/emojione.min.css" integrity="sha256-UZ7fDcAJctmoEcXmC5TPcZswNRqN/mLzj6uNS1GCVYs=" crossorigin="anonymous">
@@ -16,7 +16,7 @@
 			<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/tui-color-picker@2.2.6/dist/tui-color-picker.min.css" integrity="sha256-YXyPq5gUbyI1rL7bBKd9T7TW+Q8psU6EMveRMLM4iZU=" crossorigin="anonymous">
 			
 			<script src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.5/require.min.js" integrity="sha256-0SGl1PJNDyJwcV5T+weg2zpEMrh7xvlwO4oXgvZCeZk=" crossorigin="anonymous"></script>
-			<script src="<?= $static_path ?>js/init.js?r=<?= $revision ?>" id="loader_modules" data-revision="<?= $revision ?>"></script>
+			<script src="/js/init.js?r=<?= $revision ?>" id="loader_modules" data-revision="<?= $revision ?>"></script>
 			<script>define('comm/data', <?= json_encode($group) ?>);</script>
 			<script>require(['app']);</script>
 		<?php endif; ?>

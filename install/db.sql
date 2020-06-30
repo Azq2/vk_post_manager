@@ -108,6 +108,8 @@ CREATE TABLE `vk_activity_posts` (
   `last_check` int(10) unsigned NOT NULL,
   `likes` int(10) unsigned NOT NULL DEFAULT '0',
   `comments` int(10) unsigned NOT NULL DEFAULT '0',
+  `reposts` int(10) unsigned NOT NULL DEFAULT '0',
+  `views` int(10) unsigned NOT NULL DEFAULT '0',
   `need_check_likes` tinyint(4) NOT NULL DEFAULT '0',
   `need_check_comments` tinyint(4) NOT NULL DEFAULT '0',
   `last_likes_check` int(11) NOT NULL DEFAULT '0',
@@ -212,7 +214,6 @@ CREATE TABLE `vk_grabber_blacklist` (
 /*!40101 SET character_set_client = utf8 */;
 CREATE TABLE `vk_grabber_data` (
   `id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,
-  `owner` varchar(255) DEFAULT NULL,
   `text` text CHARACTER SET utf8mb4,
   `attaches` longblob,
   PRIMARY KEY (`id`)
@@ -227,6 +228,7 @@ CREATE TABLE `vk_grabber_data_index` (
   `remote_id` varchar(64) NOT NULL,
   `time` int(10) unsigned NOT NULL,
   `grab_time` int(10) unsigned NOT NULL,
+  `first_grab_time` int(10) unsigned NOT NULL DEFAULT '0',
   `likes` int(10) unsigned NOT NULL DEFAULT '0',
   `reposts` int(10) unsigned NOT NULL DEFAULT '0',
   `comments` int(10) unsigned NOT NULL DEFAULT '0',
@@ -234,6 +236,7 @@ CREATE TABLE `vk_grabber_data_index` (
   `gifs_cnt` int(10) unsigned NOT NULL DEFAULT '0',
   `data_id` int(10) unsigned NOT NULL DEFAULT '0',
   `post_type` tinyint(1) unsigned NOT NULL DEFAULT '0',
+  `list_type` int(10) unsigned DEFAULT '0',
   PRIMARY KEY (`id`),
   UNIQUE KEY `source_type-remote_id` (`source_type`,`remote_id`) USING BTREE,
   KEY `source_id-only_text` (`source_id`,`post_type`) USING BTREE,
@@ -247,35 +250,26 @@ CREATE TABLE `vk_grabber_data_index` (
 /*!40101 SET character_set_client = @saved_cs_client */;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
 /*!40101 SET character_set_client = utf8 */;
-CREATE TABLE `vk_grabber_data_owners` (
-  `id` varchar(255) NOT NULL,
-  `name` varchar(1024) NOT NULL,
-  `url` varchar(1024) NOT NULL,
-  `avatar` varchar(1024) NOT NULL,
-  PRIMARY KEY (`id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8;
-/*!40101 SET character_set_client = @saved_cs_client */;
-/*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!40101 SET character_set_client = utf8 */;
 CREATE TABLE `vk_grabber_selected_sources` (
-  `id` int(10) unsigned NOT NULL AUTO_INCREMENT,
   `source_id` int(10) unsigned NOT NULL,
   `group_id` bigint(11) NOT NULL DEFAULT '0',
-  `name` varchar(255) NOT NULL,
   `enabled` tinyint(3) unsigned NOT NULL DEFAULT '1',
-  PRIMARY KEY (`id`),
-  UNIQUE KEY `source_id` (`source_id`,`group_id`)
+  PRIMARY KEY (`source_id`,`group_id`),
+  KEY `group_id` (`group_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 /*!40101 SET character_set_client = @saved_cs_client */;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
 /*!40101 SET character_set_client = utf8 */;
 CREATE TABLE `vk_grabber_sources` (
   `id` int(10) unsigned NOT NULL AUTO_INCREMENT,
-  `source_type` int(10) unsigned NOT NULL,
-  `source_id` varchar(255) NOT NULL,
+  `type` int(10) unsigned NOT NULL,
+  `value` varchar(255) NOT NULL,
+  `name` varchar(1024) NOT NULL DEFAULT '',
+  `url` varchar(1024) NOT NULL DEFAULT '',
+  `avatar` varchar(1024) NOT NULL DEFAULT '',
   `internal_id` varchar(255) DEFAULT NULL,
   PRIMARY KEY (`id`),
-  UNIQUE KEY `source_type` (`source_type`,`source_id`)
+  UNIQUE KEY `type-url` (`type`,`value`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 /*!40101 SET character_set_client = @saved_cs_client */;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
@@ -328,7 +322,8 @@ CREATE TABLE `vk_join_stat` (
   `time` int(10) unsigned NOT NULL,
   `users_cnt` int(10) unsigned NOT NULL,
   PRIMARY KEY (`id`),
-  KEY `cid-uid` (`cid`,`uid`)
+  KEY `cid-uid` (`cid`,`uid`),
+  KEY `cid-time` (`cid`,`time`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 /*!40101 SET character_set_client = @saved_cs_client */;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;

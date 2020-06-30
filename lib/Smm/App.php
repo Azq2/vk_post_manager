@@ -6,13 +6,12 @@ use \Z\View;
 class App extends \Z\App {
 	public function init() {
 		$revision = 0;
-		foreach (new \RecursiveIteratorIterator(new \RecursiveDirectoryIterator(APP."/www/static/")) as $file) {
+		foreach (new \RecursiveIteratorIterator(new \RecursiveDirectoryIterator(APP."/www/")) as $file) {
 			if (preg_match("/\.js$/i", $file) && is_file($file))
 				$revision = max($revision, filemtime($file));
 		}
 		
 		View::setGlobal([
-			'static_path'		=> '/static/', 
 			'logged'			=> false, 
 			'revision'			=> $revision
 		]);

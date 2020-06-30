@@ -7,6 +7,8 @@ use \Z\Util\Url;
 
 class Pinterest extends \Z\Task {
 	public function run($args) {
+		exit;
+		
 		if (!\Smm\Utils\Lock::lock(__CLASS__)) {
 			echo "Already running.\n";
 			return;

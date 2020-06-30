@@ -297,7 +297,7 @@ var tpl = {
 		var html =
 			'<div class="wrapper">' + 
 				'<div class="row grey">' + 
-					'<img src="/i/img/spinner2.gif" alt="" width="16" height="16" class="m" /> ' + 
+					'<img src="/images/spinner2.gif" alt="" width="16" height="16" class="m" /> ' + 
 					'<span class="m">Загружаем шрифты...</span>' + 
 				'</div>' + 
 			'</div>';

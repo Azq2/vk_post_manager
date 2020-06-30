@@ -83,7 +83,7 @@
 					<div class="pad_t">
 						<input type="hidden" name="type" value="<?= $oauth['type'] ?>" />
 						<button class="btn js-oauth_form_submit">
-							<img src="i/img/spinner.gif" alt="" class="m js-spinner hide" />
+							<img src="images/spinner.gif" alt="" class="m js-spinner hide" />
 							<span class="m">Войти</span>
 						</button>
 					</div>
@@ -114,7 +114,7 @@
 					
 					<div class="js-captcha_form hide">
 						<div class="pad_t">
-							<img src="/i/img/transparent.gif" alt="" width="196" height="81" class="bord js-captcha_img" />
+							<img src="/images/transparent.gif" alt="" width="196" height="81" class="bord js-captcha_img" />
 						</div>
 						
 						<div class="pad_t">
@@ -148,7 +148,7 @@
 					<div class="pad_t">
 						<input type="hidden" name="type" value="<?= $oauth['type'] ?>" />
 						<button class="btn js-oauth_form_submit">
-							<img src="i/img/spinner.gif" alt="" class="m js-spinner hide" />
+							<img src="images/spinner.gif" alt="" class="m js-spinner hide" />
 							<span class="m">Войти</span>
 						</button>
 					</div>
@@ -175,7 +175,7 @@
 					
 					<div class="js-captcha_form hide">
 						<div class="pad_t">
-							<img src="/i/img/transparent.gif" alt="" width="196" height="81" class="bord js-captcha_img" />
+							<img src="/images/transparent.gif" alt="" width="196" height="81" class="bord js-captcha_img" />
 						</div>
 						
 						<div class="pad_t">
@@ -209,7 +209,7 @@
 					<div class="pad_t">
 						<input type="hidden" name="type" value="<?= $oauth['type'] ?>" />
 						<button class="btn js-oauth_form_submit">
-							<img src="i/img/spinner.gif" alt="" class="m js-spinner hide" />
+							<img src="images/spinner.gif" alt="" class="m js-spinner hide" />
 							<span class="m">Войти</span>
 						</button>
 					</div>

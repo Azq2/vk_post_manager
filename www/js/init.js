@@ -1,7 +1,7 @@
 requirejs.config({
 	urlArgs:		"r=" + document.getElementById('loader_modules').getAttribute('data-revision'), 
 	waitSeconds:	9999, 
-	baseUrl:		"/static/js/", 
+	baseUrl:		"/js/", 
 	paths: {
 		"jquery":				"https://cdn.jsdelivr.net/npm/jquery@3.5.1/dist/jquery.min",
 		"emojionearea":			"https://cdn.jsdelivr.net/npm/emojionearea@3.4.2/dist/emojionearea.min", 

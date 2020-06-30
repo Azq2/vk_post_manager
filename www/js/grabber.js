@@ -29,12 +29,12 @@ var tpl = {
 			'<div class="pad_t oh js-post_toolbar">' + 
 				'<button class="btn js-post_action post-hide_edit m inl" data-action="edit">Редактор</button> ' + 
 				'<button class="btn js-post_action post-show_edit m inl" data-action="queue">' + 
-					'<img src="/i/img/spinner.gif" alt="" class="m js-spinner hide" /> ' + 
+					'<img src="/images/spinner.gif" alt="" class="m js-spinner hide" /> ' + 
 					'В очередь' + 
 				'</button> ' + 
 				
 				'<button class="btn js-post_action post-hide_edit m inl" data-action="anchor">' + 
-					'<img src="i/img/anchor.svg" width="16" height="16" />' + 
+					'<img src="images/anchor.svg" width="16" height="16" />' + 
 				'</button>' + 
 				
 				'<div class="right">' + 
@@ -51,7 +51,7 @@ var tpl = {
 		return '<span class="green">' + msg + '</span>';
 	}, 
 	spinner: function (msg) {
-		return '<img src="/i/img/spinner2.gif" alt="" class="m" /> <span class="m">' + msg + '</span>';
+		return '<img src="/images/spinner2.gif" alt="" class="m" /> <span class="m">' + msg + '</span>';
 	}, 
 	noPosts: function () {
 		var html = 
@@ -373,6 +373,7 @@ function loadPosts() {
 		include: options.include, 
 		exclude: options.exclude, 
 		content: options.contentFilter, 
+		list_type: options.listType, 
 		exclude_posts: exclude.join(","), 
 		gid: options.gid
 	}, function (res) {

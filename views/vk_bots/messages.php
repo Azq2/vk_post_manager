@@ -116,7 +116,7 @@
 			
 			<div class="pad_t oh">
 				<button class="btn js-message_save">
-					<img src="i/img/spinner.gif" alt="" class="m js-spinner hide" />
+					<img src="images/spinner.gif" alt="" class="m js-spinner hide" />
 					<span class="m">Сохранить</span>
 				</button>
 				<a href="<?= $m['delete_link'] ?>" onclick="return confirm('Точно удалить?');">

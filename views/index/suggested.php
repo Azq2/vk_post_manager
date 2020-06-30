@@ -116,6 +116,6 @@ require(['suggested']);
 <div id="vk_posts_error" class="row red hide"></div>
 
 <div id="vk_posts_spinner" class="row center grey">
-	<img src="/i/img/spinner2.gif" alt="" class="m" />
+	<img src="/images/spinner2.gif" alt="" class="m" />
 	<span class="m">Загружаем посты...</span>
 </div>

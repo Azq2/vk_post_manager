@@ -2,7 +2,7 @@
 
 <div class="wrapper js-page_spinner_switch">
 	<div class="row center grey">
-		<img src="i/img/spinner2.gif" width="16" height="16" alt="" class="m" />
+		<img src="images/spinner2.gif" width="16" height="16" alt="" class="m" />
 		<span class="m">Загрузка...</span>
 	</div>
 </div>

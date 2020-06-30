@@ -51,7 +51,7 @@ $(function () {
 	function setStatus(type, text) {
 		switch (type) {
 			case "load":
-				$('#status').html('<img src="/i/img/spinner2.gif" alt="" class="m" /> <span class="m grey">' + text + '</span>').show();
+				$('#status').html('<img src="/images/spinner2.gif" alt="" class="m" /> <span class="m grey">' + text + '</span>').show();
 			break;
 			
 			case "error":

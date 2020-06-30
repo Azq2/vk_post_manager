@@ -9,6 +9,15 @@ class Grabber {
 	const SOURCE_INSTAGRAM	= 2;
 	const SOURCE_PINTEREST	= 3;
 	
+	const POST_WITH_TEXT			= 0;
+	const POST_WITH_TEXT_GIF		= 1;
+	const POST_WITH_TEXT_PIC		= 2;
+	const POST_WITH_TEXT_PIC_GIF	= 3;
+	
+	const LIST_UNKNOWN				= 0;
+	const LIST_NEW					= 1;
+	const LIST_TOP					= 2;
+	
 	public static $type2name = [
 		self::SOURCE_VK			=> 'VK', 
 		self::SOURCE_OK			=> 'OK', 
@@ -36,7 +45,7 @@ class Grabber {
 		$all_groups_ids = [];
 		
 		if ($type == self::SOURCE_VK) {
-			$all_groups_ids = DB::select('id')
+			$all_groups_ids = DB::select('-id')
 				->from('vk_groups')
 				->where('deleted', '=', 0)
 				->execute()
@@ -45,13 +54,13 @@ class Grabber {
 		
 		$sources_query = DB::select()
 			->from('vk_grabber_sources')
-			->where('source_type', '=', $type)
+			->where('type', '=', $type)
 			->execute();
 		
 		foreach ($sources_query as $s) {
 			$is_enabled = $enabled_sources[$s['id']] ?? false;
 			
-			if ($s['source_type'] == self::SOURCE_VK && in_array(-$s['source_id'], $all_groups_ids))
+			if ($s['type'] == self::SOURCE_VK && in_array($s['url'], $all_groups_ids))
 				$is_enabled = true;
 			
 			if ($is_enabled) {
@@ -92,23 +101,30 @@ class Grabber {
 		return count($rows);
 	}
 	
-	public static function cleanOldPosts($sources_ids, $max_age) {
+	public static function cleanOldPosts($sources_ids, $options = []) {
+		$options = array_merge([
+			'max_age'		=> 7 * 3600 * 24, 
+			'post_types'	=> []
+		], $options);
+		
 		if (!$sources_ids)
 			return 0;
 		
-		$rows = DB::select('id', 'data_id')
+		$query = DB::select('id', 'data_id')
 			->from('vk_grabber_data_index')
 			->where('source_id', 'IN', $sources_ids)
-			->where('grab_time', '<=', $max_age)
-			->limit(1000)
-			->execute()
-			->asArray();
+			->where('grab_time', '<=', time() - $options['max_age'])
+			->limit(1000);
+		
+		if ($options['post_types'])
+			$query->where('post_type', 'IN', $options['post_types']);
+		
+		$rows = $query->execute()->asArray();
 		
 		$post_ids = array_map(function ($v) { return $v['id']; }, $rows);
 		$data_ids = array_map(function ($v) { return $v['data_id']; }, $rows);
 		
 		if ($rows) {
-			echo "delete ".count($rows)." old posts...\n";
 			DB::delete('vk_grabber_data')
 				->where('id', 'IN', $data_ids)
 				->execute();
@@ -137,11 +153,9 @@ class Grabber {
 			$data_id = DB::insert('vk_grabber_data')
 				->set([
 					'text'		=> $data->text, 
-					'owner'		=> $data->owner, 
 					'attaches'	=> gzdeflate(serialize($data->attaches)), 
 				])
 				->onDuplicateSetValues('text')
-				->onDuplicateSetValues('owner')
 				->onDuplicateSetValues('attaches')
 				->execute()
 				->insertId();
@@ -152,26 +166,27 @@ class Grabber {
 			DB::update('vk_grabber_data')
 				->set([
 					'text'		=> $data->text, 
-					'owner'		=> $data->owner, 
 					'attaches'	=> gzdeflate(serialize($data->attaches)), 
 				])
 				->where('id', '=', $data_id)
 				->execute();
 		}
 		
-		$post_type = 0;
+		$post_type = self::POST_WITH_TEXT;
+		
 		if ($data->images_cnt > 0 && $data->gifs_cnt > 0)
-			$post_type = 3;
+			$post_type = self::POST_WITH_TEXT_PIC_GIF;
 		elseif ($data->images_cnt > 0)
-			$post_type = 2;
+			$post_type = self::POST_WITH_TEXT_PIC;
 		elseif ($data->gifs_cnt > 0)
-			$post_type = 1;
+			$post_type = self::POST_WITH_TEXT_GIF;
 		
 		DB::insert('vk_grabber_data_index')
 			->set([
 				'source_id'			=> $source_id, 
 				'data_id'			=> $data_id, 
 				'grab_time'			=> time(), 
+				'first_grab_time'	=> time(), 
 				'post_type'			=> $post_type, 
 				'source_type'		=> $data->source_type, 
 				'remote_id'			=> $data->remote_id, 
@@ -182,6 +197,7 @@ class Grabber {
 				'images_cnt'		=> $data->images_cnt, 
 				'gifs_cnt'			=> $data->gifs_cnt, 
 				'likes'				=> $data->likes, 
+				'list_type'			=> $data->list_type ?? self::LIST_UNKNOWN
 			])
 			->onDuplicateSetValues('data_id')
 			->onDuplicateSetValues('time')

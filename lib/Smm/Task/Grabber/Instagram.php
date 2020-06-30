@@ -23,15 +23,25 @@ class Instagram extends \Z\Task {
 				echo "Deleted $deleted unclaimed posts...\n";
 		} while ($deleted > 0);
 		
-		$need_clean_old = array_filter($sources_enabled, function ($v) {
-			return $v['source_id'][0] == '#';
-		});
-		
 		// Удаляем старые посты
 		do {
-			$deleted = \Smm\Grabber::cleanOldPosts(array_keys($need_clean_old), 7 * 24 * 3600);
+			$deleted = \Smm\Grabber::cleanOldPosts(array_keys($sources_enabled), [
+				'max_age'		=> 7 * 24 * 3600
+			]);
 			if ($deleted > 0)
 				echo "Deleted $deleted old posts...\n";
+		} while ($deleted > 0);
+		
+		do {
+			$deleted = \Smm\Grabber::cleanOldPosts(array_keys($sources_enabled), [
+				'max_age'		=> 24 * 3600, 
+				'post_type'		=> [
+					\Smm\Grabber::POST_WITH_TEXT_GIF, 
+					\Smm\Grabber::POST_WITH_TEXT_PIC_GIF
+				]
+			]);
+			if ($deleted > 0)
+				echo "Deleted $deleted old posts [GIF]...\n";
 		} while ($deleted > 0);
 		
 		$this->grabInstagram($sources_enabled);
@@ -39,111 +49,8 @@ class Instagram extends \Z\Task {
 		echo date("Y-m-d H:i:s")." - done.\n";
 	}
 	
-	public function getInstagramUser($insta_api, $login) {
-		$found_user = false;
-		$max_tries = 15;
-		
-		while (true) {
-			$response = $insta_api->exec("https://www.instagram.com/web/search/topsearch/", [
-				'query'		=> $login
-			]);
-			
-			if ($response->success())
-				break;
-			
-			echo "=> ERROR: can't get user ($login): ".$response->error()."\n";
-			
-			if (in_array($response->errorCode(), [400, 404, 403]))
-				break;
-			
-			if (!$max_tries)
-				break;
-			
-			--$max_tries;
-			
-			sleep($response->errorCode() == 429 ? 3 * 60 : 1);
-		}
-		
-		if (!$response->success())
-			return false;
-		
-		if (!isset($response->users)) {
-			echo "=> ERROR: can't get user ($login): invalid response\n";
-			return false;
-		}
-		
-		foreach ($response->users as $row) {
-			if ($row->user->username === $login) {
-				$found_user = $row->user;
-				break;
-			}
-		}
-		
-		return $found_user;
-	}
-	
 	public function grabInstagram($sources) {
 		$insta_api = new \Smm\Instagram\API();
-		
-		$instagram_sources = [];
-		foreach ($sources as $source) {
-			$id = $source['source_id'];
-			
-			if ($id[0] == "#") {
-				$value = substr($id, 1);
-				$url = "https://www.instagram.com/explore/tags/".urlencode($value);
-				$type = 'hashtag';
-			} elseif ($id[0] == "@") {
-				$value = substr($id, 1);
-				$url = "https://www.instagram.com/".urlencode($value);
-				$type = 'user';
-				
-				if (!$source['internal_id']) {
-					echo "Get user_id for $id...\n";
-					
-					$user = $this->getInstagramUser($insta_api, $value);
-					if (!$user || !isset($user->pk)) {
-						echo "=> ERROR: can't get user_id.\n";
-						continue;
-					}
-					
-					echo "=> OK, user_id: ".$user->pk."\n";
-					
-					$source['internal_id'] = $user->pk;
-					
-					DB::update('vk_grabber_sources')
-						->set([
-							'internal_id'		=> $user->pk
-						])
-						->where('id', '=', $source['id'])
-						->execute();
-				}
-			} else {
-				echo "Invalid ID: $id\n";
-				continue;
-			}
-			
-			$instagram_sources[$source['id']] = [
-				'id'		=> $source['id'], 
-				'owner'		=> $id, 
-				'value'		=> $value, 
-				'url'		=> $url, 
-				'type'		=> $type, 
-				'user_id'	=> $source['internal_id']
-			];
-			
-			DB::insert('vk_grabber_data_owners')
-				->set([
-					'id'		=> \Smm\Grabber::SOURCE_INSTAGRAM."_".$id, 
-					'name'		=> $id, 
-					'url'		=> $url, 
-					'avatar'	=> "https://www.instagram.com/static/images/ico/xxxhdpi_launcher.png/9fc4bab7565b.png"
-				])
-				->onDuplicateSetValues('url')
-				->onDuplicateSetValues('name')
-				->onDuplicateSetValues('avatar')
-				->execute();
-		}
 		
 		$next = [];
 		$ended = [];
@@ -158,39 +65,39 @@ class Instagram extends \Z\Task {
 			
 			$good = 0;
 			
-			foreach ($instagram_sources as $id => $source) {
+			foreach ($sources as $id => $source) {
 				if (isset($ended[$id]))
 					continue;
 				
-				echo "[ ".$source['owner']." ]\n";
+				echo "[ ".$source['value']." ]\n";
 				
 				$max_tries = 15;
 				
 				while (true) {
-					if ($source['type'] == "hashtag") {
+					if ($source['value'][0] == "#") {
 						if (isset($next[$id])) {
 							$response = $insta_api->execGraphql('HASHTAG_NEXT_PAGE', [
-								'tag_name'	=> $source['value'], 
+								'tag_name'	=> substr($source['value'], 1), 
 								'first'		=> 50, 
 								'after'		=> $next[$id], 
 							]);
 						} else {
 							$response = $insta_api->execGraphql('HASHTAG_NEXT_PAGE', [
-								'tag_name'	=> $source['value'], 
+								'tag_name'	=> substr($source['value'], 1), 
 								'first'		=> 12, 
 							]);
 						}
-					} elseif ($source['type'] == "user") {
+					} elseif ($source['value'][0] == "@") {
 						if (isset($next[$id])) {
 							$response = $insta_api->execGraphql('PROFILE_NEXT_PAGE', [
-								'id'		=> $source['user_id'], 
+								'id'		=> $source['internal_id'], 
 								'first'		=> 50, 
 								'after'		=> $next[$id], 
 							]);
 						} else {
 							$response = $insta_api->execGraphql('PROFILE_NEXT_PAGE', [
-								'id'		=> $source['user_id'], 
-								'first'		=> 5
+								'id'		=> $source['internal_id'], 
+								'first'		=> 12
 							]);
 						}
 					}
@@ -220,22 +127,22 @@ class Instagram extends \Z\Task {
 				
 				$edges_lists = [];
 				if (isset($graphql->user->edge_owner_to_timeline_media->edges))
-					$edges_lists[] = $graphql->user->edge_owner_to_timeline_media->edges;
+					$edges_lists[] = [\Smm\Grabber::LIST_UNKNOWN, $graphql->user->edge_owner_to_timeline_media->edges];
 				
 				if (isset($graphql->hashtag->edge_hashtag_to_top_posts->edges))
-					$edges_lists[] = $graphql->hashtag->edge_hashtag_to_top_posts->edges;
+					$edges_lists[] = [\Smm\Grabber::LIST_TOP, $graphql->hashtag->edge_hashtag_to_top_posts->edges];
 				
 				if (isset($graphql->hashtag->edge_hashtag_to_media->edges))
-					$edges_lists[] = $graphql->hashtag->edge_hashtag_to_media->edges;
+					$edges_lists[] = [\Smm\Grabber::LIST_NEW, $graphql->hashtag->edge_hashtag_to_media->edges];
 				
 				$next[$id] = false;
 				
+				/*
 				if (isset($graphql->user->edge_owner_to_timeline_media->page_info)) {
 					if ($graphql->user->edge_owner_to_timeline_media->page_info->has_next_page)
 						$next[$id] = $graphql->user->edge_owner_to_timeline_media->page_info->end_cursor;
 				}
 				
-				/*
 				if (isset($graphql->hashtag->edge_hashtag_to_media->page_info)) {
 					if ($graphql->hashtag->edge_hashtag_to_media->page_info->has_next_page)
 						$next[$id] = $graphql->hashtag->edge_hashtag_to_media->page_info->end_cursor;
@@ -252,7 +159,7 @@ class Instagram extends \Z\Task {
 				$totlal_new_items = 0;
 				
 				foreach ($edges_lists as $edges_list) {
-					foreach ($edges_list as $edge) {
+					foreach ($edges_list[1] as $edge) {
 						$gifs_cnt = 0;
 						$images_cnt = 0;
 						
@@ -414,7 +321,6 @@ class Instagram extends \Z\Task {
 							'remote_id'			=> $topic_id, 
 							
 							'text'				=> $text, 
-							'owner'				=> $source['owner'], 
 							'attaches'			=> $attaches, 
 							
 							'time'				=> $date, 
@@ -422,7 +328,8 @@ class Instagram extends \Z\Task {
 							'comments'			=> $comments, 
 							'reposts'			=> 0, 
 							'images_cnt'		=> $images_cnt, 
-							'gifs_cnt'			=> $gifs_cnt
+							'gifs_cnt'			=> $gifs_cnt, 
+							'list_type'			=> $edges_list[0]
 						];
 						
 						$ok = \Smm\Grabber::addNewPost((object) $post_data);

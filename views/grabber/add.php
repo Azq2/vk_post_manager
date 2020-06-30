@@ -43,7 +43,7 @@
 		
 		<?php foreach ($sources as $i => $s): ?>
 			<div class="row oh<?= !$s['enabled'] ? ' deleted' : '' ?>">
-				<img src="<?= $s['icon'] ?>" width="16" height="16" alt="<?= $s['type'] ?>" class="m" />
+				<img src="/images/grabber/icon/<?= $s['type'] ?>.png" width="16" height="16" alt="<?= $s['type'] ?>" class="m" />
 				
 				<a href="<?= $s['url'] ?>" target="_blank" class="m"><?= $s['name'] ?></a>
 				
@@ -53,7 +53,7 @@
 					<?php else: ?>
 						<a href="<?= $s['off_url'] ?>" class="red m">Выкл</a>&nbsp;&nbsp;
 					<?php endif; ?>
-					<a href="<?= $s['delete_url'] ?>" class="red m" onclick="return confirm('Точна????')">Удалить</a>
+					<a href="<?= $s['delete_url'] ?>" class="red m">Удалить</a>
 				</div>
 			</div>
 		<?php endforeach; ?>

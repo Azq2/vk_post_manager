@@ -106,9 +106,9 @@
 
 	<div class="row">
 		<?php foreach ($images as $n => $img): ?>
-			<a href="<?= $img['src'] ?: "/i/img/transparent.gif" ?>" target="_blank" style="width: <?= $img['width'] ?>px; max-width: 30%; display: inline-block">
+			<a href="<?= $img['src'] ?: "/images/transparent.gif" ?>" target="_blank" style="width: <?= $img['width'] ?>px; max-width: 30%; display: inline-block">
 				<div class="aspect" style="padding-top: <?= round($img['height'] / $img['width'] * 100, 2) ?>%">
-					<img src="<?= $img['src'] ?: "/i/img/transparent.gif" ?>" alt="" class="preview" />
+					<img src="<?= $img['src'] ?: "/images/transparent.gif" ?>" alt="" class="preview" />
 					<span style="position: absolute;top: 0;left: 0;background: #cddae7;width: 1em;text-align: center;padding: 5px;"><?= $n + 1 ?></span>
 				</div>
 			</a>
@@ -137,7 +137,7 @@
 		<div class="row wrapper<?= $u['blacklisted'] ? ' deleted' : '' ?>">
 			<div class="oh">
 				<div class="left post-preview relative">
-					<img src="<?= $u['avatar'] ?: "/i/img/transparent.gif" ?>" alt="" width="50" height="50" />
+					<img src="<?= $u['avatar'] ?: "/images/transparent.gif" ?>" alt="" width="50" height="50" />
 				</div>
 				<div class="oh">
 					<b class="post-author post-author-VK m bord">&nbsp;<?= $n + 1 ?>&nbsp;</b>
@@ -147,17 +147,17 @@
 				</div>
 				
 				<div class="pad_t oh">
-					<img src="/i/img/diamond.svg" class="m" width="16" height="16">
+					<img src="/images/diamond.svg" class="m" width="16" height="16">
 					<span class="darkblue m"><?= $u['points'] ?></span>
 					
 					&nbsp;&nbsp;&nbsp;
 					
-					<img src="/i/img/like.svg" class="m" width="16" height="16">
+					<img src="/images/like.svg" class="m" width="16" height="16">
 					<span class="darkblue" m><?= $u['likes'] ?></span>
 					
 					&nbsp;&nbsp;&nbsp;
 					
-					<img src="/i/img/comment.svg" class="m" width="16" height="16">
+					<img src="/images/comment.svg" class="m" width="16" height="16">
 					<span class="darkblue m"><?= $u['comments'] ?></span>
 					
 					<?php if ($u['blacklisted']): ?>

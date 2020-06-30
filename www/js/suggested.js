@@ -22,7 +22,7 @@ var tpl = {
 			'<div class="pad_t oh js-post_toolbar">' + 
 				'<button class="btn js-post_action post-hide_edit m inl" data-action="edit">Редактор</button> ' + 
 				'<button class="btn js-post_action post-show_edit m inl" data-action="queue">' + 
-					'<img src="/i/img/spinner.gif" alt="" class="m js-spinner hide" /> ' + 
+					'<img src="/images/spinner.gif" alt="" class="m js-spinner hide" /> ' + 
 					'В очередь' + 
 				'</button> ' + 
 				
@@ -43,7 +43,7 @@ var tpl = {
 				'<button class="btn js-post_action post-hide_edit m inl" data-action="move" data-dir="up">Выше</button> ' + 
 				'<button class="btn js-post_action post-hide_edit m inl" data-action="move" data-dir="down">Ниже</button> ' + 
 				'<button class="btn js-post_action post-show_edit m inl" data-action="save">' + 
-					'<img src="/i/img/spinner.gif" alt="" class="m js-spinner hide" /> ' + 
+					'<img src="/images/spinner.gif" alt="" class="m js-spinner hide" /> ' + 
 					'Сохранить' + 
 				'</button> ' + 
 				
@@ -81,7 +81,7 @@ var tpl = {
 		return '<span class="green">' + msg + '</span>';
 	}, 
 	spinner: function (msg) {
-		return '<img src="/i/img/spinner2.gif" alt="" class="m" /> <span class="m">' + msg + '</span>';
+		return '<img src="/images/spinner2.gif" alt="" class="m" /> <span class="m">' + msg + '</span>';
 	}
 };
 

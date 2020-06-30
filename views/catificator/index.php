@@ -46,8 +46,8 @@
 				
 				<a href="<?= $track['delete_link'] ?>" class="red right m">Удалить</a>
 				
-				<img src="/i/img/play_audio.svg" alt="" width="16" height="16" class="js-track_play m cursor" />
-				<img src="/i/img/pause_audio.svg" alt="" width="16" height="16" class="js-track_pause hide m cursor" />
+				<img src="/images/play_audio.svg" alt="" width="16" height="16" class="js-track_play m cursor" />
+				<img src="/images/pause_audio.svg" alt="" width="16" height="16" class="js-track_pause hide m cursor" />
 				
 				<span class="m grey"><?= $track['filename'] ?> (<?= $track['duration'] ?> сек., 
 					<?php if ($track['volume']['mean'] < -20): ?>

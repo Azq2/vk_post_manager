@@ -35,7 +35,7 @@ var tpl = {
 			}
 			html += '&nbsp;&nbsp;<input type="text" value="" name="page" class="js-page_input m" size="1" /> ' + 
 					'<button class="js-page_input_btn btn m">' + 
-						'<img src="i/img/anchor.svg" width="16" height="16" />' + 
+						'<img src="images/anchor.svg" width="16" height="16" />' + 
 					'</button>';
 			html += '</div>';
 			html += '</div>';

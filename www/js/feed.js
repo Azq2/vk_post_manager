@@ -69,20 +69,20 @@ var tpl = {
 							) + 
 							(!deleted && att.type == 'photo' ? 
 								'<span class="post-attach_edit js-attach_edit inl post-show_edit">' + 
-									'<img src="/i/img/edit_image.png" alt="" />' + 
+									'<img src="/images/edit_image.png" alt="" />' + 
 								'</span>' : ''
 							) + 
 							(!deleted && att.type == 'photo' ? 
 								'<span class="post-attach_edit post-attach_edit_2nd js-attach_tui_edit inl post-show_edit">' + 
-									'<img src="/i/img/edit_image_tui.png" alt="" />' + 
+									'<img src="/images/edit_image_tui.png" alt="" />' + 
 								'</span>' : ''
 							) + 
 							(!deleted ? 
 								'<span class="post-attach_remove js-attach_remove inl post-show_edit">' + 
-									'<img src="/i/img/remove_image.png" alt="" />' + 
+									'<img src="/images/remove_image.png" alt="" />' + 
 								'</span>' : ''
 							) + 
-							(att.ext == 'gif' ? '<img src="/i/img/play.svg" alt="" class="post-doc_play js-gif_hide" />' : '') + 
+							(att.ext == 'gif' ? '<img src="/images/play.svg" alt="" class="post-doc_play js-gif_hide" />' : '') + 
 							(att.type == 'doc' ? '<div class="post-doc_title js-gif_hide"><b>' + utils.htmlWrap(att.title) + '</b></div>' : '') + 
 						'</a>' + 
 					'</div>';
@@ -94,7 +94,7 @@ var tpl = {
 						'</a>' + 
 						(!deleted ? 
 							'<a href="#" class="post-show_edit inl js-attach_remove right">' + 
-								'<img src="/i/img/remove.png" alt="" class="m" /> ' + 
+								'<img src="/images/remove.png" alt="" class="m" /> ' + 
 							'</a>' : ''
 						) + 
 					'</div>';
@@ -104,7 +104,7 @@ var tpl = {
 						'<b class="m">Аудио:</b> <span class="m">' + utils.htmlWrap(att.title) + '</span>' + 
 						(!deleted ? 
 							'<a href="#" class="post-show_edit inl js-attach_remove right">' + 
-								'<img src="/i/img/remove.png" alt="" class="m" /> ' + 
+								'<img src="/images/remove.png" alt="" class="m" /> ' + 
 							'</a>' : ''
 						) + 
 					'</div>';
@@ -116,7 +116,7 @@ var tpl = {
 						'</a>' + 
 						(!deleted ? 
 							'<a href="#" class="post-show_edit inl js-attach_remove right">' + 
-								'<img src="/i/img/remove.png" alt="" class="m" /> ' + 
+								'<img src="/images/remove.png" alt="" class="m" /> ' + 
 							'</a>' : ''
 						) + 
 						'<br />' + 
@@ -128,7 +128,7 @@ var tpl = {
 						'<b class="m">GEO:</b> <span class="m">' + att.lat + ", " + att.lng + '</span>' + 
 						(!deleted ? 
 							'<a href="#" class="post-show_edit inl js-attach_remove right">' + 
-								'<img src="/i/img/remove.png" alt="" class="m" /> ' + 
+								'<img src="/images/remove.png" alt="" class="m" /> ' + 
 							'</a>' : ''
 						) + 
 					'</div>';
@@ -138,7 +138,7 @@ var tpl = {
 						'<b class="m">Опрос:</b> <span class="m">' + utils.htmlWrap(att.question) + (att.anon ? ' <span class="grey">(Анонимный)</span>' : '') + '</span>' + 
 						(!deleted ? 
 							'<a href="#" class="post-show_edit inl js-attach_remove right">' + 
-								'<img src="/i/img/remove.png" alt="" class="m" /> ' + 
+								'<img src="/images/remove.png" alt="" class="m" /> ' + 
 							'</a>' : ''
 						) + 
 						'<br />';
@@ -174,7 +174,7 @@ var tpl = {
 							'</div>' + 
 							(!deleted ? 
 								'<span class="post-attach_remove js-attach_remove inl post-show_edit">' + 
-									'<img src="/i/img/remove_image.png" alt="" />' + 
+									'<img src="/images/remove_image.png" alt="" />' + 
 								'</span>' : ''
 							) + 
 						'</a>' + 
@@ -232,7 +232,7 @@ var tpl = {
 						'</span>' + 
 						'<a href="' + owner_url + '" target="_blank" class="m"><b class="post-author post-author-' + data.source_type + '">' + data.owner_name + '</b></a> ' + 
 						'<a href="' + url + '" target="_blank">' + 
-							'<img src="/i/img/external.svg" width="14" height="14" class="m" alt="" />' + 
+							'<img src="/images/external.svg" width="14" height="14" class="m" alt="" />' + 
 						'</a>' + 
 						(data.delta ? 
 							' &nbsp;<span class="green m js-post_delta">+' + calcPostDelta(data.delta) + '</span> ' : 
@@ -301,9 +301,9 @@ var tpl = {
 					'</div>' + 
 					'<div class="js-post_attaches post-attaches' + (!attaches.length ? ' hide' : '') + '">' + attaches.join('') + '</div>' + 
 					'<div class="pad_t oh' + (!data.likes && !data.comments && !data.reposts ? ' hide' : '') + '">' + 
-						'<img src="/i/img/like.svg" class="m" width="16" height="16" /> <span class="darkblue">' + data.likes + '</span>&nbsp;&nbsp;&nbsp;' + 
-						'<img src="/i/img/comment.svg" class="m" width="16" height="16" /> <span class="darkblue">' + data.comments + '</span>&nbsp;&nbsp;&nbsp;' + 
-						'<img src="/i/img/repost.svg" class="m" width="16" height="16" /> <span class="darkblue">' + data.reposts + '</span>' + 
+						'<img src="/images/like.svg" class="m" width="16" height="16" /> <span class="darkblue">' + data.likes + '</span>&nbsp;&nbsp;&nbsp;' + 
+						'<img src="/images/comment.svg" class="m" width="16" height="16" /> <span class="darkblue">' + data.comments + '</span>&nbsp;&nbsp;&nbsp;' + 
+						'<img src="/images/repost.svg" class="m" width="16" height="16" /> <span class="darkblue">' + data.reposts + '</span>' + 
 					'</div>' + 
 					'<div class="js-post_next_date grey pad_t post-show_edit"></div>' + 
 					custom.toolbar + 
@@ -312,7 +312,7 @@ var tpl = {
 		return html;
 	},
 	spinner: function (msg) {
-		return '<img src="/i/img/spinner2.gif" alt="" class="m" /> <span class="m">' + msg + '</span>';
+		return '<img src="/images/spinner2.gif" alt="" class="m" /> <span class="m">' + msg + '</span>';
 	}, 
 	error: function (msg) {
 		return '<span class="red">' + msg + '</span>';
@@ -854,7 +854,7 @@ function findBestThumb(hash, size) {
 		ret = {
 			w: 320, 
 			h: 320, 
-			src: "/i/img/transparent.gif"
+			src: "/images/transparent.gif"
 		};
 	}
 	

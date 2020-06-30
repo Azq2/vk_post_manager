@@ -11,6 +11,7 @@
 	data-include="<?= htmlspecialchars(json_encode($include)) ?>"
 	data-exclude="<?= htmlspecialchars(json_encode($exclude)) ?>"
 	data-interval="<?= htmlspecialchars($interval) ?>"
+	data-list-type="<?= htmlspecialchars($list_type) ?>"
 	id="grabber_data"></div>
 
 <div class="wrapper">
@@ -23,6 +24,9 @@
 	<div class="row">
 		Период: <?= $date_tabs ?>
 	</div>
+	<div class="row">
+		Список: <?= $list_type_tabs ?>
+	</div>
 	
 	<?php if ($mode == 'external'): ?>
 		<div class="row">
@@ -30,7 +34,7 @@
 				<div class="pad_b">
 					<span class="m">Выводим только эти:</span>
 					<?php foreach ($include_list as $s): ?>
-						<img src="<?= $s['icon'] ?>" width="16" height="16" alt="<?= $s['type'] ?>" class="m" />
+						<img src="/images/grabber/icon/<?= $s['type'] ?>.png" width="16" height="16" alt="<?= $s['type'] ?>" class="m" />
 						<a href="<?= $s['url'] ?>" target="_blank" class="m"><?= $s['name'] ?></a>
 						<b class="red js-grabber_filter_delete cursor" title="Удалить" data-id="<?= $s['key'] ?>">(x)</b><!--
 						--><?= $s != end($include_list) ? ',' : '' ?>
@@ -42,7 +46,7 @@
 				<div class="pad_b">
 					<span class="m">Выводим всё, кроме этих:</span>
 					<?php foreach ($exclude_list as $i => $s): ?>
-						<img src="<?= $s['icon'] ?>" width="16" height="16" alt="<?= $s['type'] ?>" class="m" />
+						<img src="/images/grabber/icon/<?= $s['type'] ?>.png" width="16" height="16" alt="<?= $s['type'] ?>" class="m" />
 						<a href="<?= $s['url'] ?>" target="_blank" class="m"><?= $s['name'] ?></a>
 						<b class="red js-grabber_filter_delete cursor" title="Удалить" data-id="<?= $s['key'] ?>">(x)</b><!--
 						--><?= $s != end($exclude_list) ? ',' : '' ?>
@@ -102,7 +106,7 @@
 		<div class="right">
 			<input type="text" size="6" value="0" id="post_offset" class="m" />
 			<button class="btn m" id="post_offset_btn">
-				<img src="i/img/anchor.svg" width="16" height="16" />
+				<img src="images/anchor.svg" width="16" height="16" />
 			</button>
 		</div>
 	</div>
@@ -110,7 +114,7 @@
 
 <div class="wrapper">
 	<div class="row center grey" id="garbber_init_spinner">
-		<img src="i/img/spinner2.gif" width="16" height="16" alt="" class="m" />
+		<img src="images/spinner2.gif" width="16" height="16" alt="" class="m" />
 		<span class="m">Продаём душу аццкой сотоне...</span>
 	</div>
 </div>
@@ -121,7 +125,7 @@
 
 <div class="wrapper hide" id="garbber_posts_spinner">
 	<div class="row center grey">
-		<img src="i/img/spinner2.gif" width="16" height="16" alt="" class="m" />
+		<img src="images/spinner2.gif" width="16" height="16" alt="" class="m" />
 		<span class="m">Ищем ближайшие корованы...</span>
 	</div>
 </div>

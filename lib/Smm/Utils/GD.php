@@ -59,7 +59,7 @@ class GD {
 			
 			$ret = 1;
 			$stdout = [];
-			exec("exiftool -m ".escapeshellarg("$file.jpg")." -tagsFromFile ".escapeshellarg(APP."www/static/exif-template.jpg")." ".implode(" ", $tmp)." -o ".escapeshellarg($tmp_file), $stdout, $ret);
+			exec("exiftool -m ".escapeshellarg("$file.jpg")." -tagsFromFile ".escapeshellarg(APP."www/images/exif-template.jpg")." ".implode(" ", $tmp)." -o ".escapeshellarg($tmp_file), $stdout, $ret);
 			if ($ret != 0 || !file_exists($tmp_file) || !filesize($tmp_file) || !imagecreatefromjpeg($tmp_file)) {
 				if (file_exists($tmp_file))
 					unlink($tmp_file);

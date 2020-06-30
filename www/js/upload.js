@@ -35,7 +35,7 @@ var tpl = {
 				'<table style="width: 100%"><tr>' + 
 					'<td class="left post-preview file-thumb">' + 
 						'<div class="file-thumb-center"></div>' + 
-						'<img src="i/img/transparent.gif" alt="" class="js-file_thumb" />' + 
+						'<img src="images/transparent.gif" alt="" class="js-file_thumb" />' + 
 					'</td>' + 
 					'<td style="width:100%">' + 
 						'<b class="darkblue">' + html_wrap(data.name) + '</b>' + (data.size ? ' <span class="grey">(' + data.size + ')</span>' : '') + 
@@ -180,7 +180,7 @@ function initForm(el) {
 			errors:	errors
 		}));
 		
-		file.el.find('.js-file_thumb').prop("src", "/i/img/link_2x.png");
+		file.el.find('.js-file_thumb').prop("src", "/images/link_2x.png");
 		
 		files_wrap.removeClass('hide').append(file.el);
 		

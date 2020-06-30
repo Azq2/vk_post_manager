@@ -40,7 +40,7 @@
 		<div class="row wrapper">
 			<div class="oh">
 				<div class="left post-preview relative">
-					<img src="<?= $u['avatar'] ?: "/i/img/transparent.gif" ?>" loading="lazy" alt="" width="50" height="50" />
+					<img src="<?= $u['avatar'] ?: "/images/transparent.gif" ?>" loading="lazy" alt="" width="50" height="50" />
 				</div>
 				
 				<div class="oh">
@@ -73,12 +73,12 @@
 					<?php endif; ?>
 					
 					<div class="pad_t">
-						<img src="/i/img/like.svg" class="m" width="16" height="16">
+						<img src="/images/like.svg" class="m" width="16" height="16">
 						<span class="darkblue" m><?= $u['likes'] ?></span>
 						
 						&nbsp;&nbsp;&nbsp;
 						
-						<img src="/i/img/comment.svg" class="m" width="16" height="16">
+						<img src="/images/comment.svg" class="m" width="16" height="16">
 						<span class="darkblue m"><?= $u['comments'] ?></span>
 					</div>
 				</div>

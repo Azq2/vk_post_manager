@@ -443,7 +443,7 @@ li {
 .spell {
 	display: inline-block;
 	position: relative;
-	background: url(wave.gif) bottom repeat-x;
+	background: url(/images/wave.gif) bottom repeat-x;
 }
 
 .inl_bl {
@@ -551,23 +551,23 @@ li {
 /* meme editor */
 @font-face {
     font-family: 'ImpactExternal';
-    src: url('/static/fonts/impact.ttf');
+    src: url('/fonts/impact.ttf');
 }
 @font-face {
     font-family: 'Goudy Old Style External';
-    src: url('/static/fonts/GOUDOS.ttf');
+    src: url('/fonts/GOUDOS.ttf');
 }
 @font-face {
     font-family: 'Arial External';
-    src: url('/static/fonts/Arial.ttf');
+    src: url('/fonts/Arial.ttf');
 }
 @font-face {
     font-family: 'Times New Roman External';
-    src: url('/static/fonts/times.ttf');
+    src: url('/fonts/times.ttf');
 }
 @font-face {
     font-family: 'LobsterExternal';
-    src: url('/static/fonts/Lobster-Regular.ttf');
+    src: url('/fonts/Lobster-Regular.ttf');
 }
 .meme-textbox {
 	position: absolute;
@@ -625,11 +625,11 @@ li {
 .colorpicker-rect > div {
 	position: absolute;
 	top: 0; bottom: 0; left: 0; right: 0;
-	background-image: url(/static/img/colorpicker/overlay.png)
+	background-image: url(/images/colorpicker/overlay.png)
 }
 .colorpicker-gradient_cursor {
 	position: absolute;
-	background-image: url(/static/img/colorpicker/cursor.png);
+	background-image: url(/images/colorpicker/cursor.png);
 	width: 8px;
 	height: 8px;
 	margin-top: -4px;
@@ -645,7 +645,7 @@ li {
 	margin-top: 7px
 }
 .colorpicker-spectrum {
-	background-image: url(/static/img/colorpicker/colors.png);
+	background-image: url(/images/colorpicker/colors.png);
 	width: 17px; height: 150px;
 	display: inline-block;
 	position: relative;
