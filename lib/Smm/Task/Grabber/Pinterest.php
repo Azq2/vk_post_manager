@@ -7,8 +7,6 @@ use \Z\Util\Url;
 
 class Pinterest extends \Z\Task {
 	public function run($args) {
-		exit;
-		
 		if (!\Smm\Utils\Lock::lock(__CLASS__)) {
 			echo "Already running.\n";
 			return;
@@ -21,14 +19,29 @@ class Pinterest extends \Z\Task {
 		// Удаляем ненужные посты
 		do {
 			$deleted = \Smm\Grabber::cleanUnclaimedPosts(array_keys($sources_disabled));
-			echo "Deleted $deleted unclaimed posts...\n";
+			if ($deleted > 0)
+				echo "Deleted $deleted unclaimed posts...\n";
 		} while ($deleted > 0);
 		
 		// Удаляем старые посты
 		do {
-			$deleted = \Smm\Grabber::cleanOldPosts(array_keys($sources_enabled), 7 * 24 * 3600);
+			$deleted = \Smm\Grabber::cleanOldPosts(array_keys($sources_enabled), [
+				'max_age'		=> 0
+			]);
 			if ($deleted > 0)
 				echo "Deleted $deleted old posts...\n";
+		} while ($deleted > 0);
+		
+		do {
+			$deleted = \Smm\Grabber::cleanOldPosts(array_keys($sources_enabled), [
+				'max_age'		=> 0, 
+				'post_types'	=> [
+					\Smm\Grabber::POST_WITH_TEXT_GIF, 
+					\Smm\Grabber::POST_WITH_TEXT_PIC_GIF
+				]
+			]);
+			if ($deleted > 0)
+				echo "Deleted $deleted old posts [GIF]...\n";
 		} while ($deleted > 0);
 		
 		$this->grabPinterest($sources_enabled);
@@ -37,9 +50,22 @@ class Pinterest extends \Z\Task {
 	}
 	
 	public function grabPinterest($sources) {
-		$ch = \Smm\Grabber\Pinterest::instance()->getCurl();
-		
-		\Smm\Grabber\Pinterest::instance()->setRequestMode('desktop_ajax');
+		$ch = curl_init();
+		curl_setopt_array($ch, [
+			CURLOPT_RETURNTRANSFER		=> true, 
+			CURLOPT_FOLLOWLOCATION		=> true, 
+			CURLOPT_VERBOSE				=> false, 
+			CURLOPT_HTTPHEADER			=> [
+				"Accept: text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3", 
+				"Encoding: gzip, deflate, br", 
+				"Accept-Language: en-US,en;q=0.9,ru;q=0.8", 
+				"Upgrade-Insecure-Requests: 1", 
+				"X-Requested-With: XMLHttpRequest", 
+				"Origin: https://pinterest.ru"
+			], 
+			CURLOPT_USERAGENT			=> "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/75.0.3770.100 Safari/537.36", 
+			CURLOPT_IPRESOLVE			=> CURL_IPRESOLVE_V4
+		]);
 		
 		$fetch_json = function ($ch, $url, $post = []) {
 			$ban_errors = 10;
@@ -113,34 +139,28 @@ class Pinterest extends \Z\Task {
 			echo "-------------- PAGE: $page -------------- \n";
 			
 			$good = 0;
-			foreach ($sources as $source) {
-				$id = $source['source_id'];
+			foreach ($sources as $id => $source) {
+				$id = $source['id'];
 				
 				if (isset($ended[$id]))
 					continue;
 				
-				DB::insert('vk_grabber_data_owners')
-					->set([
-						'id'		=> \Smm\Grabber::SOURCE_PINTEREST."_".$id, 
-						'name'		=> "$id", 
-						'url'		=> "https://www.pinterest.ru/search/pins/?rs=ac&len=2&q=".urlencode($id), 
-						'avatar'	=> "https://s.pinimg.com/webapp/style/images/logo_trans_144x144-642179a1.png"
-					])
-					->onDuplicateSetValues('url')
-					->onDuplicateSetValues('name')
-					->onDuplicateSetValues('avatar')
-					->execute();
+				echo "FETCH RELATED: ".$source['url']."\n";
 				
-				echo "SEARCH: $id\n";
+				$options = $next[$id] ?? [
+					'isPrefetch'				=> false, 
+					'pin_id'					=> $source['value'], 
+					'context_pin_ids'			=> [], 
+					'search_query'				=> '', 
+					'source'					=> 'deep_linking', 
+					'top_level_source'			=> 'deep_linking', 
+					'top_level_source_depth'	=> 1
+				];
 				
-				$page_url = "https://www.pinterest.ru/resource/BaseSearchResource/get/?".http_build_query([
-					'source_url'		=> "/search/pins/?rs=ac&len=2&q=".urlencode($id), 
+				$page_url = "https://pinterest.ru/resource/RelatedModulesResource/get/?".http_build_query([
+					'source_url'		=> "/pin/".$source['value']."/", 
 					'data'				=> json_encode([
-						'options'		=> $next[$id] ?? [
-							'isPrefetch'		=> false, 
-							'query'				=> $id, 
-							'scope'				=> 'pins'
-						], 
+						'options'		=> $options, 
 						'context'		=> (object) []
 					]), 
 					'_'					=> round(microtime(true) * 1000)
@@ -156,29 +176,34 @@ class Pinterest extends \Z\Task {
 				if (!$json)
 					continue;
 				
-				if (!isset($json->resource_response, $json->resource_response->data,  $json->resource_response->data->results)) {
-					echo "ERROR: Can't find resource_response->data->results from JSON ($page_url)\n";
+				if (!isset($json->resource_response->data)) {
+					echo "=> ERROR: Can't find resource_response->data from JSON ($page_url)\n";
 					var_dump($json);
 					break;
 				}
 				
 				$good2 = 0;
 				
-				foreach ($json->resource_response->data->results as $result) {
+				foreach ($json->resource_response->data as $result) {
+					if (!in_array($result->type, ["pin"])) {
+						echo "=> skip unsupported type: ".$result->type."\n";
+						continue;
+					}
+					
 					// Получаем ID фотки
 					$topic_id = $result->id;
 					if (!$topic_id) {
-						echo "ERROR: Can't parse topic id ($page_url)\n";
+						echo "=> ERROR: Can't parse topic id ($page_url)\n";
 						continue;
 					}
 					
 					if (!isset($result->created_at) || !$result->created_at) {
-						echo "ERROR: Can't parse result ($page_url)\n";
+						echo "=> ERROR: Can't parse result ($page_url)\n";
 						continue;
 					}
 					
 					// Ссылка на фотку
-					$topic_url = "https://www.pinterest.ru/pin/$topic_id";
+					$topic_url = "https://pinterest.ru/pin/$topic_id";
 					
 					// Дата загрузки фотки
 					$date = strtotime($result->created_at);
@@ -187,20 +212,58 @@ class Pinterest extends \Z\Task {
 					$text = trim($result->title."\n".$result->description);
 					
 					// Лайки
-					$likes = 0;
+					$likes = $result->repin_count;
 					
 					// Комменты
-					$comments = 0;
+					$comments = $result->comment_count;
 					
-					$thumbs = [];
-					foreach ($result->images as $i)
-						$thumbs[$i->width] = $i->url;
+					// Репосты
+					$reposts = 0;
+					
+					// Кол-во GIF
+					$gifs_cnt = 0;
 					
 					$attaches = [];
 					
-					if ($thumbs) {
+					/*
+					if ($result->videos) {
+						$thumbs = [];
+						foreach ($result->images as $i)
+							$thumbs[$i->width] = $i->url;
+						
+						if (!isset($result->videos->video_list->V_HLSV4)) {
+							echo "=> ERROR: Can't parse V_HLSV4 ($page_url)\n";
+							continue;
+						}
+						
 						$attaches[] = [
-							'id'		=> 'photo_'.md5($result->images->orig->url), 
+							'id'		=> 'doc_'.$result->id.'_'.count($attaches), 
+							'type'		=> 'doc', 
+							'ext'		=> 'mp4', 
+							'title'		=> 'video.mp4', 
+							'w'			=> $result->videos->video_list->V_HLSV4->width, 
+							'h'			=> $result->videos->video_list->V_HLSV4->height, 
+							'thumbs'	=> $thumbs, 
+							'video'		=> [
+								'has_audio'		=> $sub_edge->node->has_audio ?? NULL, 
+								'duration'		=> $result->videos->video_list->V_HLSV4->duration ?? 0, 
+							], 
+							'url'		=> $result->videos->video_list->V_HLSV4->url, 
+							'mp4'		=> $result->videos->video_list->V_HLSV4->url, 
+							'page_url'	=> $topic_url
+						];
+						
+						++$gifs_cnt;
+					} else
+					*/
+					
+					if ($result->images) {
+						$thumbs = [];
+						foreach ($result->images as $i)
+							$thumbs[$i->width] = $i->url;
+						
+						$attaches[] = [
+							'id'		=> 'photo_'.$result->id.'_'.count($attaches), 
 							'type'		=> 'photo', 
 							'w'			=> $result->images->orig->width, 
 							'h'			=> $result->images->orig->height, 
@@ -209,26 +272,27 @@ class Pinterest extends \Z\Task {
 					}
 					
 					if (!$attaches) {
-						echo "ERROR: #$topic_id topic without attaches ($topic_url)\n";
+						echo "=> ERROR: #$topic_id topic without attaches ($topic_url)\n";
 						continue;
 					}
 					
-					$ok = \Smm\Grabber::addNewPost((object) [
+					$item = [
 						'source_id'			=> $source['id'], 
 						'source_type'		=> \Smm\Grabber::SOURCE_PINTEREST, 
 						'remote_id'			=> $topic_id, 
 						
 						'text'				=> $text, 
-						'owner'				=> $id, 
 						'attaches'			=> $attaches, 
 						
-						'time'				=> $date, 
-						'likes'				=> 0, 
-						'comments'			=> 0, 
-						'reposts'			=> 0, 
+						'time'				=> time(), 
+						'likes'				=> $likes, 
+						'comments'			=> $comments, 
+						'reposts'			=> $reposts, 
 						'images_cnt'		=> 1, 
-						'gifs_cnt'			=> 0
-					]);
+						'gifs_cnt'			=> $gifs_cnt
+					];
+					
+					$ok = \Smm\Grabber::addNewPost((object) $item);
 					
 					echo "OK: $topic_url\n";
 					
@@ -246,7 +310,7 @@ class Pinterest extends \Z\Task {
 			if (!$good)
 				break;
 			
-			if ($page > 50) {
+			if ($page > 100) {
 				echo "Pages limit.\n";
 				break;
 			}

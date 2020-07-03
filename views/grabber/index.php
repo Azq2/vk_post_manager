@@ -12,18 +12,31 @@
 	data-exclude="<?= htmlspecialchars(json_encode($exclude)) ?>"
 	data-interval="<?= htmlspecialchars($interval) ?>"
 	data-list-type="<?= htmlspecialchars($list_type) ?>"
+	data-date-from="<?= htmlspecialchars($date_from) ?>"
+	data-date-to="<?= htmlspecialchars($date_to) ?>"
 	id="grabber_data"></div>
 
 <div class="wrapper">
 	<div class="row">
 		Режим работы: <?= $mode_tabs ?>
 	</div>
+	
 	<div class="row">
 		Показать посты: <?= $content_tabs ?>
 	</div>
+	
 	<div class="row">
 		Период: <?= $date_tabs ?>
 	</div>
+	
+	<?php if ($interval == 'custom'): ?>
+		<div class="row">
+			<input type="text" id="date_from" name="date_from" value="<?= htmlspecialchars($date_from) ?>" class="datepicker" size="8" placeholder="Начало" /> -
+			<input type="text" id="date_to" name="date_to" value="<?= htmlspecialchars($date_to) ?>" class="datepicker" size="8" placeholder="Конец" />
+			<button class="btn js-grabber_interval_set">OK</button>
+		</div>
+	<?php endif; ?>
+	
 	<div class="row">
 		Список: <?= $list_type_tabs ?>
 	</div>

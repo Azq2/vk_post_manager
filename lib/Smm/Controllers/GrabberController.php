@@ -95,6 +95,8 @@ class GrabberController extends \Smm\GroupController {
 		$exclude = isset($_REQUEST['exclude']) && is_array($_REQUEST['exclude']) ? $_REQUEST['exclude'] : [];
 		$interval = $_REQUEST['interval'] ?? 'all';
 		$list_type = $_REQUEST['list_type'] ?? 'all';
+		$date_from = $_REQUEST['date_from'] ?? '';
+		$date_to = $_REQUEST['date_to'] ?? '';
 		
 		$sources = $this->_getSources();
 		
@@ -186,6 +188,14 @@ class GrabberController extends \Smm\GroupController {
 			
 			case "3month_old":
 				$grabber_query->where('time', '<', time() - 3600 * 24 * 31 * 3);
+			break;
+			
+			case "custom":
+				if ($date_from)
+					$grabber_query->where('time', '>=', strtotime($date_from." 00:00:00"));
+				
+				if ($date_to)
+					$grabber_query->where('time', '<=', strtotime($date_to." 23:59:59"));
 			break;
 		}
 		
@@ -344,7 +354,7 @@ class GrabberController extends \Smm\GroupController {
 			], 
 			'PINTEREST'		=> [
 				'title'			=> 'Pinterest', 
-				'descr'			=> 'Строка поиска вида: cute cats'
+				'descr'			=> 'Ссылка вида: https://pinterest.ru/pin/605874956108657616/'
 			]
 		];
 		
@@ -354,8 +364,11 @@ class GrabberController extends \Smm\GroupController {
 			if (strpos($raw_source_url, "//vk.com") !== false)
 				$source_type_name = 'VK';
 			
-			if (strpos($raw_source_url, "//www.instagram.com") !== false)
+			if (strpos($raw_source_url, "//instagram.com") !== false || strpos($raw_source_url, "//www.instagram.com") !== false)
 				$source_type_name = 'INSTAGRAM';
+			
+			if (strpos($raw_source_url, "//pinterest.") !== false || strpos($raw_source_url, "//www.pinterest.") !== false)
+				$source_type_name = 'PINTEREST';
 			
 			if (!$this->user->can('user')) {
 				$error = 'Гостевой доступ!';
@@ -434,15 +447,19 @@ class GrabberController extends \Smm\GroupController {
 					break;
 					
 					case "PINTEREST":
-						$value = preg_replace("/\s+/", " ", mb_strtolower($raw_source_url));
-						
-						$new_source = [
-							'value'		=> $value, 
-							'type'		=> \Smm\Grabber::SOURCE_PINTEREST, 
-							'name'		=> htmlspecialchars($value), 
-							'url'		=> 'https://www.pinterest.ru/search/pins/?rs=ac&len=2&q='.urlencode($value), 
-							'avatar'	=> '/images/grabber/avatar/PINTEREST.png'
-						];
+						if (preg_match("#/pin/(\d+)#i", $raw_source_url, $m)) {
+							$value = $m[1];
+							
+							$new_source = [
+								'value'		=> $value, 
+								'type'		=> \Smm\Grabber::SOURCE_PINTEREST, 
+								'name'		=> htmlspecialchars($value), 
+								'url'		=> 'http://pinterest.ru/pin/'.urlencode($value).'/', 
+								'avatar'	=> '/images/grabber/avatar/PINTEREST.png'
+							];
+						} else {
+							$error = 'Неправильная ссылка на pin.';
+						}
 					break;
 					
 					default:
@@ -534,6 +551,9 @@ class GrabberController extends \Smm\GroupController {
 		$interval = $_REQUEST['interval'] ?? 'all';
 		$list_type = $_REQUEST['list_type'] ?? 'all';
 		
+		$date_from = $_REQUEST['date_from'] ?? date("Y-m-d", time() - 3600 * 24 * 31 * 3);
+		$date_to = $_REQUEST['date_to'] ?? '';
+		
 		$sources = $this->_getSources();
 		
 		$base_url = Url::mk('/')->set('gid', $this->group['id']);
@@ -582,7 +602,8 @@ class GrabberController extends \Smm\GroupController {
 				'today'			=> 'Сегодня', 
 				'week'			=> 'Неделя', 
 				'month'			=> 'Месяц', 
-				'3month_old'	=> '&gt;3 месяца'
+				'3month_old'	=> '&gt;3 месяца', 
+				'custom'		=> 'Указать', 
 			], 
 			'active'	=> $interval
 		]);
@@ -643,6 +664,8 @@ class GrabberController extends \Smm\GroupController {
 			'exclude'			=> $exclude, 
 			'interval'			=> $interval, 
 			'list_type'			=> $list_type, 
+			'date_from'			=> $date_from, 
+			'date_to'			=> $date_to, 
 			
 			'gid'				=> $this->group['id'], 
 			'mode_tabs'			=> $mode_tabs->render(), 

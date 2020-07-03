@@ -60,7 +60,7 @@ class Grabber {
 		foreach ($sources_query as $s) {
 			$is_enabled = $enabled_sources[$s['id']] ?? false;
 			
-			if ($s['type'] == self::SOURCE_VK && in_array($s['url'], $all_groups_ids))
+			if ($s['type'] == self::SOURCE_VK && in_array($s['value'], $all_groups_ids))
 				$is_enabled = true;
 			
 			if ($is_enabled) {
@@ -211,7 +211,6 @@ class Grabber {
 				'list_type'			=> $data->list_type ?? self::LIST_UNKNOWN
 			])
 			->onDuplicateSetValues('data_id')
-			->onDuplicateSetValues('time')
 			->onDuplicateSetValues('grab_time')
 			->onDuplicateSetValues('likes')
 			->onDuplicateSetValues('comments')

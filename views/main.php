@@ -15,6 +15,9 @@
 			<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/tui-image-editor@3.9.0/dist/tui-image-editor.min.css" integrity="sha256-bCMe+Bbn9sylVz64xzApEMo3tQ0A77v1pm+/7MAf728=" crossorigin="anonymous">
 			<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/tui-color-picker@2.2.6/dist/tui-color-picker.min.css" integrity="sha256-YXyPq5gUbyI1rL7bBKd9T7TW+Q8psU6EMveRMLM4iZU=" crossorigin="anonymous">
 			
+			<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/pickadate@3.6.4/lib/compressed/themes/classic.css" integrity="sha256-yEAddV9VwZMtV/g4lgh7jSH2wHoeYAQgeT8E/Z7fx8Q=" crossorigin="anonymous">
+			<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/pickadate@3.6.4/lib/compressed/themes/classic.date.css" integrity="sha256-U24A2dULD5s+Dl/tKvi5zAe+CAMKBFUaHUtLN8lRnKE=" crossorigin="anonymous">
+			
 			<script src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.5/require.min.js" integrity="sha256-0SGl1PJNDyJwcV5T+weg2zpEMrh7xvlwO4oXgvZCeZk=" crossorigin="anonymous"></script>
 			<script src="/js/init.js?r=<?= $revision ?>" id="loader_modules" data-revision="<?= $revision ?>"></script>
 			<script>define('comm/data', <?= json_encode($group) ?>);</script>

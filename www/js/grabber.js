@@ -1,4 +1,4 @@
-define(['jquery', 'feed', 'url', 'utils', 'upload', 'emojionearea', 'functions'], function ($, VkFeed, Url, utils) {
+define(['jquery', 'feed', 'url', 'utils', 'picker.date', 'upload', 'emojionearea', 'functions'], function ($, VkFeed, Url, utils) {
 //
 var TOPICS_CHUNK = 10, 
 	LOAD_CHUNK = 100;
@@ -75,6 +75,11 @@ function init() {
 	window.onbeforeunload = function() { 
 		return !$.isEmptyObject(busy_posts) ? "Посты ещё добавляются. Точна???" : undefined; 
 	};
+	
+	$('.datepicker').pickadate({
+		format:			'yyyy-mm-dd', 
+		formatSubmit:	'yyyy-mm-dd'
+	});
 	
 	remote_topics_offset = +window.localStorage["saved_offset_" + uniq_id] || 0;
 	$('#post_offset').val(remote_topics_offset);
@@ -330,6 +335,13 @@ function init() {
 		});
 		
 		location.href = url.toString();
+	}).on('click', '.js-grabber_interval_set', function (e) {
+		e.preventDefault();
+		
+		var url = new Url(location.href);
+		url.query.date_from = $('#date_from').val();
+		url.query.date_to = $('#date_to').val();
+		location.href = url.toString();
 	});
 	
 	$(window).on('scroll.grabber', onScroll);
@@ -375,6 +387,8 @@ function loadPosts() {
 		content: options.contentFilter, 
 		list_type: options.listType, 
 		exclude_posts: exclude.join(","), 
+		date_from: options.dateFrom, 
+		date_to: options.dateTo, 
 		gid: options.gid
 	}, function (res) {
 		toggleSpinner(false);

@@ -8,6 +8,10 @@ requirejs.config({
 		"emojione":				"https://cdn.jsdelivr.net/npm/emojione@4.5.0/lib/js/emojione.min", 
 		"howler":				"https://cdn.jsdelivr.net/npm/howler@2.2.0/dist/howler.min", 
 		
+		"picker":				"https://cdn.jsdelivr.net/npm/pickadate@3.6.4/lib/compressed/picker", 
+		"picker.date":			"https://cdn.jsdelivr.net/npm/pickadate@3.6.4/lib/compressed/picker.date", 
+		"picker.ru_RU":			"https://cdn.jsdelivr.net/npm/pickadate@3.6.4/lib/compressed/translations/ru_RU", 
+		
 		"tui-image-editor":		"https://cdn.jsdelivr.net/npm/tui-image-editor@3.9.0/dist/tui-image-editor.min", 
 		"tui-code-snippet":		"https://cdn.jsdelivr.net/npm/tui-code-snippet@1.5.2/dist/tui-code-snippet.min", 
 		"fabric":				"https://cdn.jsdelivr.net/npm/fabric@3.6.3/dist/fabric.min", 

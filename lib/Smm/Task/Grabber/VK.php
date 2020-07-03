@@ -59,7 +59,7 @@ class VK extends \Z\Task {
 	}
 	
 	public function grabVK($sources) {
-		$max_api_calls = 5;
+		$max_api_calls = 10;
 		$execute_api_limit = 25;
 		
 		$api_calls = 0;
