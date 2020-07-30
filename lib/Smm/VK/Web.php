@@ -111,7 +111,7 @@ class Web {
 		
 		$response = iconv("cp1251", "utf-8", $this->loadHTML("desktop_ajax", "https://vk.com/al_wall.php", $post));
 		
-		if (preg_match_all("/post".$data['owner_id']."_(\d+)/", $response, $m)) {
+		if (preg_match_all("/post".$data['owner_id']."_(\d+)/", stripslashes($response), $m)) {
 			$ret['success'] = true;
 			$ret['post_id'] = max($m[1]);
 			return $ret;

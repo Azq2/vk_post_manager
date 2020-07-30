@@ -159,11 +159,7 @@ class Downloader extends \Z\Task {
 						'caption'	=> ''
 					];
 				} elseif ($file['type'] == 'doc') {
-					$url = DB::select('url')
-						->from('vk_grabber_data_owners')
-						->where('id', '=', \Smm\Grabber::SOURCE_VK.'_-'.$queue->gid)
-						->execute()
-						->get('url', false);
+					$url = $this->getVkGroupLink($queue->gid);
 					
 					$upload[] = [
 						'path'		=> $file['out'], 
@@ -172,11 +168,7 @@ class Downloader extends \Z\Task {
 						'document'	=> true
 					];
 				} elseif ($file['type'] == 'video') {
-					$url = DB::select('url')
-						->from('vk_grabber_data_owners')
-						->where('id', '=', \Smm\Grabber::SOURCE_VK.'_-'.$queue->gid)
-						->execute()
-						->get('url', false);
+					$url = $this->getVkGroupLink($queue->gid);
 					
 					$upload[] = [
 						'path'		=> $file['out'], 
@@ -237,6 +229,35 @@ class Downloader extends \Z\Task {
 				}
 			});
 		}
+	}
+	
+	public function getVkGroupLink($gid) {
+		$cache = \Z\Cache::instance();
+		
+		$url = $cache->get("vk_group_addr:$gid");
+		
+		if (!$url) {
+			$url = "/public$gid";
+			
+			for ($i = 0; $i < 5; ++$i) {
+				$res = $this->api->exec("groups.getById", [
+					'group_ids'		=> $gid
+				]);
+				
+				if ($res->success()) {
+					if (isset($res->response[0]->screen_name))
+						$url = "/".$res->response[0]->screen_name;
+					$cache->set("vk_group_addr:$gid", $url, 3600);
+					break;
+				}
+				
+				echo "ERROR: Can't get link for #$gid: ".$res->error()."\n";
+				
+				sleep(1);
+			}
+		}
+		
+		return $url;
 	}
 	
 	public function queueDone($id) {
