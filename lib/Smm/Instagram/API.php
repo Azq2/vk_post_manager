@@ -24,10 +24,11 @@ class API {
 			'bd0d6d184eefd4d0ce7036c11ae58ed9'
 		], 
 		'HASHTAG_NEXT_PAGE'		=> [
-			'7dabc71d3e758b1ec19ffb85639e427b', 
-			'f92f56d47dc7a55b606908374b43a314', 
-			'c769cb6c71b24c8a86590b22402fda50', 
-			'174a5243287c5f3a7de741089750ab3b'
+			'9b498c08113f1e09617a1703c22b2f32', 
+			// '7dabc71d3e758b1ec19ffb85639e427b', 
+			// 'f92f56d47dc7a55b606908374b43a314', 
+			// 'c769cb6c71b24c8a86590b22402fda50', 
+			// '174a5243287c5f3a7de741089750ab3b'
 		]
 	];
 	

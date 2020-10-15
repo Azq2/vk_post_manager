@@ -392,7 +392,10 @@ class Posts {
 						count:		100, 
 						offset:		postponed_offset
 					});
-					results.push(postponed);
+					
+					if (postponed)
+						results.push(postponed);
+					
 					postponed_total = postponed.count;
 					postponed_offset = postponed_offset + postponed.items.length;
 					api_cnt = api_cnt + 1;
@@ -407,7 +410,10 @@ class Posts {
 						count:		100, 
 						offset:		suggests_offset
 					});
-					results.push(suggests);
+					
+					if (suggests)
+						results.push(suggests);
+					
 					suggests_total = suggests.count;
 					suggests_offset = suggests_offset + suggests.items.length;
 					api_cnt = api_cnt + 1;
@@ -426,7 +432,8 @@ class Posts {
 				offset:		0
 			});
 			
-			results.push(last_comments);
+			if (last_comments)
+				results.push(last_comments);
 			
 			var load_user_ids = [];
 			
@@ -452,6 +459,20 @@ class Posts {
 			}
 			
 			sleep(1);
+		}
+		
+		$errors_list = [];
+		
+		if (isset($out->execute_errors)) {
+			foreach ($out->execute_errors as $err)
+				$errors_list[] = "#".$err->error_code." ".$err->error_msg." (".$err->method.")";
+			$errors_list = array_unique($errors_list);
+		}
+		
+		if (!$out->response->results && $errors_list) {
+			$result->success = false;
+			$result->error = implode(", ", $errors_list);
+			return $result;
 		}
 		
 		if (!$out->success()) {

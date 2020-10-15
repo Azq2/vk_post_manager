@@ -170,7 +170,7 @@ class GroupActivityGrabber extends \Z\Task {
 			echo date("Y-m-d H:i:s")." - fetch likes:".count($fetch_likes).", comments:".count($fetch_comments)."\n";
 			
 			$js_code = '
-				var MAX_API_CNT		= 25;
+				var MAX_API_CNT		= 15;
 				var OWNER_ID		= -'.$group['id'].';
 				var fetch_likes		= '.json_encode($fetch_likes).';
 				var fetch_comments	= '.json_encode($fetch_comments).';
@@ -436,7 +436,7 @@ class GroupActivityGrabber extends \Z\Task {
 				var api_calls = 0;
 				
 				var i = 0;
-				while (i < ids.length && api_calls < 25) {
+				while (i < ids.length && api_calls < 15) {
 					var chunk = ids.slice(i, i + 100);
 					
 					var result = API.wall.getById({
@@ -554,7 +554,7 @@ class GroupActivityGrabber extends \Z\Task {
 			echo date("Y-m-d H:i:s")." - grab posts, offset: $offset\n";
 			
 			$js_code = '
-				var MAX_API_CNT		= 25;
+				var MAX_API_CNT		= 15;
 				var OWNER_ID		= -'.$group['id'].';
 				
 				var results = [];
