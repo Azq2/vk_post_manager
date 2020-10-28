@@ -513,6 +513,7 @@ class VkPostsController extends \Smm\GroupController {
 				}
 				
 				if ($id) {
+					// \Z\Cache::instance()->delete("download_queue:$id");
 					$status = \Z\Cache::instance()->get("download_queue:$id");
 					
 					$this->content['id'] = $id;

@@ -85,19 +85,31 @@ class Downloader extends \Z\Task {
 		
 		echo $queue->id.": start download files\n";
 		
-		$queue->total = count($queue->images) + count($queue->documents) + count($queue->videos) + count($queue->files);
 		$queue->downloaded = 0;
 		$queue->uploaded = 0;
 		
+		$type2urls = [
+			'photo'		=> $queue->images,
+			'doc'		=> $queue->documents,
+			'video'		=> $queue->videos,
+			'file'		=> $queue->files,
+		];
+		
 		$files = [];
-		foreach ($queue->images as $file)
-			$files[] = ['url' => $file, 'type' => 'photo', 'out' => APP."/tmp/download/".md5($id.$file).".bin", 'index' => count($files)];
-		foreach ($queue->documents as $file)
-			$files[] = ['url' => $file, 'type' => 'doc', 'out' => APP."/tmp/download/".md5($id.$file).".bin", 'index' => count($files)];
-		foreach ($queue->videos as $file)
-			$files[] = ['url' => $file, 'type' => 'video', 'out' => APP."/tmp/download/".md5($id.$file).".bin", 'index' => count($files)];
-		foreach ($queue->files as $file)
-			$files[] = ['url' => $file, 'type' => 'file', 'out' => APP."/tmp/download/".md5($id.$file).".bin", 'index' => count($files)];
+		foreach ($type2urls as $type => $urls) {
+			foreach ($urls as $url) {
+				$file_index = count($files);
+				$file_id = md5($id.$url.$file_index);
+				$files[] = [
+					'url'		=> $url,
+					'type'		=> $type,
+					'out'		=> APP."/tmp/download/$file_id.bin",
+					'index'		=> $file_index
+				];
+			}
+		}
+		
+		$queue->total = count($files);
 		
 		$progress_offsets = [];
 		$progress_sizes = [];
