@@ -59,7 +59,7 @@ class Instagram extends \Z\Task {
 			
 			// Add collect request to queue
 			if ($source['value'][0] == "#") {
-				if (time() - $last_check < 30 * 60)
+				if (time() - $last_check < 3600 * 4)
 					continue;
 				
 				echo "[ ".$source['value']." ]\n";
@@ -69,7 +69,7 @@ class Instagram extends \Z\Task {
 					'type'		=> 'hashtag'
 				]);
 			} elseif ($source['value'][0] == "@") {
-				if (time() - $last_check < 3600 * 3)
+				if (time() - $last_check < 3600 * 8)
 					continue;
 				
 				echo "[ ".$source['value']." ]\n";
@@ -80,7 +80,7 @@ class Instagram extends \Z\Task {
 				]);
 			}
 			
-			$cache->set("instagram-grabber-last:".$source['value'], time());
+			$cache->set("instagram-grabber-last:".$source['value'], time(), 3600 * 48);
 			
 			if ($response->status != 200) {
 				echo "=> ERROR: instagram browser error: ".$response->error." (".$response->status.")\n";
@@ -268,7 +268,7 @@ class Instagram extends \Z\Task {
 			}
 			
 			echo "total collected: $totlal_items (+$totlal_new_items new)\n";
-			sleep(rand(30, 60));
+			sleep(rand(60, 120));
 		}
 	}
 }
