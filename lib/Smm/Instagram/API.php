@@ -18,6 +18,7 @@ class API {
 			'505f2f2dfcfce5b99cb7ac4155cbf299'
 		], 
 		'PROFILE_NEXT_PAGE'		=> [
+	//		'003056d32c2554def87228bc3fd9668a',
 			'44efc15d3c13342d02df0b5a9fa3d33f', 
 			'42323d64886122307be10013ad2dcc44', 
 			'472f257a40c653c64c666ce877d59d2b', 
@@ -43,9 +44,28 @@ class API {
 			CURLOPT_TIMEOUT				=> 60, 
 			CURLOPT_CONNECTTIMEOUT		=> 60, 
 			CURLOPT_ENCODING			=> "gzip,deflate", 
-			CURLOPT_USERAGENT			=> "Mozilla/5.0 (Linux; Android 6.0.1; Nexus 5X Build/MMB29P) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/41.0.2272.96 Mobile Safari/537.36 (compatible; Googlebot/2.1; +http://www.google.com/bot.html)", 
-			CURLOPT_IPRESOLVE			=> CURL_IPRESOLVE_V4
+			CURLOPT_USERAGENT			=> "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/88.0.4324.41 Safari/537.36", 
+			CURLOPT_IPRESOLVE			=> CURL_IPRESOLVE_V4,
+			CURLOPT_HTTPHEADER			=> []
 		]);
+	}
+	
+	public function getUser($name) {
+		$response = $this->exec("https://www.instagram.com/web/search/topsearch/", [
+			'context'		=> 'blended',
+			'query'			=> $name,
+			'rank_token'	=> '0.6631398494622207',
+			'include_reel'	=> true
+		]);
+		var_dump($response);
+		if (isset($response->users)) {
+			foreach ($response->users as $row) {
+				if (strcasecmp($row->user->username, $name) === 0)
+					return $row->user;
+			}
+		}
+		
+		return false;
 	}
 	
 	public function execGraphql($query_hash_type, $variables) {

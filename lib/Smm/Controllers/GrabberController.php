@@ -354,7 +354,7 @@ class GrabberController extends \Smm\GroupController {
 				'title'			=> 'Instagram', 
 				'descr'			=> 
 					'Для хэштега: #cat<br />'.
-					'Для профиля: https://www.instagram.com/p/CAJe9h5pITl/ (ссылку на любой пост)'
+					'Для профиля: @ledravenger'
 			], 
 			'PINTEREST'		=> [
 				'title'			=> 'Pinterest', 
@@ -424,27 +424,19 @@ class GrabberController extends \Smm\GroupController {
 							
 							// Профиль
 							case "@":
-								$error = "Добавление через @ПРОФИЛЬ не работает. Теперь нужно указать ссылку на любой пост.";
-							break;
-							
-							// Oembed
-							default:
-								if (strpos($raw_source_url, "https://") === 0) {
-									$json = @json_decode(@file_get_contents("https://api.instagram.com/oembed?url=".urlencode($raw_source_url)));
-									if (isset($json->author_id, $json->author_name)) {
-										$new_source = [
-											'value'			=> htmlspecialchars("@".$json->author_name), 
-											'type'			=> \Smm\Grabber::SOURCE_INSTAGRAM, 
-											'name'			=> "@".$json->author_name, 
-											'url'			=> 'https://www.instagram.com/'.urlencode($json->author_name), 
-											'avatar'		=> '/images/grabber/avatar/INSTAGRAM.png', 
-											'internal_id'	=> $json->author_id
-										];
-									} else {
-										$error = 'Instagram пост не найден.';
-									}
+								$insta_api = new \Smm\Instagram\API();
+								$ig_user = $insta_api->getUser(trim(substr($raw_source_url, 1)));
+								if ($ig_user && $ig_user->pk) {
+									$new_source = [
+										'value'			=> htmlspecialchars("@".$ig_user->username), 
+										'type'			=> \Smm\Grabber::SOURCE_INSTAGRAM, 
+										'name'			=> "@".$ig_user->username, 
+										'url'			=> 'https://www.instagram.com/'.urlencode($ig_user->username), 
+										'avatar'		=> '/images/grabber/avatar/INSTAGRAM.png', 
+										'internal_id'	=> $ig_user->pk
+									];
 								} else {
-									$error = 'Неправильная ссылка на пост.';
+									$error = 'Юзер не найден.';
 								}
 							break;
 						}

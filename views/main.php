@@ -26,7 +26,7 @@
 	</head>
 	
 	<body>
-		<div class="main" style="background:#fff" id="main">
+		<div class="main" style="background:rgb(255 255 255 / 0.96)" id="main">
 			<div class="overlay hide" id="modal_overlay">
 				<div class="modal" id="modal_content">
 					

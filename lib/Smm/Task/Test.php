@@ -13,8 +13,13 @@ class TestModel extends \Z\Model\ActiveRecord {
 
 class Test extends \Z\Task {
 	public function run($args) {
+		$ig = new Smm\Instagram\Web();
+		$ig->auth();
+		
+		
 		// var_dump(new TestModel());
 		
+		/*
 		$sources = DB::select()
 			->from('vk_grabber_sources')
 			->execute();
@@ -51,6 +56,7 @@ class Test extends \Z\Task {
 			
 			$q->execute();
 		}
+		*/
 		
 		/*
 		$data2id = DB::select('id', 'data_id')
