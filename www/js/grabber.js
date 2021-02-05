@@ -386,6 +386,7 @@ function loadPosts() {
 		exclude: options.exclude, 
 		content: options.contentFilter, 
 		list_type: options.listType, 
+		source_type: options.sourceType, 
 		exclude_posts: exclude.join(","), 
 		date_from: options.dateFrom, 
 		date_to: options.dateTo, 

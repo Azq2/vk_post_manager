@@ -95,6 +95,7 @@ class GrabberController extends \Smm\GroupController {
 		$exclude = isset($_REQUEST['exclude']) && is_array($_REQUEST['exclude']) ? $_REQUEST['exclude'] : [];
 		$interval = $_REQUEST['interval'] ?? 'all';
 		$list_type = $_REQUEST['list_type'] ?? 'all';
+		$source_type = $_REQUEST['source_type'] ?? 'all';
 		$date_from = $_REQUEST['date_from'] ?? '';
 		$date_to = $_REQUEST['date_to'] ?? '';
 		
@@ -102,6 +103,9 @@ class GrabberController extends \Smm\GroupController {
 		
 		$sources_ids = [];
 		foreach ($sources as $s) {
+			if ($source_type !== 'all' && $source_type != $s['type'])
+				continue;
+			
 			if ($s['enabled']) {
 				$key = \Smm\Grabber::$type2name[$s['type']].'_'.$s['value'];
 				if ($include && !in_array($key, $include))
@@ -546,6 +550,7 @@ class GrabberController extends \Smm\GroupController {
 		$exclude = isset($_REQUEST['exclude']) && is_array($_REQUEST['exclude']) ? $_REQUEST['exclude'] : [];
 		$interval = $_REQUEST['interval'] ?? 'all';
 		$list_type = $_REQUEST['list_type'] ?? 'all';
+		$source_type = $_REQUEST['source_type'] ?? 'all';
 		
 		$date_from = $_REQUEST['date_from'] ?? date("Y-m-d", time() - 3600 * 24 * 31 * 3);
 		$date_to = $_REQUEST['date_to'] ?? '';
@@ -616,6 +621,18 @@ class GrabberController extends \Smm\GroupController {
 			'active'	=> $list_type
 		]);
 		
+		$source_type_tabs = new Widgets\Tabs([
+			'url'		=> Url::current(),
+			'param'		=> 'source_type',
+			'items'		=> [
+				'all'							=> 'Все',
+				\Smm\Grabber::SOURCE_VK			=> 'VK',
+				\Smm\Grabber::SOURCE_INSTAGRAM	=> 'Instagram',
+				\Smm\Grabber::SOURCE_PINTEREST	=> 'Pinterest'
+			],
+			'active'	=> $source_type
+		]);
+		
 		$sources_ids = [];
 		$sources_list = [];
 		$include_list = [];
@@ -661,6 +678,7 @@ class GrabberController extends \Smm\GroupController {
 			'exclude'			=> $exclude, 
 			'interval'			=> $interval, 
 			'list_type'			=> $list_type, 
+			'source_type'		=> $source_type, 
 			'date_from'			=> $date_from, 
 			'date_to'			=> $date_to, 
 			
@@ -669,7 +687,8 @@ class GrabberController extends \Smm\GroupController {
 			'content_tabs'		=> $content_tabs->render(), 
 			'sort_tabs'			=> $sort_tabs->render(), 
 			'date_tabs'			=> $date_tabs->render(), 
-			'list_type_tabs'		=> $list_type_tabs->render()
+			'list_type_tabs'	=> $list_type_tabs->render(),
+			'source_type_tabs'	=> $source_type_tabs->render()
 		]);
 	}
 	

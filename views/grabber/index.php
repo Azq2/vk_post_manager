@@ -14,6 +14,7 @@
 	data-list-type="<?= htmlspecialchars($list_type) ?>"
 	data-date-from="<?= htmlspecialchars($date_from) ?>"
 	data-date-to="<?= htmlspecialchars($date_to) ?>"
+	data-source-type="<?= htmlspecialchars($source_type) ?>"
 	id="grabber_data"></div>
 
 <div class="wrapper">
@@ -27,6 +28,10 @@
 	
 	<div class="row">
 		Период: <?= $date_tabs ?>
+	</div>
+	
+	<div class="row">
+		Источник: <?= $source_type_tabs ?>
 	</div>
 	
 	<?php if ($interval == 'custom'): ?>

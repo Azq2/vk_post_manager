@@ -43,7 +43,7 @@ class Tabs extends \Smm\View\Widget {
 			
 			$tabs[] = array(
 				'id'		=> $id, 
-				'active'	=> $id == $this->args['active'], 
+				'active'	=> (string) $id == (string) $this->args['active'], 
 				'url'		=> isset($item['url']) ? $item['url'] : $url, 
 				'name'		=> $item['name'], 
 				'last'		=> false, 

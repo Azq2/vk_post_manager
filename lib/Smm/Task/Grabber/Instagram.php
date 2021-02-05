@@ -59,7 +59,7 @@ class Instagram extends \Z\Task {
 			
 			// Add collect request to queue
 			if ($source['value'][0] == "#") {
-				if (time() - $last_check < 3600 * 4)
+				if (time() - $last_check < 3600 * 8)
 					continue;
 				
 				echo "[ ".$source['value']." ]\n";
@@ -268,7 +268,7 @@ class Instagram extends \Z\Task {
 			}
 			
 			echo "total collected: $totlal_items (+$totlal_new_items new)\n";
-			sleep(rand(60, 120));
+			sleep(660);
 		}
 	}
 }
