@@ -1,4 +1,5 @@
 <?php
 return [
-	'debug_cookie'	=> 'debug'
+	'debug_cookie'		=> 'debug',
+	'image_proxy_key'	=> '***change me***'
 ];

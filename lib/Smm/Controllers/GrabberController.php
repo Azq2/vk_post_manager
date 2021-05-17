@@ -273,6 +273,18 @@ class GrabberController extends \Smm\GroupController {
 					$blacklist_ids[$post['source_type']] = [];
 				$blacklist_ids[$post['source_type']][] = $post['remote_id'];
 				
+				$attaches = array_map(function ($att) {
+					if (isset($att['thumbs'])) {
+						foreach ($att['thumbs'] as $size => $thumb)
+							$att['thumbs'][$size] = $this->proxyThumb($att['thumbs'][$size]);
+					}
+					
+					if (isset($att['mp4']))
+						$att['mp4'] = $this->proxyThumb($att['mp4']);
+					
+					return $att;
+				}, unserialize(gzinflate($post_data['attaches'])));
+				
 				$items[$post['id']] = [
 					'id'				=> $post['id'], 
 					'remote_id'			=> $post['remote_id'], 
@@ -290,7 +302,7 @@ class GrabberController extends \Smm\GroupController {
 					'owner_name'		=> $source['name'], 
 					'owner_url'			=> $source['url'], 
 					'owner_avatar'		=> $source['avatar'], 
-					'attaches'			=> unserialize(gzinflate($post_data['attaches']))
+					'attaches'			=> $attaches
 				];
 			}
 		}
@@ -339,6 +351,8 @@ class GrabberController extends \Smm\GroupController {
 			'time_blacklist'		=> $time_blacklist, 
 			'blacklist_filtered'	=> count($blacklist_filtered)
 		];
+		
+		$this->proxyThumbGenKey();
 	}
 	
 	public function sourcesAction() {
@@ -412,7 +426,7 @@ class GrabberController extends \Smm\GroupController {
 						switch ($raw_source_url[0]) {
 							// Хэштег
 							case "#":
-								if (!preg_match('/^[#\@\*][\w\d_.-]+$/i', $raw_source_url)) {
+								if (!preg_match('/^#[\w\d_.-]+$/i', $raw_source_url)) {
 									$error = 'Неправильный тег.';
 								} else {
 									$new_source = [
@@ -428,19 +442,17 @@ class GrabberController extends \Smm\GroupController {
 							
 							// Профиль
 							case "@":
-								$insta_api = new \Smm\Instagram\API();
-								$ig_user = $insta_api->getUser(trim(substr($raw_source_url, 1)));
-								if ($ig_user && $ig_user->pk) {
-									$new_source = [
-										'value'			=> htmlspecialchars("@".$ig_user->username), 
-										'type'			=> \Smm\Grabber::SOURCE_INSTAGRAM, 
-										'name'			=> "@".$ig_user->username, 
-										'url'			=> 'https://www.instagram.com/'.urlencode($ig_user->username), 
-										'avatar'		=> '/images/grabber/avatar/INSTAGRAM.png', 
-										'internal_id'	=> $ig_user->pk
-									];
+								if (!preg_match('/^\@[\w\d_.-]+$/i', $raw_source_url)) {
+									$error = 'Неправильный тег.';
 								} else {
-									$error = 'Юзер не найден.';
+									$new_source = [
+										'value'			=> htmlspecialchars($raw_source_url), 
+										'type'			=> \Smm\Grabber::SOURCE_INSTAGRAM, 
+										'name'			=> $raw_source_url, 
+										'url'			=> 'https://www.instagram.com/'.urlencode(substr($raw_source_url, 1)), 
+										'avatar'		=> '/images/grabber/avatar/INSTAGRAM.png', 
+										'internal_id'	=> ''
+									];
 								}
 							break;
 						}
@@ -690,6 +702,25 @@ class GrabberController extends \Smm\GroupController {
 			'list_type_tabs'	=> $list_type_tabs->render(),
 			'source_type_tabs'	=> $source_type_tabs->render()
 		]);
+		
+		$this->proxyThumbGenKey();
+	}
+	
+	private function proxyThumbGenKey() {
+		if (!isset($_COOKIE['impk']) || strlen($_COOKIE['impk']) != 64) {
+			$_COOKIE['impk'] = hash("sha256", openssl_random_pseudo_bytes(1024));
+			setcookie('impk', $_COOKIE['impk'], time() + 365 * 24 * 3600 * 2);
+		}
+	}
+	
+	private function proxyThumb($url) {
+		$key1 = $_COOKIE['impk'] ?? "";
+		$key2 = Config::get("common", "image_proxy_key")
+		
+		return '/img-proxy/?'.http_build_query([
+			'url'		=> $url,
+			'hash'		=> hash("sha256", "img-proxy:$key1:$key2:$url")
+		], '', '&');
 	}
 	
 	private function _getSources() {

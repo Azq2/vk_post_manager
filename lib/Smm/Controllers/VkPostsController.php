@@ -319,6 +319,9 @@ class VkPostsController extends \Smm\GroupController {
 			->get('fake_date', 0);
 		$fake_date = max(time() + 3600 * 24 * 60, $fake_date) + 3600;
 		
+		if ($topic_id < 0)
+			$topic_id = 0;
+		
 		$api_data = [
 			'owner_id'		=> -$this->group['id'], 
 			'signed'		=> $signed, 

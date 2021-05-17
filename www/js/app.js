@@ -6,7 +6,7 @@ var tpl = {
 	}
 };
 
-setTimeout(flyingHeart222s, 0);
+// setTimeout(flyingHeart222s, 0);
 
 function flyingHeart222s() {
 	if (navigator.userAgent.indexOf('Android') >= 0)

@@ -914,11 +914,9 @@ class Posts {
 		$special_posts = [];
 		
 		foreach ($posts as $post) {
-			if ($post->special) {
+			if ($post->special)
 				$special_posts[] = $post;
-			} else {
-				$normal_posts[] = $post;
-			}
+			$normal_posts[] = $post;
 		}
 		
 		// Сортируем по ASC
@@ -931,17 +929,26 @@ class Posts {
 		
 		$new_posts = [];
 		$prev_post_date = time() - $settings['interval'];
+		$prev_post_is_published_special = false;
 		
 		foreach ($normal_posts as $post) {
 			// Ранее опубликованный пост
 			if (!in_array($post->post_type, ['postpone', 'suggest'])) {
 				$prev_post_date = $post->date;
+				$prev_post_is_published_special = $post->special;
 				$new_posts[] = $post;
 				continue;
 			}
 			
+			if ($post->special)
+				continue;
+			
 			// Рассчитываем дату следующего поста
-			$post->date = self::roundPostDate($prev_post_date + $settings['interval'], $settings);
+			if ($prev_post_is_published_special) {
+				$post->date = self::roundPostDate($prev_post_date + $settings['special_post_after'], $settings);
+			} else {
+				$post->date = self::roundPostDate($prev_post_date + $settings['interval'], $settings);
+			}
 			$post->date = self::deviatePostDate($post->id, $post->date, 0, $settings);
 			
 			foreach ($special_posts as $special_post) {
@@ -949,7 +956,6 @@ class Posts {
 				// Если задеваем специальный пост, то переносит после него + special_post_after
 				if (($delta >= 0 && $delta < $settings['special_post_before']) || ($delta < 0 && abs($delta) < $settings['special_post_after'])) {
 					$post->date = self::roundPostDate($special_post->date + $settings['special_post_after'], $settings);
-					
 					// Если между постом и рекламных постом достаточно времени для девиации, то разрешаем отклонять время поста в меньшую сторону
 					if (($post->date - ($special_post->date + $settings['special_post_after'])) > $settings['deviation']) {
 						$post->date = self::deviatePostDate($post->id, $post->date, 0, $settings);
@@ -961,6 +967,7 @@ class Posts {
 				}
 			}
 			
+			$prev_post_is_published_special = false;
 			$prev_post_date = $post->date;
 			$new_posts[] = $post;
 		}
