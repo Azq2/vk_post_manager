@@ -4,6 +4,7 @@ namespace Smm\Controllers;
 use \Z\DB;
 use \Z\View;
 use \Z\Date;
+use \Z\Config;
 use \Z\Util\Url;
 
 use \Smm\View\Widgets;
@@ -715,7 +716,7 @@ class GrabberController extends \Smm\GroupController {
 	
 	private function proxyThumb($url) {
 		$key1 = $_COOKIE['impk'] ?? "";
-		$key2 = Config::get("common", "image_proxy_key")
+		$key2 = Config::get("common", "image_proxy_key");
 		
 		return '/img-proxy/?'.http_build_query([
 			'url'		=> $url,
