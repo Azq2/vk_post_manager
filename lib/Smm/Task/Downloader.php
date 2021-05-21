@@ -98,6 +98,13 @@ class Downloader extends \Z\Task {
 		$files = [];
 		foreach ($type2urls as $type => $urls) {
 			foreach ($urls as $url) {
+				if (preg_match("/^\/img-proxy\//", $url)) {
+					$url_query = [];
+					parse_str(parse_url($url, PHP_URL_QUERY), $url_query);
+					if (isset($url_query['url']))
+						$url = $url_query['url'];
+				}
+				
 				$file_index = count($files);
 				$file_id = md5($id.$url.$file_index);
 				$files[] = [

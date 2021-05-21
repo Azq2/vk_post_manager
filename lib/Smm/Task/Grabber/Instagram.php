@@ -53,9 +53,11 @@ class Instagram extends \Z\Task {
 		$insta_browser = new \Smm\Instagram\RemoteBrowser();
 		
 		$cache = \Z\Cache::instance();
-	
+		
+		$last_time_key = "instagram-grabber-last:v2";
+		
 		foreach ($sources as $id => $source) {
-			$last_check = $cache->get("instagram-grabber-last:".$source['value']) ?: 0;
+			$last_check = $cache->get("$last_time_key:".$source['value']) ?: 0;
 			
 			// Add collect request to queue
 			if ($source['value'][0] == "#") {
@@ -80,7 +82,7 @@ class Instagram extends \Z\Task {
 				]);
 			}
 			
-			$cache->set("instagram-grabber-last:".$source['value'], time(), 3600 * 48);
+			$cache->set("$last_time_key:".$source['value'], time(), 3600 * 48);
 			
 			if ($response->status != 200) {
 				echo "=> ERROR: instagram browser error: ".$response->error." (".$response->status.")\n";

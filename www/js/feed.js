@@ -408,8 +408,6 @@ var VkFeed = Class({
 			
 			var src = findBestThumb(att.thumbs, 99999).src;
 			
-			// src = '/?a=vk_posts/image_proxy&src=' + encodeURIComponent(src);
-			
 			self.initTuiEditor(src, function (blob) {
 				blob.name = "image.png";
 				
