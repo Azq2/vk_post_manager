@@ -31,7 +31,7 @@ class VkAndroid extends \Smm\VK\API\Client {
 	}
 	
 	public function getApiVersion() {
-		return '5.68';
+		return '5.131';
 	}
 	
 	public function getAppId() {

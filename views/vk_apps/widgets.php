@@ -161,6 +161,6 @@ $(function () {
 		});
 	}, function () {
 		$('#spinner').html('<span class="red">Ошибка инициализации API. Обновите страницу.</span>');
-	}, '5.101');
+	}, '5.131');
 });
 </script>

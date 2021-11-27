@@ -29,7 +29,7 @@ class VkAdmin extends \Smm\VK\API\Client {
 	}
 	
 	public function getApiVersion() {
-		return '5.70';
+		return '5.131';
 	}
 	
 	public function getAppId() {
