@@ -34,7 +34,7 @@ class Instagram extends \Z\Task {
 		
 		do {
 			$deleted = \Smm\Grabber::cleanOldPosts(array_keys($sources_enabled), [
-				'max_age'		=> 24 * 3600 * 0, 
+				'max_age'		=> 24 * 3600, 
 				'post_types'	=> [
 					\Smm\Grabber::POST_WITH_TEXT_GIF, 
 					\Smm\Grabber::POST_WITH_TEXT_PIC_GIF
