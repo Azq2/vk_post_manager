@@ -34,7 +34,7 @@ class Instagram extends \Z\Task {
 		
 		do {
 			$deleted = \Smm\Grabber::cleanOldPosts(array_keys($sources_enabled), [
-				'max_age'		=> 24 * 3600, 
+				'max_age'		=> 24 * 3600 * 0, 
 				'post_types'	=> [
 					\Smm\Grabber::POST_WITH_TEXT_GIF, 
 					\Smm\Grabber::POST_WITH_TEXT_PIC_GIF
@@ -54,7 +54,7 @@ class Instagram extends \Z\Task {
 		
 		$cache = \Z\Cache::instance();
 		
-		$last_time_key = "instagram-grabber-last:v8";
+		$last_time_key = "instagram-grabber-last:v9";
 		
 		foreach ($sources as $id => $source) {
 			$last_check = $cache->get("$last_time_key:".$source['value']) ?: 0;
