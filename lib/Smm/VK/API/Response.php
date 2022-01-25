@@ -14,7 +14,7 @@ class Response {
 	}
 	
 	public function success() {
-		return array_key_exists('response', $this->data);
+		return property_exists($this->data, 'response');
 	}
 	
 	public function error() {

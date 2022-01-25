@@ -9,7 +9,7 @@ class OauthResponse {
 	}
 	
 	public function success() {
-		return array_key_exists('access_token', $this->data);
+		return property_exists($this->data, 'access_token');
 	}
 	
 	public function error() {
