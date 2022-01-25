@@ -54,7 +54,7 @@ class Instagram extends \Z\Task {
 		
 		$cache = \Z\Cache::instance();
 		
-		$last_time_key = "instagram-grabber-last:v2";
+		$last_time_key = "instagram-grabber-last:v8";
 		
 		foreach ($sources as $id => $source) {
 			$last_check = $cache->get("$last_time_key:".$source['value']) ?: 0;
@@ -100,32 +100,32 @@ class Instagram extends \Z\Task {
 				continue;
 			}
 			
-			$edges_lists = [];
+			$media_lists = [];
+			foreach ($response->result->media as $k => $items) {
+				if (preg_match("/top/", $k)) {
+					$media_lists[] = [\Smm\Grabber::LIST_TOP, $items];
+				} else if (preg_match("/recent/", $k)) {
+					$media_lists[] = [\Smm\Grabber::LIST_NEW, $items];
+				} else {
+					$media_lists[] = [\Smm\Grabber::LIST_UNKNOWN, $items];
+				}
+			}
 			
-			if (!empty($response->result->graphql->all))
-				$edges_lists[] = [\Smm\Grabber::LIST_UNKNOWN, $response->result->graphql->all];
-			
-			if (!empty($response->result->graphql->top))
-				$edges_lists[] = [\Smm\Grabber::LIST_TOP, $response->result->graphql->top];
-			
-			if (!empty($response->result->graphql->new))
-				$edges_lists[] = [\Smm\Grabber::LIST_NEW, $response->result->graphql->new];
-			
-			if (!$edges_lists) {
-				echo "=> ERROR: can't get edges: invalid graphql response\n";
+			if (!$media_lists) {
+				echo "=> ERROR: can't get medias: invalid response\n";
 				continue;
 			}
 			
 			$totlal_items = 0;
 			$totlal_new_items = 0;
 			
-			foreach ($edges_lists as $edges_list) {
-				foreach ($edges_list[1] as $edge) {
+			foreach ($media_lists as $media_list) {
+				foreach ($media_list[1] as $item) {
 					$gifs_cnt = 0;
 					$images_cnt = 0;
 					
 					// Получаем ID фотки
-					$topic_id = $edge->node->shortcode;
+					$topic_id = $item->code;
 					if (!$topic_id) {
 						echo "=> ERROR: can't parse topic id\n";
 						continue;
@@ -134,104 +134,77 @@ class Instagram extends \Z\Task {
 					// Ссылка на фотку
 					$topic_url = "https://www.instagram.com/p/$topic_id";
 					
-					echo "=> $topic_url [".$edge->node->__typename."]\n";
+					echo "=> $topic_url [".$item->product_type."]\n";
 					
 					// Дата загрузки фотки
 					$date = time();
-					if (isset($edge->node->taken_at_timestamp)) {
-						$date = $edge->node->taken_at_timestamp;
+					if (isset($item->taken_at)) {
+						$date = $item->taken_at;
 					} else {
 						echo "=> WARNING: can't parse date!\n";
 					}
 					
 					// Описание фотки
-					$text = "";
-					if (isset($edge->node->edge_media_to_caption->edges, $edge->node->edge_media_to_caption->edges[0]))
-						$text = $edge->node->edge_media_to_caption->edges[0]->node->text;
+					$text = $item->caption->text ?? '';
 					
 					// Лайки
-					$likes = 0;
-					if (isset($edge->node->edge_liked_by)) {
-						$likes = $edge->node->edge_liked_by->count;
-					} elseif (isset($edge->node->edge_media_preview_like)) {
-						$likes = $edge->node->edge_media_preview_like->count;
-					} else {
-						echo "=> WARNING: can't parse likes!\n";
-					}
+					$likes = $item->like_count ?? 0;
 					
 					// Комменты
-					$comments = 0;
-					if (isset($edge->node->edge_media_to_comment)) {
-						$comments = $edge->node->edge_media_to_comment->count;
-					} elseif (isset($edge->node->edge_media_to_parent_comment)) {
-						$comments = $edge->node->edge_media_to_parent_comment->count;
-					} else {
-						echo "=> WARNING: can't parse comments!\n";
-					}
+					$comments = $item->comment_count ?? 0;
 					
 					$attaches = [];
-					$edges_to_parse = [];
 					
-					if ($edge->node->__typename == "GraphSidecar") {
-						if (!isset($edge->node->edge_sidecar_to_children)) {
-							echo "  => ERROR: can't find data->shortcode_media->edge_sidecar_to_children from JSON\n";
-							continue;
-						}
-						
-						foreach ($edge->node->edge_sidecar_to_children->edges as $sub_edge)
-							$edges_to_parse[] = $sub_edge;
-					} elseif ($edge->node->__typename == "GraphVideo") {
-						if (!isset($edge->node->video_url)) {
-							echo "  => ERROR: can't edge->node->video_url from JSON\n";
-							continue;
-						}
-						
-						$edges_to_parse[] = $edge;
+					$sub_items = [];
+					if ($item->product_type == "carousel_container") {
+						foreach ($item->carousel_media as $sub_item)
+							$sub_items[] = $sub_item;
 					} else {
-						$edges_to_parse[] = $edge;
+						$sub_items[] = $item;
 					}
 					
-					foreach ($edges_to_parse as $sub_edge) {
-						switch ($sub_edge->node->__typename) {
-							case "GraphVideo":
+					foreach ($sub_items as $sub_item) {
+						switch ($sub_item->media_type) {
+							case 1: // photo
 								$attaches[] = [
-									'id'		=> 'doc_'.md5($sub_edge->node->display_url), 
-									'type'		=> 'doc', 
-									'ext'		=> 'mp4', 
-									'title'		=> 'video.mp4', 
-									'w'			=> $sub_edge->node->dimensions->width, 
-									'h'			=> $sub_edge->node->dimensions->height, 
-									'thumbs'	=> [
-										$sub_edge->node->dimensions->width => $sub_edge->node->display_url
-									], 
-									'video'		=> [
-										'has_audio'		=> $sub_edge->node->has_audio ?? NULL, 
-										'duration'		=> $sub_edge->node->video_duration ?? 0, 
-									], 
-									'url'		=> $sub_edge->node->video_url, 
-									'mp4'		=> $sub_edge->node->video_url, 
-									'page_url'	=> $topic_url
-								];
-								
-								++$gifs_cnt;
-							break;
-							
-							case "GraphImage":
-								$attaches[] = [
-									'id'		=> 'photo_'.md5($sub_edge->node->display_url), 
+									'id'		=> 'photo_'.$topic_id.'_'.count($attaches), 
 									'type'		=> 'photo', 
-									'w'			=> $sub_edge->node->dimensions->width, 
-									'h'			=> $sub_edge->node->dimensions->height, 
-									'thumbs' => [
-										$sub_edge->node->dimensions->width => $sub_edge->node->display_url
+									'w'			=> $sub_item->original_width, 
+									'h'			=> $sub_item->original_height, 
+									'thumbs'	=> [
+										$sub_item->image_versions2->candidates[0]->width => $sub_item->image_versions2->candidates[0]->url
 									]
 								];
 								
 								++$images_cnt;
 							break;
 							
+							case 2: // video
+								$attaches[] = [
+									'id'		=> 'photo_'.$topic_id.'_'.count($attaches), 
+									'type'		=> 'doc', 
+									'ext'		=> 'mp4', 
+									'title'		=> 'video.mp4', 
+									'w'			=> $sub_item->original_width, 
+									'h'			=> $sub_item->original_height, 
+									'thumbs'	=> [
+										$sub_item->image_versions2->candidates[0]->width => $sub_item->image_versions2->candidates[0]->url
+									],
+									'video'		=> [
+										'has_audio'		=> $sub_item->has_audio ?? NULL, 
+										'duration'		=> $sub_item->video_duration, 
+									], 
+									'url'		=> $sub_item->video_versions[0]->url, 
+									'mp4'		=> $sub_item->video_versions[0]->url, 
+									'page_url'	=> $topic_url
+								];
+								
+								++$gifs_cnt;
+								
+							break;
+							
 							default:
-								echo "  => ERROR: unknown type: ".$sub_edge->node->__typename."\n";
+								echo "  => ERROR: unknown type: ".$sub_item->media_type."\n";
 							break;
 						}
 					}
@@ -255,7 +228,7 @@ class Instagram extends \Z\Task {
 						'reposts'			=> 0, 
 						'images_cnt'		=> $images_cnt, 
 						'gifs_cnt'			=> $gifs_cnt, 
-						'list_type'			=> $edges_list[0]
+						'list_type'			=> $media_list[0]
 					];
 					
 					$ok = \Smm\Grabber::addNewPost((object) $post_data);
