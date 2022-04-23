@@ -47,6 +47,11 @@ return [
 		'type'		=> 'VK_WEB', 
 		'required'	=> false
 	], 
+	'TUMBLR'		=> [
+		'title'		=> 'Tumblr', 
+		'type'		=> 'TUMBLR', 
+		'required'	=> false
+	],  
 	/*
 	'VK_ANDROID'	=> [
 		'title'		=> 'ВК (посты от android)', 

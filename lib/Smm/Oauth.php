@@ -38,7 +38,7 @@ class Oauth {
 				'access_token'			=> $token['access_token'], 
 				'secret'				=> $token['secret'], 
 				'access_token_type'		=> 'user', 
-				'client'				=> $oauth_users[$type]['client']
+				'client'				=> $oauth_users[$type]['client'] ?? false
 			];
 		}
 		

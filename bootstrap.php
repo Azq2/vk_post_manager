@@ -5,6 +5,7 @@ ob_start();
 error_reporting(E_ALL);
 ini_set('display_errors', 'On');
 ini_set('memory_limit', '128M');
+ini_set('arg_separator.input', ';&');
 date_default_timezone_set('Europe/Moscow');
 mb_internal_encoding('UTF-8');
 

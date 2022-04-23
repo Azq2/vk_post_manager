@@ -4,6 +4,14 @@
 	</div>
 </div>
 
+<?php if ($error_description): ?>
+	<div class="wrapper">
+		<div class="row red bord">
+			Ошибка oauth: <?= htmlspecialchars($error_description) ?>
+		</div>
+	</div>
+<?php endif; ?>
+
 <div class="wrapper bord">
 	<div class="row header cursor">
 		OAuth приложения сообщества
@@ -60,7 +68,17 @@
 		</div>
 		
 		<div class="row">
-			<?php if ($oauth['form'] == 'CODE'): ?>
+			<?php if ($oauth['form'] == 'NONE'): ?>
+				<a href="<?= $oauth['oauth_url'] ?>" rel="noopener noreferrer" target="_blank">Запросить доступ</a>
+				
+				<?php if ($oauth['user']): ?>
+					<a href="<?= $oauth['user']['link'] ?>" rel="noopener noreferrer" target="_blank">
+						<span class="green">(<?= $oauth['user']['name'] ?>)</span>
+					</a>
+				<?php else: ?>
+					<span class="red">(Не авторизирован)</span>
+				<?php endif; ?>
+			<?php elseif ($oauth['form'] == 'CODE'): ?>
 				<a href="<?= $oauth['oauth_url'] ?>" rel="noopener noreferrer" target="_blank">Запросить доступ</a>
 				
 				<?php if ($oauth['user']): ?>

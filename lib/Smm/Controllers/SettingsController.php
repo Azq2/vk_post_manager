@@ -262,6 +262,8 @@ class SettingsController extends \Smm\GroupController {
 	public function auth_saveAction() {
 		$this->mode('json');
 		
+		$use_redirect = false;
+		
 		$key				= $_REQUEST['type'] ?? '';
 		$code				= $_REQUEST['code'] ?? '';
 		$code_2fa			= $_REQUEST['code_2fa'] ?? '';
@@ -274,7 +276,6 @@ class SettingsController extends \Smm\GroupController {
 		$oauth_users = \Z\Config::get('oauth_users');
 		
 		$this->content['success'] = false;
-		
 		if (!isset($oauth_users[$key])) {
 			$this->content['error'] = 'Неизвестный тип авторизации.';
 			return;
@@ -521,6 +522,41 @@ class SettingsController extends \Smm\GroupController {
 					$this->content['error'] = 'Ошибка COOKIE auth: '.$result['error'];
 				}
 			break;
+			
+			case "TUMBLR":
+				$api = new \Smm\Tumblr\API();
+				$result = $api->loginOauthCode($code, [
+					'redirect_uri'	=> $_REQUEST['state'] ?? ''
+				]);
+				
+				if ($result->success()) {
+					DB::insert('vk_oauth')
+						->set([
+							'type'			=> $oauth['type'], 
+							'access_token'	=> $result->access_token, 
+							'expires'		=> $result->expires_in ?? 0, 
+							'refresh_token'	=> ''
+						])
+						->onDuplicateSetValues('access_token')
+						->onDuplicateSetValues('expires')
+						->execute();
+					$this->content['success'] = true;
+				} else {
+					$this->content['error'] = $result->error();
+				}
+				
+				$use_redirect = true;
+			break;
+		}
+		
+		if ($use_redirect) {
+			if ($this->content['success']) {
+				$redirect = Url::mk("/")->set('a', 'settings/auth')->url();
+				$this->redirect($redirect);
+			} else {
+				$redirect = Url::mk("/")->set('a', 'settings/auth')->set('error_description', $this->content['error'])->url();
+				$this->redirect($redirect);
+			}
 		}
 	}
 	
@@ -640,6 +676,42 @@ class SettingsController extends \Smm\GroupController {
 					];
 				break;
 				
+				case "TUMBLR":
+					$api = new \Smm\Tumblr\API();
+					
+					$logged_user = false;
+					$access_token = \Smm\Oauth::getAccessToken($key);
+					
+					if ($access_token) {
+						$user_api = new \Smm\Tumblr\API();
+						$result = $user_api->exec("user/info");
+						if ($result->success()) {
+							$logged_user = [
+								'name'		=> $result->response->user->name, 
+								'link'		=> 'https://www.tumblr.com/blog/'.$result->response->user->name
+							];
+						}
+					}
+					
+					$redirect_uri = Url::mk("https://".$_SERVER['HTTP_HOST']."/")->set('a', 'settings/auth_save')->set('type', $key)->href();
+					
+					$oauth_list[] = [
+						'type'				=> $key, 
+						'required'			=> $oauth['required'], 
+						'form'				=> 'NONE', 
+						'title'				=> $oauth['title'], 
+						'oauth_url'			=> $api->getOauthUrl([
+							'redirect_uri'	=> $redirect_uri,
+							'state'			=> $redirect_uri
+						]), 
+						'user'				=> $logged_user, 
+						'help'				=> [
+							'1. Переходим по <b>Запросить доступ</b> и соглашаемся.', 
+							'2. Готово!'
+						]
+					];
+				break;
+				
 				case "PINTEREST_COOKIE":
 					$pinterest = \Smm\Grabber\Pinterest::instance();
 					
@@ -672,6 +744,7 @@ class SettingsController extends \Smm\GroupController {
 		$base_url = Url::mk('/')->set('gid', $this->group['id']);
 		
 		$this->content = View::factory('settings/auth', [
+			'error_description'		=> $_GET['error_description'] ?? '',
 			'oauth_list'			=> $oauth_list, 
 			'oauth_groups_list'		=> $oauth_groups_list, 
 			'groups_app_id'			=> $VK_COMM_MINI_APP['id'], 
