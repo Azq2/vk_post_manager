@@ -8,6 +8,7 @@ class Grabber {
 	const SOURCE_OK			= 1;
 	const SOURCE_INSTAGRAM	= 2;
 	const SOURCE_PINTEREST	= 3;
+	const SOURCE_TUMBLR		= 4;
 	
 	const POST_WITH_TEXT			= 0;
 	const POST_WITH_TEXT_GIF		= 1;
@@ -23,13 +24,15 @@ class Grabber {
 		self::SOURCE_OK			=> 'OK', 
 		self::SOURCE_INSTAGRAM	=> 'INSTAGRAM', 
 		self::SOURCE_PINTEREST	=> 'PINTEREST', 
+		self::SOURCE_TUMBLR		=> 'TUMBLR', 
 	];
 	
 	public static $name2type = [
 		'VK'			=> self::SOURCE_VK, 
 		'OK'			=> self::SOURCE_OK, 
 		'INSTAGRAM'		=> self::SOURCE_INSTAGRAM, 
-		'PINTEREST'		=> self::SOURCE_PINTEREST
+		'PINTEREST'		=> self::SOURCE_PINTEREST, 
+		'TUMBLR'		=> self::SOURCE_TUMBLR
 	];
 	
 	public static function getSources($type) {

@@ -5,6 +5,7 @@ use \Z\Cache;
 
 class API {
 	protected $ch;
+	protected $oauth;
 	protected $client;
 	
 	public function __construct() {
@@ -25,23 +26,23 @@ class API {
 		$oauth_url = "https://www.tumblr.com/oauth2/authorize?".http_build_query(array_merge([
 			'client_id'			=> \Z\Config::get("oauth.TUMBLR.id"),
 			'response_type'		=> 'code',
-			'scope'				=> 'basic write',
+			'scope'				=> 'basic write offline_access',
 			'state'				=> '',
 		], $params), "", "&");
 		return $oauth_url;
 	}
 	
 	public function loginOauthCode($code, $params = []) {
-		return $this->exec('oauth2/token', array_merge([
+		return $this->exec('POST', 'oauth2/token', array_merge([
 			'grant_type'	=> 'authorization_code',
 			'code'			=> $code,
 			'client_id'		=> \Z\Config::get("oauth.TUMBLR.id"),
 			'client_secret'	=> \Z\Config::get("oauth.TUMBLR.secret")
-		], $params));
+		], $params), false);
 	}
 	
-	public function exec($method, $args = []) {
-		$response = $this->_sendRequest("https://api.tumblr.com/v2/$method", $args);
+	public function exec($method, $url, $args = [], $use_auth = true) {
+		$response = $this->sendRequest($method, "https://api.tumblr.com/v2/$url", $args, $use_auth);
 		$code = $response->code;
 		
 		if (!($json = json_decode($response->body))) {
@@ -56,16 +57,54 @@ class API {
 		return new API\Response($code, $json);
 	}
 	
-	protected function _sendRequest($url, $post) {
-		curl_setopt_array($this->ch, [
-			CURLOPT_URL				=> $url, 
-			CURLOPT_POST			=> !empty($post), 
-			CURLOPT_POSTFIELDS		=> $post
-		]);
+	protected function renewOauthKey() {
+		$oauth = \Smm\Oauth::getAccessToken('TUMBLR');
+		if ($oauth && $oauth['expires'] && $oauth['expires'] - time() <= 600) {
+			$result = $this->exec('POST', 'oauth2/token', [
+				'grant_type'	=> 'refresh_token',
+				'refresh_token'	=> $oauth['refresh_token'],
+				'client_id'		=> \Z\Config::get("oauth.TUMBLR.id"),
+				'client_secret'	=> \Z\Config::get("oauth.TUMBLR.secret")
+			], false);
+			
+			if ($result->success()) {
+				\Z\DB::insert('vk_oauth')
+					->set([
+						'type'			=> 'TUMBLR', 
+						'access_token'	=> $result->access_token, 
+						'secret'		=> $result->secret ?? '', 
+						'refresh_token'	=> $result->refresh_token ?? '', 
+						'expires'		=> $result->expires_in ? time() + $result->expires_in : 0, 
+					])
+					->onDuplicateSetValues('access_token')
+					->onDuplicateSetValues('refresh_token')
+					->onDuplicateSetValues('secret')
+					->onDuplicateSetValues('expires')
+					->execute();
+				
+				$oauth = \Smm\Oauth::getAccessToken('TUMBLR');
+			}
+		}
+		return $oauth;
+	}
+	
+	protected function sendRequest($method, $url, $post, $use_auth = true) {
+		curl_setopt($this->ch, CURLOPT_CUSTOMREQUEST, $method);
 		
-		$auth = \Smm\Oauth::getAccessToken('TUMBLR');
-		if ($auth)
-			curl_setopt($this->ch, CURLOPT_HTTPHEADER, ["Authorization: Bearer ".$auth["access_token"]]);
+		if ($method == 'GET') {
+			curl_setopt($this->ch, CURLOPT_URL, $url."?".http_build_query($post, '', '&'));
+			curl_setopt($this->ch, CURLOPT_POST, false);
+		} else {
+			curl_setopt($this->ch, CURLOPT_URL, $url);
+			curl_setopt($this->ch, CURLOPT_POST, true);
+			curl_setopt($this->ch, CURLOPT_POSTFIELDS, $post);
+		}
+		
+		if ($use_auth) {
+			$oauth = $this->renewOauthKey();
+			if ($oauth)
+				curl_setopt($this->ch, CURLOPT_HTTPHEADER, ["Authorization: Bearer ".$oauth["access_token"]]);
+		}
 		
 		$res = curl_exec($this->ch);
 		

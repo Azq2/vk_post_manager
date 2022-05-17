@@ -36,7 +36,9 @@ class Oauth {
 		if ($token) {
 			return [
 				'access_token'			=> $token['access_token'], 
+				'refresh_token'			=> $token['refresh_token'], 
 				'secret'				=> $token['secret'], 
+				'expires'				=> $token['expires'], 
 				'access_token_type'		=> 'user', 
 				'client'				=> $oauth_users[$type]['client'] ?? false
 			];

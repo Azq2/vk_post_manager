@@ -378,6 +378,10 @@ class GrabberController extends \Smm\GroupController {
 			'PINTEREST'		=> [
 				'title'			=> 'Pinterest', 
 				'descr'			=> 'Ссылка вида: https://pinterest.ru/pin/605874956108657616/'
+			], 
+			'TUMBLR'		=> [
+				'title'			=> 'Tumblr', 
+				'descr'			=> 'Для хэштега: #tag'
 			]
 		];
 		
@@ -472,6 +476,21 @@ class GrabberController extends \Smm\GroupController {
 							];
 						} else {
 							$error = 'Неправильная ссылка на pin.';
+						}
+					break;
+					
+					case "TUMBLR":
+						if (!preg_match('/^#[\w\d_.-]+$/i', $raw_source_url)) {
+							$error = 'Неправильный тег.';
+						} else {
+							$new_source = [
+								'value'			=> htmlspecialchars(substr($raw_source_url, 1)), 
+								'type'			=> \Smm\Grabber::SOURCE_TUMBLR, 
+								'name'			=> $raw_source_url, 
+								'url'			=> 'https://www.tumblr.com/tagged/'.urlencode(substr($raw_source_url, 1)), 
+								'avatar'		=> '/images/grabber/avatar/TUMBLR.png', 
+								'internal_id'	=> ''
+							];
 						}
 					break;
 					
@@ -641,7 +660,8 @@ class GrabberController extends \Smm\GroupController {
 				'all'							=> 'Все',
 				\Smm\Grabber::SOURCE_VK			=> 'VK',
 				\Smm\Grabber::SOURCE_INSTAGRAM	=> 'Instagram',
-				\Smm\Grabber::SOURCE_PINTEREST	=> 'Pinterest'
+				\Smm\Grabber::SOURCE_PINTEREST	=> 'Pinterest',
+				\Smm\Grabber::SOURCE_TUMBLR		=> 'Tumblr'
 			],
 			'active'	=> $source_type
 		]);

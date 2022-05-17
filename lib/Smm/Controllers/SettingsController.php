@@ -534,10 +534,13 @@ class SettingsController extends \Smm\GroupController {
 						->set([
 							'type'			=> $oauth['type'], 
 							'access_token'	=> $result->access_token, 
-							'expires'		=> $result->expires_in ?? 0, 
-							'refresh_token'	=> ''
+							'secret'		=> $result->secret ?? '', 
+							'refresh_token'	=> $result->refresh_token ?? '', 
+							'expires'		=> $result->expires_in ? time() + $result->expires_in : 0, 
 						])
 						->onDuplicateSetValues('access_token')
+						->onDuplicateSetValues('refresh_token')
+						->onDuplicateSetValues('secret')
 						->onDuplicateSetValues('expires')
 						->execute();
 					$this->content['success'] = true;
@@ -684,7 +687,7 @@ class SettingsController extends \Smm\GroupController {
 					
 					if ($access_token) {
 						$user_api = new \Smm\Tumblr\API();
-						$result = $user_api->exec("user/info");
+						$result = $user_api->exec("GET", "user/info");
 						if ($result->success()) {
 							$logged_user = [
 								'name'		=> $result->response->user->name, 
