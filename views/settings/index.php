@@ -5,6 +5,12 @@
 	
 	<?php if ($is_admin): ?>
 		<div class="row">
+			<a href="<?= $kill_php_url ?>">
+				Перезапуск демонов
+			</a>
+		</div>
+		
+		<div class="row">
 			<a href="<?= $oauth_url ?>">
 				Настройки <b>oauth</b>
 			</a>

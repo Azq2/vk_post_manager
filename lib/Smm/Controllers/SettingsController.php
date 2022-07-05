@@ -850,6 +850,12 @@ class SettingsController extends \Smm\GroupController {
 		]);
 	}
 	
+	public function killAction() {
+		touch(APP."www/files/kill-daemons");
+		$redirect = Url::mk("/")->set('a', 'settings/index')->url();
+		$this->redirect($redirect);
+	}
+	
 	public function indexAction() {
 		$this->title = 'Настройки';
 		
@@ -857,6 +863,7 @@ class SettingsController extends \Smm\GroupController {
 		
 		$this->content = View::factory('settings/index', [
 			'exit_url'			=> $base_url->copy()->set('a', 'index/exit')->href(), 
+			'kill_php_url'		=> $base_url->copy()->set('a', 'settings/kill')->href(), 
 			'oauth_url'			=> $base_url->copy()->set('a', 'settings/auth')->href(), 
 			'groups_url'		=> $base_url->copy()->set('a', 'settings/groups')->href(), 
 			'callbacks_url'		=> $base_url->copy()->set('a', 'settings/callbacks')->href(), 

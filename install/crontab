@@ -12,6 +12,9 @@
 # Щедулер комментов к постам - добавляем первые комментарии к постам
 * * * * * php {project}/www/index.php Smm/Task/AutoCommentator --anticaptcha=1 >> {project}/logs/auto_commentator.log 2>&1
 
+# Контроль демонов
+* * * * * php {project}/www/index.php Smm/Task/Control >> {project}/logs/control.log 2>&1
+
 # Синхронизация Telegram канала и основного паблика в ВК
 */15 * * * * php {project}/www/index.php Smm/Task/VkToTelegram >> {project}/logs/cron_vk_to_telegram.log 2>&1
 
