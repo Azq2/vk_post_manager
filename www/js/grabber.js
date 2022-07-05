@@ -270,27 +270,6 @@ function init() {
 	
 	feed.addAction('queue', post_save);
 	
-	var source_filter = function (key_delete, key_add) {
-		var url = new Url(location.href), 
-			source = $('.js-grabber_filter_select').val();
-		
-		delete url.query[key_delete];
-		
-		if (source) {
-			if (!url.query[key_add])
-				url.query[key_add] = [];
-			if (!(url.query[key_add] instanceof Array))
-				url.query[key_add] = [url.query[key_add]];
-			
-			if (url.query[key_add].indexOf(source) < 0)
-				url.query[key_add].push(source);
-		} else {
-			delete url.query[key_add];
-		}
-		
-		location.href = url.toString();
-	};
-	
 	$('body').on('click', '.js-page_input_btn', function (e) {
 		e.preventDefault();
 		var page = Math.max(1, +$(this).parents('.js-pagenav').find('.js-page_input').val() || 0);
@@ -305,42 +284,33 @@ function init() {
 		e.preventDefault();
 		window.localStorage["saved_offset_" + uniq_id] = $('#post_offset').val();
 		location.href = location.href;
-	}).on('click', '.js-grabber_filter_whitelist', function (e) {
-		e.preventDefault();
-		source_filter('exclude[]', 'include[]');
-	}).on('click', '.js-grabber_filter_blacklist', function (e) {
-		e.preventDefault();
-		source_filter('include[]', 'exclude[]');
-	}).on('click', '.js-grabber_filter_delete', function (e) {
-		e.preventDefault();
-		
-		var url = new Url(location.href), 
-			source = $(this).data('id');
-		
-		$.each(['include[]', 'exclude[]'], function (_, k) {
-			if (!url.query[k])
-				url.query[k] = [];
-			if (!(url.query[k] instanceof Array))
-				url.query[k] = [url.query[k]];
-			
-			var new_values = [];
-			$.each(url.query[k], function (_, v) {
-				if (v != source)
-					new_values.push(v);
-			});
-			url.query[k] = new_values;
-			
-			if (!url.query[k].length)
-				delete url.query[k];
-		});
-		
-		location.href = url.toString();
 	}).on('click', '.js-grabber_interval_set', function (e) {
 		e.preventDefault();
 		
 		var url = new Url(location.href);
 		url.query.date_from = $('#date_from').val();
 		url.query.date_to = $('#date_to').val();
+		location.href = url.toString();
+	}).on('click', '.js-open_grabber_src_filter', function (e) {
+		$(this).remove();
+		$('#grabber_src_filter').removeClass('hide');
+	}).on('click', '.js-grabber_apply_src_filter', function (e) {
+		var url = new Url(location.href);
+		
+		let filter_type = $('input[name="src_filter_type"]:checked').val();
+		if (filter_type == 'include') {
+			url.query["exclude[]"] = [];
+		} else {
+			url.query["include[]"] = [];
+		}
+		
+		url.query[`${filter_type}[]`] = $('input[name="src_filter"]:checked').toArray().map((el) => el.value);
+		
+		location.href = url.toString();
+	}).on('click', '.js-grabber_reset_src_filter', function (e) {
+		var url = new Url(location.href);
+		url.query["exclude[]"] = [];
+		url.query["include[]"] = [];
 		location.href = url.toString();
 	});
 	

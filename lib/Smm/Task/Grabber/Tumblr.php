@@ -53,21 +53,36 @@ class Tumblr extends \Z\Task {
 		$api = new \Smm\Tumblr\Web();
 		
 		foreach ($sources as $id => $source) {
-			foreach (['top', 'recent'] as $sort) {
-				echo "TAG: #".$source['value']." ($sort)\n";
-				
-				$response = $api->getTagged($source['value'], $sort);
+			if ($source['value'][0] == '@') {
+				echo "USER: ".$source['value']."\n";
+				$response = $api->getUser(substr($source['value'], 1));
 				if ($response->error) {
 					echo "=> error: ".$response->error."\n";
 					continue;
 				}
 				
-				if (!isset($response->data->Tagged->timeline->elements)) {
+				if (!isset($response->data->PeeprRoute->initialTimeline->objects)) {
 					echo "=> error: timeline not found!\n";
 					continue;
 				}
 				
-				$this->parseTimeline($source, $response->data->Tagged->timeline->elements, $sort);
+				$this->parseTimeline($source, $response->data->PeeprRoute->initialTimeline->objects, 'user');
+			} else {
+				foreach (['top', 'recent'] as $sort) {
+					echo "TAG: #".$source['value']." ($sort)\n";
+					$response = $api->getTagged($source['value'], $sort);
+					if ($response->error) {
+						echo "=> error: ".$response->error."\n";
+						continue;
+					}
+					
+					if (!isset($response->data->Tagged->timeline->elements)) {
+						echo "=> error: timeline not found!\n";
+						continue;
+					}
+					
+					$this->parseTimeline($source, $response->data->Tagged->timeline->elements, $sort);
+				}
 			}
 		}
 	}
@@ -128,6 +143,13 @@ class Tumblr extends \Z\Task {
 				continue;
 			}
 			
+			$list_type = \Smm\Grabber::LIST_UNKNOWN;
+			if ($sort == 'top') {
+				$list_type = \Smm\Grabber::LIST_TOP;
+			} else if ($sort == 'recent') {
+				$list_type = \Smm\Grabber::LIST_NEW;
+			}
+			
 			$item = [
 				'source_id'			=> $source['id'],
 				'source_type'		=> \Smm\Grabber::SOURCE_TUMBLR,
@@ -142,7 +164,7 @@ class Tumblr extends \Z\Task {
 				'reposts'			=> ($post->reblogCount ?? 0) + ($post->replyCount ?? 0),
 				'images_cnt'		=> $images_cnt,
 				'gifs_cnt'			=> $gifs_cnt,
-				'list_type'			=> ($sort == 'top' ? \Smm\Grabber::LIST_TOP : \Smm\Grabber::LIST_NEW)
+				'list_type'			=> $list_type
 			];
 			
 			if (\Smm\Grabber::addNewPost((object) $item))

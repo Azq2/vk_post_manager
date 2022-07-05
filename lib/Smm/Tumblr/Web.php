@@ -47,6 +47,22 @@ class Web {
 		]);
 	}
 	
+	public function getUser($user) {
+		$url = "https://www.tumblr.com/blog/view/".urlencode($user);
+		$html = $this->loadHTML($url);
+		if (!$html)
+			return (object) ['error' => "Can't fetch $url"];
+		
+		if (!preg_match('/<script[^>]+>\s*window\[\'___INITIAL_STATE___\'\]\s*=\s*(.*?);\s*\<\/script>/si', $html, $m))
+			return (object) ['error' => "Can't find ___INITIAL_STATE___"];
+		
+		$json = json_decode(str_replace(":undefined", ":null", $m[1]));
+		if (!$json)
+			return (object) ['error' => "Invalid JSON"];
+		
+		return (object) ['error' => false, 'data' => $json];
+	}
+	
 	public function getTagged($tag, $sort = "top") {
 		$url = "https://www.tumblr.com/tagged/".urlencode($tag)."?sort=".urlencode($sort);
 		$html = $this->loadHTML($url);
@@ -82,5 +98,22 @@ class Web {
 			sleep(1);
 		}
 		return false;
+	}
+	
+	protected function createDom($res) {
+		$doc = new \DOMDocument('1.0', 'UTF-8');
+		$doc->strictErrorChecking = false;
+		$doc->encoding = 'UTF-8';
+		@$doc->loadHTML('<?xml version="1.1" encoding="UTF-8" ?>'.$res);
+		$xpath = new \DOMXPath($doc);
+		foreach ($xpath->query('//comment()') as $comment)
+			$comment->parentNode->removeChild($comment);
+		$scripts = $doc->getElementsByTagName('script');
+		foreach ($scripts as $script)
+			$script->parentNode->removeChild($script);
+		$styles = $doc->getElementsByTagName('style');
+		foreach ($styles as $style)
+			$style->parentNode->removeChild($style);
+		return $doc;
 	}
 }

@@ -100,6 +100,12 @@ class GrabberController extends \Smm\GroupController {
 		$date_from = $_REQUEST['date_from'] ?? '';
 		$date_to = $_REQUEST['date_to'] ?? '';
 		
+		if ($include) {
+			$exclude = [];
+		} else if ($exclude) {
+			$include = [];
+		}
+		
 		$sources = $this->_getSources();
 		
 		$sources_ids = [];
@@ -352,8 +358,6 @@ class GrabberController extends \Smm\GroupController {
 			'time_blacklist'		=> $time_blacklist, 
 			'blacklist_filtered'	=> count($blacklist_filtered)
 		];
-		
-		$this->proxyThumbGenKey();
 	}
 	
 	public function sourcesAction() {
@@ -381,7 +385,9 @@ class GrabberController extends \Smm\GroupController {
 			], 
 			'TUMBLR'		=> [
 				'title'			=> 'Tumblr', 
-				'descr'			=> 'Для хэштега: #tag'
+				'descr'			=>
+					'Для хэштега: #tag<br />'.
+					'Для юзера: https://USER.tumblr.com'
 			]
 		];
 		
@@ -480,9 +486,7 @@ class GrabberController extends \Smm\GroupController {
 					break;
 					
 					case "TUMBLR":
-						if (!preg_match('/^#[\w\d_.-]+$/i', $raw_source_url)) {
-							$error = 'Неправильный тег.';
-						} else {
+						if (preg_match('/^#[\w\d_.- ]+$/i', $raw_source_url)) {
 							$new_source = [
 								'value'			=> htmlspecialchars(substr($raw_source_url, 1)), 
 								'type'			=> \Smm\Grabber::SOURCE_TUMBLR, 
@@ -491,6 +495,17 @@ class GrabberController extends \Smm\GroupController {
 								'avatar'		=> '/images/grabber/avatar/TUMBLR.png', 
 								'internal_id'	=> ''
 							];
+						} elseif (preg_match('#http(?:s)?://([\w\d_-]+)\.tumblr\.com/#i', $raw_source_url, $m)) {
+							$new_source = [
+								'value'			=> '@'.$m[1], 
+								'type'			=> \Smm\Grabber::SOURCE_TUMBLR, 
+								'name'			=> '@'.$m[1], 
+								'url'			=> 'https://'.$m[1].'.tumblr.com/', 
+								'avatar'		=> '/images/grabber/avatar/TUMBLR.png', 
+								'internal_id'	=> ''
+							];
+						} else {
+							$error = 'Неправильный тег.';
 						}
 					break;
 					
@@ -584,6 +599,12 @@ class GrabberController extends \Smm\GroupController {
 		$list_type = $_REQUEST['list_type'] ?? 'all';
 		$source_type = $_REQUEST['source_type'] ?? 'all';
 		
+		if ($include) {
+			$exclude = [];
+		} else if ($exclude) {
+			$include = [];
+		}
+		
 		$date_from = $_REQUEST['date_from'] ?? date("Y-m-d", time() - 3600 * 24 * 31 * 3);
 		$date_to = $_REQUEST['date_to'] ?? '';
 		
@@ -668,8 +689,14 @@ class GrabberController extends \Smm\GroupController {
 		
 		$sources_ids = [];
 		$sources_list = [];
-		$include_list = [];
-		$exclude_list = [];
+		$source_filter_list = [];
+		$source_filter_type = 'none';
+		
+		if ($include) {
+			$source_filter_type = 'include';
+		} elseif ($exclude) {
+			$source_filter_type = 'exclude';
+		}
 		
 		foreach ($sources as $s) {
 			$key = \Smm\Grabber::$type2name[$s['type']]."_".$s['value'];
@@ -684,10 +711,10 @@ class GrabberController extends \Smm\GroupController {
 			];
 			
 			if (in_array($key, $include))
-				$include_list[] = $source_view;
+				$source_filter_list[] = $key;
 			
 			if (in_array($key, $exclude))
-				$exclude_list[] = $source_view;
+				$source_filter_list[] = $key;
 			
 			if ($s['enabled'])
 				$sources_ids[] = $s['id'];
@@ -699,10 +726,10 @@ class GrabberController extends \Smm\GroupController {
 		$this->content = View::factory('grabber/index', [
 			'add_url'			=> $base_url->copy()->set('a', 'grabber/sources')->href(), 
 			
-			'sources_ids'		=> $sources_ids, 
-			'sources'			=> $sources_list, 
-			'include_list'		=> $include_list, 
-			'exclude_list'		=> $exclude_list, 
+			'sources_ids'			=> $sources_ids, 
+			'sources'				=> $sources_list, 
+			'source_filter_list'	=> $source_filter_list, 
+			'source_filter_type'	=> $source_filter_type, 
 			
 			'sort'				=> $sort, 
 			'mode'				=> $mode, 
@@ -723,24 +750,13 @@ class GrabberController extends \Smm\GroupController {
 			'list_type_tabs'	=> $list_type_tabs->render(),
 			'source_type_tabs'	=> $source_type_tabs->render()
 		]);
-		
-		$this->proxyThumbGenKey();
-	}
-	
-	private function proxyThumbGenKey() {
-		if (!isset($_COOKIE['impk']) || strlen($_COOKIE['impk']) != 64) {
-			$_COOKIE['impk'] = hash("sha256", openssl_random_pseudo_bytes(1024));
-			setcookie('impk', $_COOKIE['impk'], time() + 365 * 24 * 3600 * 2);
-		}
 	}
 	
 	private function proxyThumb($url) {
-		$key1 = $_COOKIE['impk'] ?? "";
-		$key2 = Config::get("common", "image_proxy_key");
-		
+		$key = Config::get("common", "image_proxy_key");
 		return '/img-proxy/?'.http_build_query([
 			'url'		=> $url,
-			'hash'		=> hash("sha256", "img-proxy:$key1:$key2:$url")
+			'hash'		=> hash("sha256", "img-proxy:$key:$url")
 		], '', '&');
 	}
 	

@@ -48,42 +48,48 @@
 	
 	<?php if ($mode == 'external'): ?>
 		<div class="row">
-			<?php if ($include_list): ?>
-				<div class="pad_b">
-					<span class="m">Выводим только эти:</span>
-					<?php foreach ($include_list as $s): ?>
-						<img src="/images/grabber/icon/<?= $s['type'] ?>.png" width="16" height="16" alt="<?= $s['type'] ?>" class="m" />
-						<a href="<?= $s['url'] ?>" target="_blank" class="m"><?= $s['name'] ?></a>
-						<b class="red js-grabber_filter_delete cursor" title="Удалить" data-id="<?= $s['key'] ?>">(x)</b><!--
-						--><?= $s != end($include_list) ? ',' : '' ?>
-					<?php endforeach; ?>
-				</div>
-			<?php endif; ?>
+			<a href="#" class="js-open_grabber_src_filter">
+				<?php if ($source_filter_type != 'none'): ?><b><?php endif; ?>
+				Фильтр по корованам
+				<?php if ($source_filter_type != 'none'): ?></b><?php endif; ?>
+			</a>
 			
-			<?php if ($exclude_list): ?>
-				<div class="pad_b">
-					<span class="m">Выводим всё, кроме этих:</span>
-					<?php foreach ($exclude_list as $i => $s): ?>
-						<img src="/images/grabber/icon/<?= $s['type'] ?>.png" width="16" height="16" alt="<?= $s['type'] ?>" class="m" />
-						<a href="<?= $s['url'] ?>" target="_blank" class="m"><?= $s['name'] ?></a>
-						<b class="red js-grabber_filter_delete cursor" title="Удалить" data-id="<?= $s['key'] ?>">(x)</b><!--
-						--><?= $s != end($exclude_list) ? ',' : '' ?>
-					<?php endforeach; ?>
+			<div id="grabber_src_filter" class="wrapper bord hide">
+				<div class="row header cursor">
+					Фильтр по корованам
 				</div>
-			<?php endif; ?>
-			
-			<select class="js-grabber_filter_select">
-				<option value="">- Фильтр по корованам -</option>
+				
+				<div class="row">
+					Тип фильтра:
+					<label>
+						<input type="radio" name="src_filter_type" value="include"
+							<?php if ($source_filter_type == 'none' || $source_filter_type == 'include'): ?> checked<?php endif; ?> /> Только эти
+					</label>
+					&nbsp;
+					<label>
+						<input type="radio" name="src_filter_type" value="exclude"
+							<?php if ($source_filter_type == 'exclude'): ?> checked<?php endif; ?> /> Все, кроме этих
+					</label>
+				</div>
+				
 				<?php foreach ($sources as $i => $s): ?>
-					<?php if ($s['enabled']): ?>
-						<option class="soc-item-<?= strtolower($s['type']) ?>" value="<?= $s['key'] ?>">
-							<?= $s['name'] ?>
-						</option>
-					<?php endif; ?>
+					<label class="row" style="display: inline-block;width: 20em;overflow: hidden;white-space: nowrap;text-overflow: ellipsis;">
+						<input type="checkbox"
+							name="src_filter"
+							<?php if (in_array($s['key'], $source_filter_list)): ?>
+								checked="checked"
+							<?php endif; ?>
+							value="<?= $s['key'] ?>" class="m" />
+						<img src="/images/grabber/icon/<?= $s['type'] ?>.png" width="16" height="16" alt="<?= $s['type'] ?>" class="m" />
+						<span class="m"><?= $s['name'] ?></span>
+					</label>
 				<?php endforeach; ?>
-			</select>
-			<button class="btn btn-green js-grabber_filter_whitelist" title="Никто, кроме">&nbsp;+&nbsp;</button>
-			<button class="btn btn-delete js-grabber_filter_blacklist" title="Все, кроме">&nbsp;-&nbsp;</button>
+				
+				<div class="row">
+					<button class="btn js-grabber_apply_src_filter">Применить</button>
+					<button class="btn btn-delete js-grabber_reset_src_filter">Сбросить</button>
+				</div>
+			</div>
 		</div>
 	<?php endif; ?>
 </div>
