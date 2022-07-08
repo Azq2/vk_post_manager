@@ -54,7 +54,7 @@ class Instagram extends \Z\Task {
 		
 		$cache = \Z\Cache::instance();
 		
-		$last_time_key = "instagram-grabber-last:v9";
+		$last_time_key = "instagram-grabber-last:v10";
 		
 		foreach ($sources as $id => $source) {
 			$last_check = $cache->get("$last_time_key:".$source['value']) ?: 0;
