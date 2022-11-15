@@ -31,6 +31,8 @@ class Web {
 		
 		$this->curl = curl_init();
 		curl_setopt_array($this->curl, [
+			CURLOPT_TIMEOUT				=> 60, 
+			CURLOPT_CONNECTTIMEOUT		=> 60, 
 			CURLOPT_RETURNTRANSFER		=> true, 
 			CURLOPT_COOKIEJAR			=> self::COOKIES_FILE, 
 			CURLOPT_COOKIEFILE			=> self::COOKIES_FILE, 

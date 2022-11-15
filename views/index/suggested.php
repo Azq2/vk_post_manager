@@ -69,6 +69,11 @@ require(['suggested']);
 		</div>
 		
 		<div class="pad_t">
+			Фиксированные интервалы
+			<input type="text" value="<?= $fixed_intervals ?>" name="fixed_intervals" placeholder="11:00, 22:00, ..." />
+		</div>
+		
+		<div class="pad_t">
 			<button class="btn">Сохранить</button>
 		</div>
 	</div>

@@ -295,6 +295,7 @@ CREATE TABLE `vk_groups` (
   `deviation` int(10) unsigned NOT NULL DEFAULT '0',
   `special_post_before` int(10) unsigned NOT NULL DEFAULT '1800',
   `special_post_after` int(10) unsigned NOT NULL DEFAULT '3600',
+  `fixed_intervals` varchar(2048) NOT NULL DEFAULT '',
   `telegram_channel_id` varchar(64) NOT NULL,
   `telegram_last_vk_id` int(11) NOT NULL DEFAULT '0',
   `meme` longtext,

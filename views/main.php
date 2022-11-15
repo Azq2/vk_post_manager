@@ -27,11 +27,6 @@
 	
 	<body>
 		<div class="main" style="background:rgb(255 255 255 / 0.96)" id="main">
-			<div class="row-error row center">
-				Ошибка! Произошёл отвал жопы... |
-				<a href="https://www.youtube.com/watch?v=dQw4w9WgXcQ" target="_blank">Скрыть</a>
-			</div>
-			
 			<div class="overlay hide" id="modal_overlay">
 				<div class="modal" id="modal_content">
 					

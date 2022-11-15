@@ -54,7 +54,7 @@ class Instagram extends \Z\Task {
 		
 		$cache = \Z\Cache::instance();
 		
-		$last_time_key = "instagram-grabber-last:v10";
+		$last_time_key = "instagram-grabber-last:v13";
 		
 		foreach ($sources as $id => $source) {
 			$last_check = $cache->get("$last_time_key:".$source['value']) ?: 0;
@@ -140,6 +140,8 @@ class Instagram extends \Z\Task {
 					$date = time();
 					if (isset($item->taken_at)) {
 						$date = $item->taken_at;
+					} elseif (isset($item->taken_at_timestamp)) {
+						$date = $item->taken_at_timestamp;
 					} else {
 						echo "=> WARNING: can't parse date!\n";
 					}

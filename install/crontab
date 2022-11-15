@@ -21,23 +21,23 @@
 # Агрегатор контента (из инсты/вк и др.)
 */15 * * * * php {project}/www/index.php Smm/Task/Grabber/VK >> {project}/logs/cron_grabber.VK.log 2>&1
 */15 * * * * php {project}/www/index.php Smm/Task/Grabber/Pinterest >> {project}/logs/cron_grabber.PINTEREST.log 2>&1
-#*/15 * * * * php {project}/www/index.php Smm/Task/Grabber/Instagram >> {project}/logs/cron_grabber.INSTAGRAM.log 2>&1
+*/15 * * * * php {project}/www/index.php Smm/Task/Grabber/Instagram >> {project}/logs/cron_grabber.INSTAGRAM.log 2>&1
 */15 * * * * php {project}/www/index.php Smm/Task/Grabber/Tumblr >> {project}/logs/cron_grabber.TUMBLR.log 2>&1
 
 # Лог участников (кто ушёл, пришёл)
-*/10 * * * * php {project}/www/index.php Smm/Task/LogMembers >> {project}/logs/cron_members.log 2>&1
+#*/10 * * * * php {project}/www/index.php Smm/Task/LogMembers >> {project}/logs/cron_members.log 2>&1
 
 # Сбор статистики
-*/10 * * * * php {project}/www/index.php Smm/Task/GroupActivityGrabber >> {project}/logs/groups_activity_grabber.log 2>&1
+#*/10 * * * * php {project}/www/index.php Smm/Task/GroupActivityGrabber >> {project}/logs/groups_activity_grabber.log 2>&1
 
 # Агрегация статистики
-*/10 * * * * php {project}/www/index.php Smm/Task/GroupActivityAggregator >> {project}/logs/groups_activity_aggregator.log 2>&1
+#*/10 * * * * php {project}/www/index.php Smm/Task/GroupActivityAggregator >> {project}/logs/groups_activity_aggregator.log 2>&1
 
 # Обновление виджета
-* * * * * php {project}/www/index.php Smm/Task/VkWidgets >> {project}/logs/vk_widgets.log 2>&1
+#* * * * * php {project}/www/index.php Smm/Task/VkWidgets >> {project}/logs/vk_widgets.log 2>&1
 
 # Лог полностью удалённых юзеров
-0 0 * * * php {project}/www/index.php Smm/Task/LogDeletedMembers >> {project}/logs/log_deleted_members.log 2>&1
+#0 0 * * * php {project}/www/index.php Smm/Task/LogDeletedMembers >> {project}/logs/log_deleted_members.log 2>&1
 
 # Бот-котификатор
 * * * * * php {project}/www/index.php Smm/Task/CatificatorVolumeTester >> {project}/logs/catificator_volume_tester.log 2>&1

@@ -206,6 +206,7 @@ class IndexController extends \Smm\GroupController {
 			'special_post_before'	=> $this->_parseTime($this->group['special_post_before']), 
 			'special_post_after'	=> $this->_parseTime($this->group['special_post_after']), 
 			'deviation'				=> $this->_parseTime($this->group['deviation']), 
+			'fixed_intervals'		=> $this->group['fixed_intervals'],
 			'success'				=> isset($_REQUEST['ok']), 
 			'postponed_cnt'			=> $res->postponed_cnt, 
 			'suggests_cnt'			=> $res->suggests_cnt
@@ -353,6 +354,8 @@ class IndexController extends \Smm\GroupController {
 					$special_post_after_hh = min(max(0, $_POST['special_post_after_hh'] ?? 0), 23);
 					$special_post_after_mm = min(max(0, $_POST['special_post_after_mm'] ?? 0), 59);
 					
+					$fixed_intervals = \Smm\VK\Posts::parseFixedIntervals($_POST['fixed_intervals'] ?? '');
+					
 					$to						= $to_hh * 3600 + $to_mm * 60;
 					$from					= $from_hh * 3600 + $from_mm * 60;
 					$interval				= $interval_hh * 3600 + $interval_mm * 60;
@@ -365,6 +368,24 @@ class IndexController extends \Smm\GroupController {
 					
 					$deviation = max(0, min(round($interval / 2), $deviation));
 					
+					sort($fixed_intervals);
+					
+					if ($fixed_intervals) {
+						$from = min($fixed_intervals);
+						$to = max($fixed_intervals);
+						
+						$last_interval = NULL;
+						$min_interval = 24 * 3600;
+						
+						foreach ($fixed_intervals as $fixed_interval) {
+							if ($last_interval !== NULL)
+								$min_interval = min($min_interval, $fixed_interval - $last_interval);
+							$last_interval = $fixed_interval;
+						}
+						
+						$interval = $min_interval;
+					}
+					
 					DB::update('vk_groups')
 						->set([
 							'period_from'			=> $from, 
@@ -373,6 +394,7 @@ class IndexController extends \Smm\GroupController {
 							'deviation'				=> $deviation, 
 							'special_post_before'	=> $special_post_before, 
 							'special_post_after'	=> $special_post_after, 
+							'fixed_intervals'		=> \Smm\VK\Posts::serializeFixedIntervals($fixed_intervals)
 						])
 						->where('id', '=', $this->group['id'])
 						->execute();

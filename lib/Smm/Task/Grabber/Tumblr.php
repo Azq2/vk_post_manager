@@ -98,43 +98,49 @@ class Tumblr extends \Z\Task {
 			$gifs_cnt = 0;
 			$attaches = [];
 			
-			foreach ($post->content as $content) {
-				if ($content->type == 'video') {
-					if (!isset($content->media)) {
-						echo "=> skip unknown video: ".$content->provider."\n";
-						continue;
+			$post_contents = [$post];
+			foreach ($post->trail as $trail)
+				$post_contents[] = $trail;
+			
+			foreach ($post_contents as $post_content) {
+				foreach ($post_content->content as $content) {
+					if ($content->type == 'video') {
+						if (!isset($content->media)) {
+							echo "=> skip unknown video: ".$content->provider."\n";
+							continue;
+						}
+						
+						$attaches[] = [
+							'id'		=> 'doc_'.$post->id.'_'.count($attaches),
+							'type'		=> 'doc',
+							'ext'		=> 'mp4',
+							'title'		=> 'video.mp4',
+							'w'			=> $content->media->width,
+							'h'			=> $content->media->height,
+							'thumbs'	=> [
+								$content->poster[0]->width	=> $content->poster[0]->url
+							],
+							'video'		=> [
+								'has_audio'		=> NULL,
+								'duration'		=> 0
+							],
+							'url'		=> $content->media->url,
+							'mp4'		=> $content->media->url,
+							'page_url'	=> $post->postUrl
+						];
+						$gifs_cnt++;
+					} else if ($content->type == 'image') {
+						$attaches[] = [
+							'id'		=> 'photo_'.$post->id.'_'.count($attaches),
+							'type'		=> 'photo',
+							'w'			=> $content->media[0]->width,
+							'h'			=> $content->media[0]->height,
+							'thumbs'	=> [
+								$content->media[0]->width	=> $content->media[0]->url
+							]
+						];
+						$images_cnt++;
 					}
-					
-					$attaches[] = [
-						'id'		=> 'doc_'.$post->id.'_'.count($attaches),
-						'type'		=> 'doc',
-						'ext'		=> 'mp4',
-						'title'		=> 'video.mp4',
-						'w'			=> $content->media->width,
-						'h'			=> $content->media->height,
-						'thumbs'	=> [
-							$content->poster[0]->width	=> $content->poster[0]->url
-						],
-						'video'		=> [
-							'has_audio'		=> NULL,
-							'duration'		=> 0
-						],
-						'url'		=> $content->media->url,
-						'mp4'		=> $content->media->url,
-						'page_url'	=> $post->postUrl
-					];
-					$gifs_cnt++;
-				} else if ($content->type == 'image') {
-					$attaches[] = [
-						'id'		=> 'photo_'.$post->id.'_'.count($attaches),
-						'type'		=> 'photo',
-						'w'			=> $content->media[0]->width,
-						'h'			=> $content->media[0]->height,
-						'thumbs'	=> [
-							$content->media[0]->width	=> $content->media[0]->url
-						]
-					];
-					$images_cnt++;
 				}
 			}
 			

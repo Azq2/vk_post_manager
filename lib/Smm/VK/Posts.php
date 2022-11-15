@@ -7,6 +7,26 @@ use \Z\Date;
 use \Z\Util\Url;
 
 class Posts {
+	public static function parseFixedIntervals($fixed_intervals) {
+		if (!trim($fixed_intervals))
+			return [];
+		
+		$parsed_intervals = [];
+		foreach (preg_split('/[,\s]+/s', $fixed_intervals) as $interval) {
+			if (preg_match('/^(\d+):(\d+)$/', $interval, $m))
+				$parsed_intervals[] = ($m[1] * 3600) + ($m[2] * 60);
+		}
+		return $parsed_intervals;
+	}
+	
+	public static function serializeFixedIntervals($fixed_intervals) {
+		return implode(", ", array_map(function ($v) {
+			$h = floor($v / 3600);
+			$m = floor(($v - $h * 3600) / 60);
+			return sprintf("%02d:%02d", $h, $m);
+		}, $fixed_intervals));
+	}
+	
 	public static function getWallPostApiData($post) {
 		$out = [
 			'lat'			=> 0, 
@@ -906,6 +926,17 @@ class Posts {
 		return $post_time;
 	}
 	
+	public static function findNextFixedInterval($prev_time, $settings) {
+		$day_start = Date::getDayStart($prev_time);
+		$fixed_intervals = self::parseFixedIntervals($settings['fixed_intervals']);
+		foreach ($fixed_intervals as $v) {
+			$next_time = $day_start + $v;
+			if ($next_time > $prev_time && $next_time - $prev_time >= 3600)
+				return $next_time;
+		}
+		return $day_start + 3600 * 24 + $fixed_intervals[0];
+	}
+	
 	public static function processQueue($posts, $settings) {
 		// Разделяем посты на:
 		// 1. special	- с фиксированным временем, которое нельзя менять
@@ -943,11 +974,15 @@ class Posts {
 			if ($post->special)
 				continue;
 			
-			// Рассчитываем дату следующего поста
-			if ($prev_post_is_published_special) {
-				$post->date = self::roundPostDate($prev_post_date + $settings['special_post_after'], $settings);
+			if ($settings['fixed_intervals']) {
+				$post->date = self::findNextFixedInterval($prev_post_date, $settings);
 			} else {
-				$post->date = self::roundPostDate($prev_post_date + $settings['interval'], $settings);
+				// Рассчитываем дату следующего поста
+				if ($prev_post_is_published_special) {
+					$post->date = self::roundPostDate($prev_post_date + $settings['special_post_after'], $settings);
+				} else {
+					$post->date = self::roundPostDate($prev_post_date + $settings['interval'], $settings);
+				}
 			}
 			$post->date = self::deviatePostDate($post->id, $post->date, 0, $settings);
 			
