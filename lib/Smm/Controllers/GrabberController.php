@@ -486,7 +486,7 @@ class GrabberController extends \Smm\GroupController {
 					break;
 					
 					case "TUMBLR":
-						if (preg_match('/^#[\w\d_.- ]+$/i', $raw_source_url)) {
+						if (preg_match('/^#[\w\d_. -]+$/i', $raw_source_url)) {
 							$new_source = [
 								'value'			=> htmlspecialchars(substr($raw_source_url, 1)), 
 								'type'			=> \Smm\Grabber::SOURCE_TUMBLR, 
@@ -495,7 +495,16 @@ class GrabberController extends \Smm\GroupController {
 								'avatar'		=> '/images/grabber/avatar/TUMBLR.png', 
 								'internal_id'	=> ''
 							];
-						} elseif (preg_match('#http(?:s)?://([\w\d_-]+)\.tumblr\.com/#i', $raw_source_url, $m)) {
+						} elseif (preg_match('#http(?:s)?://([\w\d_-]+)\.tumblr\.com/#i', $raw_source_url, $m) && $m[1] != "www") {
+							$new_source = [
+								'value'			=> '@'.$m[1], 
+								'type'			=> \Smm\Grabber::SOURCE_TUMBLR, 
+								'name'			=> '@'.$m[1], 
+								'url'			=> 'https://'.$m[1].'.tumblr.com/', 
+								'avatar'		=> '/images/grabber/avatar/TUMBLR.png', 
+								'internal_id'	=> ''
+							];
+						} elseif (preg_match('#http(?:s)?://(?:www\.)?tumblr\.com\/([\w\d_-]+)#i', $raw_source_url, $m)) {
 							$new_source = [
 								'value'			=> '@'.$m[1], 
 								'type'			=> \Smm\Grabber::SOURCE_TUMBLR, 
