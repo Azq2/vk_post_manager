@@ -40,6 +40,6 @@
 #0 0 * * * php {project}/www/index.php Smm/Task/LogDeletedMembers >> {project}/logs/log_deleted_members.log 2>&1
 
 # Бот-котификатор
-* * * * * php {project}/www/index.php Smm/Task/CatificatorVolumeTester >> {project}/logs/catificator_volume_tester.log 2>&1
-* * * * * php {project}/www/index.php Smm/Task/CatificatorBot --instance=0 >> {project}/logs/catificator.0.log 2>&1
-* * * * * php {project}/www/index.php Smm/Task/CatificatorBot --instance=1 >> {project}/logs/catificator.1.log 2>&1
+#* * * * * php {project}/www/index.php Smm/Task/CatificatorVolumeTester >> {project}/logs/catificator_volume_tester.log 2>&1
+#* * * * * php {project}/www/index.php Smm/Task/CatificatorBot --instance=0 >> {project}/logs/catificator.0.log 2>&1
+#* * * * * php {project}/www/index.php Smm/Task/CatificatorBot --instance=1 >> {project}/logs/catificator.1.log 2>&1

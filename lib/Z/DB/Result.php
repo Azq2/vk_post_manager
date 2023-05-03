@@ -80,52 +80,52 @@ abstract class Result implements \Countable, \SeekableIterator, \ArrayAccess {
 	}
 	
 	/* Countable */
-	public function count() {
+	public function count(): int {
 		return $this->total_rows;
 	}
 	
 	/* ArrayAccess */
-	public function offsetExists($offset) {
+	public function offsetExists(mixed $offset): bool {
 		return $offset >= 0 && $offset < $this->total_rows;
 	}
 	
-	public function offsetGet($offset) {
+	public function offsetGet(mixed $offset): mixed {
 		$this->cursor = $offset;
 		return $this->current();
 	}
 	
-	public function offsetSet($offset, $value) {
+	public function offsetSet(mixed $offset, mixed $value): void {
 		throw new \Z\DB\Exception(__CLASS__.' is readonly');
 	}
 	
-	public function offsetUnset($offset) {
+	public function offsetUnset(mixed $offset): void {
 		throw new \Z\DB\Exception(__CLASS__.' is readonly');
 	}
 	
 	/* SeekableIterator */
-	public function seek($offset) {
+	public function seek($offset): void {
 		$this->cursor = $offset;
 	}
 	
-	public abstract function current();
+	public abstract function current(): mixed;
 	
-	public function key() {
+	public function key(): mixed {
 		return $this->cursor;
 	}
 	
-	public function next() {
+	public function next(): void {
 		++$this->cursor;
 	}
 	
-	public function prev() {
+	public function prev(): void {
 		--$this->cursor;
 	}
 	
-	public function rewind() {
+	public function rewind(): void {
 		$this->cursor = 0;
 	}
 	
-	public function valid() {
+	public function valid(): bool {
 		return $this->cursor >= 0 && $this->cursor < $this->total_rows;
 	}
 }

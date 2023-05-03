@@ -3,9 +3,9 @@
 namespace PhpAmqpLib\Connection;
 
 /**
- * @deprecated AMQPStreamConnection can be lazy too. Use AMQPConnectionFactory with AMQPConnectionConfig::setIsLazy(true)
+ * @deprecated AMQPLazySSLConnection can be lazy too. Use AMQPConnectionFactory with AMQPConnectionConfig::setIsLazy(true)
  */
-class AMQPLazyConnection extends AMQPStreamConnection
+class AMQPLazySSLConnection extends AMQPSSLConnection
 {
     /**
      * @inheritDoc

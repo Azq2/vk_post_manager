@@ -50,7 +50,7 @@ class Result extends \Z\DB\Result {
 		}
 	}
 	
-	public function current() {
+	public function current(): mixed {
 		if ($this->valid()) {
 			if (!$this->result->data_seek($this->cursor))
 				throw new \Z\DB\Exception("Can't seek result to ".$this->cursor." item, but total rows is ".$this->total_rows);

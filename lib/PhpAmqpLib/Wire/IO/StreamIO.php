@@ -1,4 +1,5 @@
 <?php
+
 namespace PhpAmqpLib\Wire\IO;
 
 use PhpAmqpLib\Exception\AMQPConnectionClosedException;
@@ -7,16 +8,17 @@ use PhpAmqpLib\Exception\AMQPIOException;
 use PhpAmqpLib\Exception\AMQPRuntimeException;
 use PhpAmqpLib\Exception\AMQPTimeoutException;
 use PhpAmqpLib\Helper\MiscHelper;
+use PhpAmqpLib\Helper\SocketConstants;
 
 class StreamIO extends AbstractIO
 {
     /** @var string */
     protected $protocol;
 
-    /** @var resource */
+    /** @var null|resource */
     protected $context;
 
-    /** @var resource */
+    /** @var null|resource */
     private $sock;
 
     /**
@@ -24,46 +26,47 @@ class StreamIO extends AbstractIO
      * @param int $port
      * @param float $connection_timeout
      * @param float $read_write_timeout
-     * @param null $context
+     * @param resource|array|null $context
      * @param bool $keepalive
      * @param int $heartbeat
+     * @param string|null $ssl_protocol
      */
     public function __construct(
         $host,
         $port,
         $connection_timeout,
-        $read_write_timeout = 130.0,
+        $read_write_timeout,
         $context = null,
         $keepalive = false,
-        $heartbeat = 60,
+        $heartbeat = 0,
         $ssl_protocol = null
     ) {
         // TODO FUTURE change comparison to <=
         // php-amqplib/php-amqplib#648, php-amqplib/php-amqplib#666
+        /*
+            TODO FUTURE enable this check
         if ($heartbeat !== 0 && ($read_write_timeout < ($heartbeat * 2))) {
             throw new \InvalidArgumentException('read_write_timeout must be at least 2x the heartbeat');
+        }
+         */
+
+        if (!is_resource($context) || get_resource_type($context) !== 'stream-context') {
+            $context = stream_context_create();
         }
 
         $this->protocol = 'tcp';
         $this->host = $host;
         $this->port = $port;
         $this->connection_timeout = $connection_timeout;
-        $this->read_timeout = $read_write_timeout;
-        $this->write_timeout = $read_write_timeout;
+        $this->read_timeout = (float)$read_write_timeout;
+        $this->write_timeout = (float)$read_write_timeout;
         $this->context = $context;
         $this->keepalive = $keepalive;
         $this->heartbeat = $heartbeat;
         $this->initial_heartbeat = $heartbeat;
         $this->canDispatchPcntlSignal = $this->isPcntlSignalEnabled();
 
-        if (!is_resource($this->context) || get_resource_type($this->context) !== 'stream-context') {
-            $this->context = stream_context_create();
-        }
-
-        // tcp_nodelay was added in 7.1.0
-        if (PHP_VERSION_ID >= 70100) {
-            stream_context_set_option($this->context, 'socket', 'tcp_nodelay', true);
-        }
+        stream_context_set_option($this->context, 'socket', 'tcp_nodelay', true);
 
         $options = stream_context_get_options($this->context);
         if (!empty($options['ssl'])) {
@@ -72,10 +75,6 @@ class StreamIO extends AbstractIO
             } else {
                 $this->protocol = 'ssl';
             }
-        }
-
-        if (!defined('SOCKET_EAGAIN')) {
-            define('SOCKET_EAGAIN', SOCKET_EWOULDBLOCK);
         }
     }
 
@@ -93,7 +92,7 @@ class StreamIO extends AbstractIO
             $this->port
         );
 
-        $this->set_error_handler();
+        $this->setErrorHandler();
 
         try {
             $this->sock = stream_socket_client(
@@ -104,9 +103,11 @@ class StreamIO extends AbstractIO
                 STREAM_CLIENT_CONNECT,
                 $this->context
             );
-            $this->cleanup_error_handler();
+            $this->throwOnError();
         } catch (\ErrorException $e) {
             throw new AMQPIOException($e->getMessage());
+        } finally {
+            $this->restoreErrorHandler();
         }
 
         if (false === $this->sock) {
@@ -120,7 +121,7 @@ class StreamIO extends AbstractIO
             );
         }
 
-        if (false === stream_socket_get_name($this->sock, true)) {
+        if (!stream_socket_get_name($this->sock, true)) {
             throw new AMQPIOException(
                 sprintf(
                     'Connection refused: %s ',
@@ -170,12 +171,14 @@ class StreamIO extends AbstractIO
                 throw new AMQPConnectionClosedException('Broken pipe or closed connection');
             }
 
-            $this->set_error_handler();
+            $this->setErrorHandler();
             try {
                 $buffer = fread($this->sock, ($len - $read));
-                $this->cleanup_error_handler();
+                $this->throwOnError();
             } catch (\ErrorException $e) {
                 throw new AMQPDataReadException($e->getMessage(), $e->getCode(), $e);
+            } finally {
+                $this->restoreErrorHandler();
             }
 
             if ($buffer === false) {
@@ -219,17 +222,21 @@ class StreamIO extends AbstractIO
      */
     public function write($data)
     {
+        $this->checkBrokerHeartbeat();
+
         $written = 0;
         $len = mb_strlen($data, 'ASCII');
         $write_start = microtime(true);
 
         while ($written < $len) {
-            if (!is_resource($this->sock)) {
-                throw new AMQPConnectionClosedException('Broken pipe or closed connection');
+            if (!is_resource($this->sock) || feof($this->sock)) {
+                $this->close();
+                $constants = SocketConstants::getInstance();
+                throw new AMQPConnectionClosedException('Broken pipe or closed connection', $constants->SOCKET_EPIPE);
             }
 
             $result = false;
-            $this->set_error_handler();
+            $this->setErrorHandler();
             // OpenSSL's C library function SSL_write() can balk on buffers > 8192
             // bytes in length, so we're limiting the write size here. On both TLS
             // and plaintext connections, the write loop will continue until the
@@ -238,25 +245,30 @@ class StreamIO extends AbstractIO
             // September 2002:
             // http://comments.gmane.org/gmane.comp.encryption.openssl.user/4361
             try {
+                // check stream and prevent from high CPU usage
+                $this->select_write();
                 $buffer = mb_substr($data, $written, self::BUFFER_SIZE, 'ASCII');
                 $result = fwrite($this->sock, $buffer);
-                $this->cleanup_error_handler();
+                $this->throwOnError();
             } catch (\ErrorException $e) {
                 $code = $this->last_error['errno'];
+                $constants = SocketConstants::getInstance();
                 switch ($code) {
-                    case SOCKET_EPIPE:
-                    case SOCKET_ENETDOWN:
-                    case SOCKET_ENETUNREACH:
-                    case SOCKET_ENETRESET:
-                    case SOCKET_ECONNABORTED:
-                    case SOCKET_ECONNRESET:
-                    case SOCKET_ECONNREFUSED:
-                    case SOCKET_ETIMEDOUT:
+                    case $constants->SOCKET_EPIPE:
+                    case $constants->SOCKET_ENETDOWN:
+                    case $constants->SOCKET_ENETUNREACH:
+                    case $constants->SOCKET_ENETRESET:
+                    case $constants->SOCKET_ECONNABORTED:
+                    case $constants->SOCKET_ECONNRESET:
+                    case $constants->SOCKET_ECONNREFUSED:
+                    case $constants->SOCKET_ETIMEDOUT:
                         $this->close();
                         throw new AMQPConnectionClosedException(socket_strerror($code), $code, $e);
                     default:
                         throw new AMQPRuntimeException($e->getMessage(), $code, $e);
                 }
+            } finally {
+                $this->restoreErrorHandler();
             }
 
             if ($result === false) {
@@ -279,8 +291,6 @@ class StreamIO extends AbstractIO
                 if (($now - $write_start) > $this->write_timeout) {
                     throw AMQPTimeoutException::writeTimeout($this->write_timeout);
                 }
-                // check stream and prevent from high CPU usage
-                $this->select_write();
             }
         }
     }
@@ -291,12 +301,13 @@ class StreamIO extends AbstractIO
     public function error_handler($errno, $errstr, $errfile, $errline, $errcontext = null)
     {
         $code = $this->extract_error_code($errstr);
+        $constants = SocketConstants::getInstance();
         switch ($code) {
             // fwrite notice that the stream isn't ready - EAGAIN or EWOULDBLOCK
-            case SOCKET_EAGAIN:
-            case SOCKET_EWOULDBLOCK:
+            case $constants->SOCKET_EAGAIN:
+            case $constants->SOCKET_EWOULDBLOCK:
             // stream_select warning that it has been interrupted by a signal - EINTR
-            case SOCKET_EINTR:
+            case $constants->SOCKET_EINTR:
                 return;
         }
 
@@ -310,8 +321,8 @@ class StreamIO extends AbstractIO
             fclose($this->sock);
         }
         $this->sock = null;
-        $this->last_read = null;
-        $this->last_write = null;
+        $this->last_read = 0;
+        $this->last_write = 0;
     }
 
     /**
@@ -325,11 +336,20 @@ class StreamIO extends AbstractIO
     /**
      * @inheritdoc
      */
-    protected function do_select($sec, $usec)
+    protected function do_select(?int $sec, int $usec)
     {
+        if ($this->sock === null || !is_resource($this->sock)) {
+            $this->sock = null;
+            throw new AMQPConnectionClosedException('Broken pipe or closed connection', 0);
+        }
+
         $read = array($this->sock);
         $write = null;
         $except = null;
+
+        if ($sec === null && PHP_VERSION_ID >= 80100) {
+            $usec = 0;
+        }
 
         return stream_select($read, $write, $except, $sec, $usec);
     }

@@ -1,4 +1,5 @@
 <?php
+
 namespace PhpAmqpLib\Helper;
 
 class MiscHelper
@@ -14,16 +15,6 @@ class MiscHelper
         }
 
         return sprintf('%d,%d', $a[0], $a[1]);
-    }
-
-    /**
-     * @param string $bytes
-     */
-    public static function saveBytes($bytes)
-    {
-        $fh = fopen('/tmp/bytes', 'wb');
-        fwrite($fh, $bytes);
-        fclose($fh);
     }
 
     /**
@@ -117,6 +108,8 @@ class MiscHelper
         }
 
         echo $dump;
+
+        return null;
     }
 
     /**

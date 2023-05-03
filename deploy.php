@@ -46,8 +46,8 @@ class Deployer {
 		
 		$this->options = (object) array_merge([
 			'src'		=> __DIR__, 
-			'dst'		=> getenv("HOME").'/apps/xujxuj', 
-			'override'	=> getenv("HOME").'/apps/xujxuj-override', 
+			'dst'		=> '/var/www/xujxuj', 
+			'override'	=> '/var/www/xujxuj-configs', 
 			'd'			=> false, 
 			'force'		=> false, 
 			'test'		=> false, 

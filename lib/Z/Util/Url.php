@@ -180,7 +180,7 @@ class Url implements \IteratorAggregate {
 		return clone $this;
 	}
 	
-	public function getIterator() {
+	public function getIterator(): \Traversable {
 		return new \ArrayIterator($this->query);
 	}
 	

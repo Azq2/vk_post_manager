@@ -6,7 +6,7 @@
 	data-sort="<?= htmlspecialchars($sort) ?>"
 	data-mode="<?= htmlspecialchars($mode) ?>"
 	data-content-filter="<?= htmlspecialchars($content_filter) ?>"
-	data-vk-app-id="<?= VK_APP_ID ?>"
+	data-vk-app-id="<?= 0 ?>"
 	data-sources="<?= htmlspecialchars(json_encode($sources_ids)) ?>"
 	data-include="<?= htmlspecialchars(json_encode($include)) ?>"
 	data-exclude="<?= htmlspecialchars(json_encode($exclude)) ?>"
